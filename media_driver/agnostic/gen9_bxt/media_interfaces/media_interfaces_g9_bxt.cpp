@@ -25,8 +25,9 @@
 //!
 
 #include "media_interfaces_g9_bxt.h"
-#include "codechal_cenc_decode.h"
+#if defined(ENABLE_KERNELS) && !defined(_FULL_OPEN_SOURCE)
 #include "igcodeckrn_g9.h"
+#endif
 
 extern template class MediaInterfacesFactory<MhwInterfaces>;
 extern template class MediaInterfacesFactory<MmdDevice>;
@@ -92,7 +93,7 @@ MOS_STATUS MhwInterfacesG9Bxt::Initialize(
 
     // MHW_CP and MHW_MI must always be created
     MOS_STATUS status;
-    Mhw_Cp_InitInterface(&m_cpInterface, osInterface);
+    m_cpInterface = Create_MhwCpInterface(osInterface);
     m_miInterface = MOS_New(Mi, m_cpInterface, osInterface);
 
     if (params.Flags.m_render)
@@ -205,7 +206,7 @@ MOS_STATUS Nv12ToP010DeviceG9Bxt::Initialize(
         MHW_ASSERTMESSAGE("Create Nv12 to P010 interfaces failed.")
         return MOS_STATUS_NO_SPACE;
     }
-	
+    
     return MOS_STATUS_SUCCESS;
 }
 
@@ -231,8 +232,18 @@ MOS_STATUS CodechalInterfacesG9Bxt::Initialize(
 
     CodechalHwInterface *hwInterface = MOS_New(Hw, osInterface, CodecFunction, mhwInterfaces);
 
+    if (hwInterface == nullptr)
+    {
+        CODECHAL_PUBLIC_ASSERTMESSAGE("hwInterface is not valid!");
+        return MOS_STATUS_NO_SPACE;
+    }
 #if USE_CODECHAL_DEBUG_TOOL
     CodechalDebugInterface *debugInterface = MOS_New(CodechalDebugInterface);
+    if (debugInterface == nullptr)
+    {
+        CODECHAL_PUBLIC_ASSERTMESSAGE("debugInterface is not valid!");
+        return MOS_STATUS_NO_SPACE;
+    }
     if (debugInterface->Initialize(hwInterface, CodecFunction) != MOS_STATUS_SUCCESS)
     {
         CODECHAL_PUBLIC_ASSERTMESSAGE("Debug interface creation failed!");
@@ -271,7 +282,7 @@ MOS_STATUS CodechalInterfacesG9Bxt::Initialize(
                 return MOS_STATUS_NO_SPACE;
             }
 #ifdef _DECODE_PROCESSING_SUPPORTED
-            if (settings != nullptr && ((PCODECHAL_SETTINGS)settings)->bDownsamplingHinted)
+            if (settings != nullptr && ((CodechalSetting *)settings)->downsamplingHinted)
             {
                 CodechalDecode *decoder = dynamic_cast<CodechalDecode *>(m_codechalDevice);
                 if (decoder == nullptr)
@@ -335,12 +346,12 @@ MOS_STATUS CodechalInterfacesG9Bxt::Initialize(
     }
     else if (CodecHalIsEncode(CodecFunction))
     {
-#ifdef _MPEG2_ENCODE_SUPPORTED
+        CodechalEncoderState *encoder = nullptr;
+#ifdef _MPEG2_ENCODE_VME_SUPPORTED
         if (info->Mode == CODECHAL_ENCODE_MODE_MPEG2)
         {
             // Setup encode interface functions
-            CodechalEncoderState* encoder =
-                MOS_New(Encode::Mpeg2, hwInterface, debugInterface, info);
+            encoder = MOS_New(Encode::Mpeg2, hwInterface, debugInterface, info);
             if (encoder == nullptr)
             {
                 CODECHAL_PUBLIC_ASSERTMESSAGE("Encode allocation failed!");
@@ -352,21 +363,13 @@ MOS_STATUS CodechalInterfacesG9Bxt::Initialize(
             }
 
             encoder->m_kernelBase = (uint8_t*)IGCODECKRN_G9;
-
-            // Create CSC and Downscaling interface
-            if ((encoder->m_cscDsState = MOS_New(Encode::CscDs, encoder)) == nullptr)
-            {
-                return MOS_STATUS_INVALID_PARAMETER;
-            }
-
         }
         else
 #endif
 #ifdef _JPEG_ENCODE_SUPPORTED
         if (info->Mode == CODECHAL_ENCODE_MODE_JPEG)
         {
-            CodechalEncoderState* encoder = 
-                MOS_New(Encode::Jpeg, hwInterface, debugInterface, info);
+            encoder = MOS_New(Encode::Jpeg, hwInterface, debugInterface, info);
             if (encoder == nullptr)
             {
                 CODECHAL_PUBLIC_ASSERTMESSAGE("Encode state creation failed!");
@@ -380,12 +383,10 @@ MOS_STATUS CodechalInterfacesG9Bxt::Initialize(
         }
         else
 #endif
-#ifdef _HEVC_ENCODE_SUPPORTED
+#ifdef _HEVC_ENCODE_VME_SUPPORTED
         if (info->Mode == CODECHAL_ENCODE_MODE_HEVC)
         {
-            CodechalEncoderState* encoder;
             encoder = MOS_New(Encode::HevcEnc, hwInterface, debugInterface, info);
-
             if (encoder == nullptr)
             {
                 CODECHAL_PUBLIC_ASSERTMESSAGE("Encode state creation failed!");
@@ -397,26 +398,23 @@ MOS_STATUS CodechalInterfacesG9Bxt::Initialize(
             }
 
             encoder->m_kernelBase = (uint8_t*)IGCODECKRN_G9;
-
-            // Create CSC and Downscaling interface
-            if ((encoder->m_cscDsState = MOS_New(Encode::CscDs, encoder)) == nullptr)
-            {
-                return MOS_STATUS_INVALID_PARAMETER;
-            }
         }
         else
 #endif
-#ifdef _AVC_ENCODE_SUPPORTED
+#if defined (_AVC_ENCODE_VME_SUPPORTED) || defined (_AVC_ENCODE_VDENC_SUPPORTED)
         if (info->Mode == CODECHAL_ENCODE_MODE_AVC)
         {
-            CodechalEncoderState *encoder = nullptr;
             if (CodecHalUsesVdencEngine(info->CodecFunction))
             {
+            #ifdef _AVC_ENCODE_VDENC_SUPPORTED
                 encoder = MOS_New(Encode::AvcVdenc, hwInterface, debugInterface, info);
+            #endif
             }
             else
             {
+            #ifdef _AVC_ENCODE_VME_SUPPORTED
                 encoder = MOS_New(Encode::AvcEnc, hwInterface, debugInterface, info);
+            #endif
             }
             if (encoder == nullptr)
             {
@@ -427,18 +425,21 @@ MOS_STATUS CodechalInterfacesG9Bxt::Initialize(
             {
                 m_codechalDevice = encoder;
             }
-
-            // Create CSC and Downscaling interface
-            if ((encoder->m_cscDsState = MOS_New(Encode::CscDs, encoder)) == nullptr)
-            {
-                return MOS_STATUS_INVALID_PARAMETER;
-            }
         }
         else
 #endif
         {
             CODECHAL_PUBLIC_ASSERTMESSAGE("Unsupported encode function requested.");
             return MOS_STATUS_INVALID_PARAMETER;
+        }
+
+        if (info->Mode != CODECHAL_ENCODE_MODE_JPEG)
+        {
+            // Create CSC and Downscaling interface
+            if ((encoder->m_cscDsState = MOS_New(Encode::CscDs, encoder)) == nullptr)
+            {
+                return MOS_STATUS_INVALID_PARAMETER;
+            }
         }
     }
     else
@@ -450,31 +451,18 @@ MOS_STATUS CodechalInterfacesG9Bxt::Initialize(
     return MOS_STATUS_SUCCESS;
 }
 
-CodechalHwInterface *CodechalInterfacesG9Bxt::CreateCodechalHwInterface(
-    CODECHAL_FUNCTION CodecFunction,
-    MhwInterfaces *mhwInterfaces,
-    PMOS_INTERFACE osInterface)
-{
-    if (mhwInterfaces == nullptr)
-    {
-        CODECHAL_PUBLIC_ASSERTMESSAGE("Create Codechal hardware interfaces failed.");
-        return nullptr;
-    }
-
-    CodechalHwInterface *codechalHwInterface = MOS_New(Hw,
-        osInterface,
-        CodecFunction,
-        mhwInterfaces);
-
-    return codechalHwInterface;
-}
-
 static bool bxtRegisteredCMHal =
     MediaInterfacesFactory<CMHalDevice>::
     RegisterHal<CMHalInterfacesG9Bxt>((uint32_t)IGFX_BROXTON);
 
 MOS_STATUS CMHalInterfacesG9Bxt::Initialize(CM_HAL_STATE *pCmState)
 {
+    if (pCmState == nullptr)
+    {
+        MHW_ASSERTMESSAGE("pCmState is nullptr.")
+        return MOS_STATUS_INVALID_PARAMETER;
+    }
+
     m_cmhalDevice = MOS_New(CMHal, pCmState);
     if (m_cmhalDevice == nullptr)
     {
@@ -512,7 +500,7 @@ MOS_STATUS MosUtilDeviceG9Bxt::Initialize()
     MosUtil *device = nullptr;
 
     device = MOS_New(MosUtil);
-	
+    
     if (device == nullptr)
     {
         MOSUTIL_FAILURE();

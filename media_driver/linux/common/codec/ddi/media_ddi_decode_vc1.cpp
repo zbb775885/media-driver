@@ -21,7 +21,7 @@
 */
 //!
 //! \file      media_ddi_decode_vc1.cpp 
-//! \brief     libva(and its extension) decoder implementation  
+//! \brief     libva(and its extension) decoder implementation 
 //!
 #include "media_libva_decoder.h"
 #include "media_libva_util.h"
@@ -32,15 +32,11 @@
 #include "media_ddi_decode_const.h"
 #include "media_ddi_factory.h"
 
-#define BFraction_ShortCode_Max 6
-#define BFraction_LongCode_Min  112
-#define BFraction_LongCode_Max  125
-
 static const int32_t FractionToScaleFactor[21] = {
     128, 85,  170, 64,  192,
     51,  102, 153, 204, 43,
     215, 37,  74,  111, 148,
-    185, 222, 32,  96,  160, 
+    185, 222, 32,  96,  160,
     224,
 };
 
@@ -204,10 +200,9 @@ VAStatus DdiDecodeVC1::ParsePicParams(
     }
     uint32_t scaleFactor = 0;
     // See spec, table 40 && Figure 70
-    if ((picParam->b_picture_fraction <= BFraction_ShortCode_Max) ||
-        ((picParam->b_picture_fraction >= BFraction_LongCode_Min) && (picParam->b_picture_fraction <= BFraction_LongCode_Max)))
+    if ((picParam->b_picture_fraction >= 0) && (picParam->b_picture_fraction < 21))
     {
-        scaleFactor = (picParam->b_picture_fraction >= BFraction_LongCode_Min) ? FractionToScaleFactor[picParam->b_picture_fraction - BFraction_LongCode_Min + BFraction_ShortCode_Max + 1] : FractionToScaleFactor[picParam->b_picture_fraction];
+        scaleFactor = FractionToScaleFactor[picParam->b_picture_fraction];
     }
     else
     {
@@ -491,11 +486,10 @@ VAStatus DdiDecodeVC1::ParsePicParams(
     return VA_STATUS_SUCCESS;
 }
 
-
 VAStatus DdiDecodeVC1::ParseSliceParams(
         DDI_MEDIA_CONTEXT            *mediaCtx,
         VASliceParameterBufferVC1    *slcParam,
-        int32_t                      numSlices)
+        uint32_t                      numSlices)
 {
     PCODEC_VC1_SLICE_PARAMS codecSlcParam = (PCODEC_VC1_SLICE_PARAMS)(m_ddiDecodeCtx->DecodeParams.m_sliceParams);
 
@@ -542,7 +536,7 @@ VAStatus DdiDecodeVC1::AllocBitPlaneBuffer()
 }
 
 VAStatus DdiDecodeVC1::AllocSliceParamContext(
-    int32_t numSlices)
+    uint32_t numSlices)
 {
     uint32_t baseSize = sizeof(CODEC_VC1_SLICE_PARAMS);
 
@@ -550,7 +544,7 @@ VAStatus DdiDecodeVC1::AllocSliceParamContext(
     {
         // in order to avoid that the buffer is reallocated multi-times,
         // extra 10 slices are added.
-        int32_t extraSlices = numSlices + 10;
+        uint32_t extraSlices = numSlices + 10;
 
         m_ddiDecodeCtx->DecodeParams.m_sliceParams = realloc(m_ddiDecodeCtx->DecodeParams.m_sliceParams,
             baseSize * (m_sliceParamBufNum + extraSlices));
@@ -575,10 +569,10 @@ void DdiDecodeVC1::DestroyContext(
     DdiMediaDecode::DestroyContext(ctx);
 }
 
-uint8_t* DdiDecodeVC1::GetPicParamBuf( 
-    DDI_CODEC_COM_BUFFER_MGR    *bufMgr) 
-{ 
-    return (uint8_t*)(&(bufMgr->Codec_Param.Codec_Param_VC1.PicParamVC1)); 
+uint8_t* DdiDecodeVC1::GetPicParamBuf(
+    DDI_CODEC_COM_BUFFER_MGR    *bufMgr)
+{
+    return (uint8_t*)(&(bufMgr->Codec_Param.Codec_Param_VC1.PicParamVC1));
 }
 
 VAStatus DdiDecodeVC1::AllocSliceControlBuffer(
@@ -590,21 +584,21 @@ VAStatus DdiDecodeVC1::AllocSliceControlBuffer(
 
     bufMgr     = &(m_ddiDecodeCtx->BufMgr);
     availSize  = m_sliceCtrlBufNum - bufMgr->dwNumSliceControl;
-    if(availSize < buf->iNumElements)
+    if(availSize < buf->uiNumElements)
     {
-        newSize   = sizeof(VASliceParameterBufferVC1) * (m_sliceCtrlBufNum - availSize + buf->iNumElements);
+        newSize   = sizeof(VASliceParameterBufferVC1) * (m_sliceCtrlBufNum - availSize + buf->uiNumElements);
         bufMgr->Codec_Param.Codec_Param_VC1.pVASliceParaBufVC1 = (VASliceParameterBufferVC1 *)realloc(bufMgr->Codec_Param.Codec_Param_VC1.pVASliceParaBufVC1, newSize);
         if(bufMgr->Codec_Param.Codec_Param_VC1.pVASliceParaBufVC1 == nullptr)
         {
             return VA_STATUS_ERROR_ALLOCATION_FAILED;
         }
-        MOS_ZeroMemory(bufMgr->Codec_Param.Codec_Param_VC1.pVASliceParaBufVC1 + m_sliceCtrlBufNum, sizeof(VASliceParameterBufferVC1) * (buf->iNumElements - availSize));
-        m_sliceCtrlBufNum = m_sliceCtrlBufNum - availSize + buf->iNumElements;
+        MOS_ZeroMemory(bufMgr->Codec_Param.Codec_Param_VC1.pVASliceParaBufVC1 + m_sliceCtrlBufNum, sizeof(VASliceParameterBufferVC1) * (buf->uiNumElements - availSize));
+        m_sliceCtrlBufNum = m_sliceCtrlBufNum - availSize + buf->uiNumElements;
     }
     buf->pData      = (uint8_t*)bufMgr->Codec_Param.Codec_Param_VC1.pVASliceParaBufVC1;
     buf->uiOffset   = sizeof(VASliceParameterBufferVC1) * bufMgr->dwNumSliceControl;
 
-    bufMgr->dwNumSliceControl += buf->iNumElements;
+    bufMgr->dwNumSliceControl += buf->uiNumElements;
 
     return VA_STATUS_SUCCESS;
 }
@@ -663,7 +657,7 @@ void DdiDecodeVC1::ParseBitPlane(
 
         uint32_t srcIdx, dstIdx;
         uint32_t srcShift;
-        int32_t  i, j;
+        uint32_t i, j;
         uint8_t  srcValue = 0;
         for (i = 0; i < heightInMbs; i++)
         {
@@ -722,7 +716,7 @@ VAStatus DdiDecodeVC1::RenderPicture(
         {
         case VABitPlaneBufferType:
         {
-            uint32_t index = m_ddiDecodeCtx->BufMgr.Codec_Param.Codec_Param_VC1.dwVC1BitPlaneIndex;
+            int32_t index = m_ddiDecodeCtx->BufMgr.Codec_Param.Codec_Param_VC1.dwVC1BitPlaneIndex;
             if (index == DDI_CODEC_INVALID_BUFFER_INDEX)
             {
                 return VA_STATUS_ERROR_INVALID_BUFFER;
@@ -751,7 +745,7 @@ VAStatus DdiDecodeVC1::RenderPicture(
 
         case VASliceDataBufferType:
         {
-            int32_t index = m_ddiDecodeCtx->m_ddiDecode->GetBitstreamBufIndexFromBuffer(&m_ddiDecodeCtx->BufMgr, buf);
+            int32_t index = GetBitstreamBufIndexFromBuffer(&m_ddiDecodeCtx->BufMgr, buf);
             if (index == DDI_CODEC_INVALID_BUFFER_INDEX)
             {
                 return VA_STATUS_ERROR_INVALID_BUFFER;
@@ -763,16 +757,16 @@ VAStatus DdiDecodeVC1::RenderPicture(
         }
         case VASliceParameterBufferType:
         {
-            if (buf->iNumElements == 0)
+            if (buf->uiNumElements == 0)
             {
                 return VA_STATUS_ERROR_INVALID_BUFFER;
             }
 
             VASliceParameterBufferVC1 *slcInfo =
                 (VASliceParameterBufferVC1 *)data;
-            int32_t numSlices = buf->iNumElements;
+            uint32_t numSlices = buf->uiNumElements;
             DDI_CHK_RET(AllocSliceParamContext(numSlices),"AllocSliceParamContext failed!");
-	    DDI_CHK_RET(ParseSliceParams(mediaCtx, slcInfo, numSlices),"ParseSliceParams failed!");
+            DDI_CHK_RET(ParseSliceParams(mediaCtx, slcInfo, numSlices),"ParseSliceParams failed!");
             m_ddiDecodeCtx->DecodeParams.m_numSlices += numSlices;
             m_groupIndex++;
             break;
@@ -1013,30 +1007,28 @@ VAStatus DdiDecodeVC1::CodecHalInit(
 {
     VAStatus     vaStatus = VA_STATUS_SUCCESS;
     MOS_CONTEXT *mosCtx   = (MOS_CONTEXT *)ptr;
-    
-    CODECHAL_FUNCTION codecFunction = CODECHAL_FUNCTION_DECODE;
-    m_ddiDecodeCtx->pCpDdiInterface->SetEncryptionType(m_ddiDecodeAttr->uiEncryptionType, &codecFunction);
 
-    CODECHAL_SETTINGS      codecHalSettings;
+    CODECHAL_FUNCTION codecFunction = CODECHAL_FUNCTION_DECODE;
+    m_ddiDecodeCtx->pCpDdiInterface->SetCpParams(m_ddiDecodeAttr->uiEncryptionType, m_codechalSettings);
+
     CODECHAL_STANDARD_INFO standardInfo;
     memset(&standardInfo, 0, sizeof(standardInfo));
-    memset(&codecHalSettings, 0, sizeof(codecHalSettings));
 
     standardInfo.CodecFunction = codecFunction;
     standardInfo.Mode          = (CODECHAL_MODE)m_ddiDecodeCtx->wMode;
 
-    codecHalSettings.CodecFunction                = codecFunction;
-    codecHalSettings.dwWidth                      = m_width;
-    codecHalSettings.dwHeight                     = m_height;
+    m_codechalSettings->codecFunction                = codecFunction;
+    m_codechalSettings->width                      = m_width;
+    m_codechalSettings->height                     = m_height;
 
-    codecHalSettings.ucLumaChromaDepth = CODECHAL_LUMA_CHROMA_DEPTH_8_BITS;
+    m_codechalSettings->lumaChromaDepth = CODECHAL_LUMA_CHROMA_DEPTH_8_BITS;
 
-    codecHalSettings.bShortFormatInUse = m_ddiDecodeCtx->bShortFormatInUse;
+    m_codechalSettings->shortFormatInUse = m_ddiDecodeCtx->bShortFormatInUse;
 
-    codecHalSettings.Mode     = CODECHAL_DECODE_MODE_VC1VLD;
-    codecHalSettings.Standard = CODECHAL_VC1;
+    m_codechalSettings->mode     = CODECHAL_DECODE_MODE_VC1VLD;
+    m_codechalSettings->standard = CODECHAL_VC1;
     /* VC1 uses the Intel-specific Format */
-    codecHalSettings.bIntelEntrypointInUse = true;
+    m_codechalSettings->intelEntrypointInUse = true;
 
     m_ddiDecodeCtx->DecodeParams.m_picParams = MOS_AllocAndZeroMemory(sizeof(CODEC_VC1_PIC_PARAMS));
     if (m_ddiDecodeCtx->DecodeParams.m_picParams == nullptr)
@@ -1055,7 +1047,6 @@ VAStatus DdiDecodeVC1::CodecHalInit(
 
     vaStatus = CreateCodecHal(mediaCtx,
         ptr,
-        &codecHalSettings,
         &standardInfo);
 
     if (vaStatus != VA_STATUS_SUCCESS)
@@ -1073,12 +1064,6 @@ VAStatus DdiDecodeVC1::CodecHalInit(
 
 CleanUpandReturn:
     FreeResourceBuffer();
-
-    if (m_decodeStatusReport)
-    {
-        MOS_DeleteArray(m_decodeStatusReport);
-        m_decodeStatusReport = nullptr;
-    }
 
     if (m_ddiDecodeCtx->pCodecHal)
     {

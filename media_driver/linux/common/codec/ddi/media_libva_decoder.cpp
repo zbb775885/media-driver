@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2009-2017, Intel Corporation
+* Copyright (c) 2009-2018, Intel Corporation
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -32,7 +32,7 @@
 
 #include "media_libva_decoder.h"
 #include "media_libva_util.h"
-#include "media_libva_cp.h"
+#include "media_libva_cp_interface.h"
 #include "media_libva_caps.h"
 #include "codechal_memdecomp.h"
 #include "mos_solo_generic.h"
@@ -94,46 +94,13 @@ VAStatus DdiDecode_CreateBuffer(
     VABufferID              *bufId
 )
 {
-    *bufId     = VA_INVALID_ID; 
+    *bufId     = VA_INVALID_ID;
     if (decCtx->m_ddiDecode){
         DDI_CHK_RET(decCtx->m_ddiDecode->CreateBuffer(type, size, numElements, data, bufId),"DdiDecode_CreateBuffer failed!");
     }
-    
+
     return VA_STATUS_SUCCESS;
 
-}
-
-VAStatus DdiDecode_UnRegisterRTSurfaces(
-    VADriverContextP    ctx,
-    PDDI_MEDIA_SURFACE surface)
-{
-    DDI_CHK_NULL(ctx,"nullptr context!", VA_STATUS_ERROR_INVALID_CONTEXT);
-    PDDI_MEDIA_CONTEXT mediaCtx   = DdiMedia_GetMediaContext(ctx);
-    DDI_CHK_NULL(mediaCtx,"nullptr mediaCtx!", VA_STATUS_ERROR_INVALID_CONTEXT);
-    DDI_CHK_NULL(surface, "nullptr surface!", VA_STATUS_ERROR_INVALID_PARAMETER);
-    
-    //Look through all decode contexts to unregister the surface in each decode context's RTtable.
-    if (mediaCtx->pDecoderCtxHeap != nullptr)
-    {
-        PDDI_MEDIA_VACONTEXT_HEAP_ELEMENT decVACtxHeapBase;
-
-        DdiMediaUtil_LockMutex(&mediaCtx->DecoderMutex);
-        decVACtxHeapBase  = (PDDI_MEDIA_VACONTEXT_HEAP_ELEMENT)mediaCtx->pDecoderCtxHeap->pHeapBase;
-        for (int32_t j = 0; j < mediaCtx->pDecoderCtxHeap->uiAllocatedHeapElements; j++)
-        {
-            if (decVACtxHeapBase[j].pVaContext != nullptr)
-            {
-                PDDI_DECODE_CONTEXT  decCtx = (PDDI_DECODE_CONTEXT)decVACtxHeapBase[j].pVaContext;
-                if (decCtx && decCtx->m_ddiDecode)
-                {
-                    //not check the return value since the surface may not be registered in the context. pay attention to LOGW.
-                    decCtx->m_ddiDecode->UnRegisterRTSurfaces(&decCtx->RTtbl, surface);
-                }
-            }
-        }
-        DdiMediaUtil_UnLockMutex(&mediaCtx->DecoderMutex);
-    }
-    return VA_STATUS_SUCCESS;
 }
 
 VAStatus DdiDecode_BeginPicture (
@@ -171,7 +138,7 @@ VAStatus DdiDecode_EndPicture (
 {
     DDI_FUNCTION_ENTER();
     DDI_CHK_NULL(ctx,                "nullptr context in vpgDecodeEndPicture!", VA_STATUS_ERROR_INVALID_CONTEXT);
-    uint32_t                         ctxType;   
+    uint32_t                         ctxType;
     // assume the VAContextID is decoder ID
     PDDI_DECODE_CONTEXT decCtx     = (PDDI_DECODE_CONTEXT)DdiMedia_GetContextFromContextID(ctx, context, &ctxType);
     DDI_CHK_NULL(decCtx,            "nullptr decCtx",            VA_STATUS_ERROR_INVALID_CONTEXT);
@@ -203,7 +170,7 @@ VAStatus DdiDecode_RenderPicture (
     uint32_t  ctxType;
     PDDI_DECODE_CONTEXT decCtx  = (PDDI_DECODE_CONTEXT)DdiMedia_GetContextFromContextID(ctx, context, &ctxType);
     DDI_CHK_NULL(decCtx,            "nullptr decCtx",            VA_STATUS_ERROR_INVALID_CONTEXT);
-    
+
     if (decCtx->m_ddiDecode)
     {
         VAStatus va = decCtx->m_ddiDecode->RenderPicture(ctx, context, buffers, numBuffers);
@@ -232,11 +199,11 @@ void DdiDecodeCleanUp(
         if(decCtx->m_ddiDecode)
         {
             decCtx->m_ddiDecode->DestroyContext(ctx);
-        MOS_Delete(decCtx->m_ddiDecode);
+            MOS_Delete(decCtx->m_ddiDecode);
             MOS_FreeMemory(decCtx);
             decCtx = nullptr;
         }
-    }  
+    }
     return;
 }
 
@@ -295,7 +262,7 @@ VAStatus DdiDecode_CreateContext (
             &decConfigAttr.uiDecSliceMode,
             &decConfigAttr.uiEncryptionType,
             &decConfigAttr.uiDecProcessingType),"Invalide config_id!");
-    
+
     mode = mediaCtx->m_caps->GetDecodeCodecMode(decConfigAttr.profile);
     codecKey =  mediaCtx->m_caps->GetDecodeCodecKey(decConfigAttr.profile);
     va       =  mediaCtx->m_caps->CheckDecodeResolution(
@@ -331,20 +298,23 @@ VAStatus DdiDecode_CreateContext (
             MOS_Delete(ddiDecBase);
         return VA_STATUS_ERROR_ALLOCATION_FAILED;
     }
-    
+
     decCtx->pMediaCtx                       = mediaCtx;
     decCtx->m_ddiDecode                     = ddiDecBase;
 
-    mosCtx.bufmgr                           = mediaCtx->pDrmBufMgr;
-    mosCtx.fd                               = mediaCtx->fd;
-    mosCtx.iDeviceId                        = mediaCtx->iDeviceId;
-    mosCtx.SkuTable                         = mediaCtx->SkuTable;
-    mosCtx.WaTable                          = mediaCtx->WaTable;
-    mosCtx.gtSystemInfo                     = *mediaCtx->pGtSystemInfo;
-    mosCtx.platform                         = mediaCtx->platform;
-    mosCtx.ppMediaMemDecompState            = &mediaCtx->pMediaMemDecompState;
-    mosCtx.pfnMemoryDecompress              = mediaCtx->pfnMemoryDecompress;
-    mosCtx.pPerfData                        = (PERF_DATA*)MOS_AllocAndZeroMemory(sizeof(PERF_DATA));
+    mosCtx.bufmgr                = mediaCtx->pDrmBufMgr;
+    mosCtx.m_gpuContextMgr       = mediaCtx->m_gpuContextMgr;
+    mosCtx.m_cmdBufMgr           = mediaCtx->m_cmdBufMgr;
+    mosCtx.fd                    = mediaCtx->fd;
+    mosCtx.iDeviceId             = mediaCtx->iDeviceId;
+    mosCtx.SkuTable              = mediaCtx->SkuTable;
+    mosCtx.WaTable               = mediaCtx->WaTable;
+    mosCtx.gtSystemInfo          = *mediaCtx->pGtSystemInfo;
+    mosCtx.platform              = mediaCtx->platform;
+    mosCtx.ppMediaMemDecompState = &mediaCtx->pMediaMemDecompState;
+    mosCtx.pfnMemoryDecompress   = mediaCtx->pfnMemoryDecompress;
+    mosCtx.pPerfData             = (PERF_DATA *)MOS_AllocAndZeroMemory(sizeof(PERF_DATA));
+    mosCtx.m_auxTableMgr         = mediaCtx->m_auxTableMgr;
 
     if (nullptr == mosCtx.pPerfData)
     {
@@ -356,7 +326,7 @@ VAStatus DdiDecode_CreateContext (
     ddiDecBase->ContextInit(pictureWidth, pictureHeight);
 
     //initialize DDI level CP interface
-    decCtx->pCpDdiInterface = MOS_New(DdiCpInterface, mosCtx);
+    decCtx->pCpDdiInterface = Create_DdiCpInterface(mosCtx);
     if (nullptr == decCtx->pCpDdiInterface)
     {
         va = VA_STATUS_ERROR_ALLOCATION_FAILED;
@@ -389,7 +359,7 @@ VAStatus DdiDecode_CreateContext (
         }
         if (VA_STATUS_SUCCESS != ddiDecBase->RegisterRTSurfaces(&decCtx->RTtbl, surface))
         {
-            va = VA_STATUS_ERROR_MAX_NUM_EXCEEDED;            
+            va = VA_STATUS_ERROR_MAX_NUM_EXCEEDED;
             DdiDecodeCleanUp(ctx,decCtx);
             return va;
         }

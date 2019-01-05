@@ -76,9 +76,9 @@ public:
         uint32_t                            uiCurrBrcPakStasIdxForWrite;
     };
 
-    static constexpr uint8_t                m_numMaxVdencL0Ref = 3;                   //!< Max number of reference frame list0   
+    static constexpr uint8_t                m_numMaxVdencL0Ref = 3;                   //!< Max number of reference frame list0
     static constexpr uint8_t                m_numMaxVdencL1Ref = 3;                   //!< Max number of reference frame list1
-    static constexpr uint32_t               m_brcPakStatsBufSize = 464;               //!< Pak statistic buffer size
+    static constexpr uint32_t               m_brcPakStatsBufSize = 512;               //!< Pak statistic buffer size
     static constexpr uint32_t               m_brcStatsBufSize = 1216;                 //!< BRC Statistic buf size: 48DWs (3CLs) of HMDC Frame Stats + 256 DWs (16CLs) of Histogram Stats = 1216 bytes
     static constexpr uint32_t               m_brcHistoryBufSize = 964;                //!< BRC history buffer size
     static constexpr uint32_t               m_brcDebugBufSize = 0x1000;               //!< BRC debug buffer size
@@ -91,7 +91,7 @@ public:
 
     //!< \cond SKIP_DOXYGEN
     // HuC tables
-    // Note: These const values are same for all Gen now. 
+    // Note: These const values are same for all Gen now.
     // In case they become diff later, then need to move declaration to each Gen's derived class
     static const uint8_t                    m_estRateThreshP0[7];
     static const uint8_t                    m_estRateThreshB0[7];
@@ -111,7 +111,7 @@ public:
     static const uint16_t                   m_rdQpLambdaI[52];
     static const uint16_t                   m_rdQpLambdaP[52];
     //! \endcond
-     
+
     bool                                    m_hevcVdencAcqpEnabled = false;                    //!< ACQP enable flag
     bool                                    m_hevcRdoqAdaptationEnabled = false;               //!< RDOQ adaptation enable flag
     bool                                    m_hevcVdencRoundingEnabled = false;                //!< Rounding enable flag
@@ -120,16 +120,12 @@ public:
     bool                                    m_hevcVdencWeightedPredEnabled = false;            //!< Weighted pred enable flag
     bool                                    m_vdencHuCConditional2ndPass = false;              //!< HuC conditional 2nd pass enable flag
     bool                                    m_vdencNativeROIEnabled = false;                   //!< Native ROI enable flag
-    bool                                    m_vdencStreamInEnabled = false;                    //!< Stream in enable flag
-    bool                                    m_pakOnlyPass = false;                             //!< flag to signal VDEnc+PAK vs. PAK only 
-    bool                                    m_hucCmdInitializerUsed = false;                   //!< Command initializer HuC used flag
-
-    // VDENC Display interface related
-    bool                                    m_enableTileReplay = false;                        //!< TileReplay Enable               
+    bool                                    m_pakOnlyPass = false;                             //!< flag to signal VDEnc+PAK vs. PAK only
 
     //Resources for VDEnc
     MOS_RESOURCE                            m_sliceCountBuffer;                                //!< Slice count buffer
     MOS_RESOURCE                            m_vdencModeTimerBuffer;                            //!< VDEnc mode timer buffer
+    MOS_RESOURCE                            m_resSliceReport[CODECHAL_ENCODE_STATUS_NUM];      //!< Slice size report buffer to be saved across passes
     uint8_t                                 m_maxNumROI = CODECHAL_ENCODE_HEVC_MAX_NUM_ROI;    //!< VDEnc maximum number of ROI supported
     uint8_t                                 m_maxNumNativeROI = ENCODE_VDENC_HEVC_MAX_STREAMINROI_G10;  //!< Number of native ROI supported by VDEnc HW
     uint8_t                                 m_imgStateImePredictors = 8;                       //!< Number of predictors for IME
@@ -144,13 +140,14 @@ public:
     MOS_RESOURCE                            m_vdencBrcConstDataBuffer[CODECHAL_ENCODE_RECYCLED_BUFFER_NUM];                         //!< VDEnc brc constant data buffer
     MOS_RESOURCE                            m_vdencBrcHistoryBuffer;                           //!< VDEnc brc history buffer
     MOS_RESOURCE                            m_vdencReadBatchBuffer[CODECHAL_ENCODE_RECYCLED_BUFFER_NUM][CODECHAL_VDENC_BRC_NUM_OF_PASSES];  //!< VDEnc read batch buffer
+    MOS_RESOURCE                            m_vdencGroup3BatchBuffer[CODECHAL_ENCODE_RECYCLED_BUFFER_NUM][CODECHAL_VDENC_BRC_NUM_OF_PASSES];  //!< VDEnc read batch buffer for Group3
     MOS_RESOURCE                            m_vdencBrcDbgBuffer;                               //!< VDEnc brc debug buffer
     uint32_t                                m_deltaQpRoiBufferSize;                            //!< VDEnc DeltaQp for ROI buffer size
     uint32_t                                m_brcRoiBufferSize;                                //!< BRC ROI input buffer size
 
     // Batch Buffer for VDEnc
-    MHW_BATCH_BUFFER                        m_vdenc2ndLevelBatchBuffer;                        //!< VDEnc 2nd level batch buffer
-    uint32_t                                m_vdenc2ndLevelBatchBufferSize = 0;
+    MHW_BATCH_BUFFER                        m_vdenc2ndLevelBatchBuffer[CODECHAL_ENCODE_RECYCLED_BUFFER_NUM];  //!< VDEnc 2nd level batch buffer
+    uint32_t                                m_vdenc2ndLevelBatchBufferSize[CODECHAL_ENCODE_RECYCLED_BUFFER_NUM] = {0};
     uint32_t                                m_vdencBatchBufferPerSliceVarSize[ENCODE_HEVC_VDENC_NUM_MAX_SLICES] = { 0 };    //!< VDEnc batch buffer slice size array
     uint32_t                                m_1stPakInsertObjectCmdSize = 0;                   //!< Size of 1st PAK_INSERT_OBJ cmd
     uint32_t                                m_hcpWeightOffsetStateCmdSize = 0;                 //!< Size of HCP_WEIGHT_OFFSET_STATE cmd
@@ -168,10 +165,13 @@ public:
 
     PCODECHAL_CMD_INITIALIZER               m_hucCmdInitializer = nullptr;
 
+    MOS_RESOURCE                            m_resDelayMinus;
+    uint32_t                                m_numDelay;
+
 protected:
     //!
     //! \brief    Constructor
-    //!            
+    //!
     CodechalVdencHevcState(CodechalHwInterface* hwInterface,
         CodechalDebugInterface* debugInterface,
         PCODECHAL_STANDARD_INFO standardInfo);
@@ -228,9 +228,11 @@ public:
     //!
     //! \brief    Setup stream-in data per region 
     //!
-    //! \param    [in] streamInWidth, top, bottom, left, right, streaminParams
-    //!                streamInWidth, region corner locations, streamInParams  
-    //!           [out] streaminData
+    //! \param    [in] streamInWidth, top, bottom, left, right
+    //!                streamInWidth, region corner locations, 
+    //! \param    [in] streaminParams
+    //!                 pointer to MHW_VDBOX_VDENC_STREAMIN_STATE_PARAMS
+    //! \param    [out] streaminData
     //!                 pointer to streaminData
     //!
     //! \return   void
@@ -247,10 +249,12 @@ public:
     //!
     //! \brief    Setup stream-in data per region 
     //!
-    //! \param    [in] streamInWidth, top, bottom, left, right, regionId, streaminParams
-    //!                streamInWidth, region corner locations, regionId, streamInParams  
-    //!           [out] streaminData
-    //!                 pointer to streaminData
+    //! \param    [in] streamInWidth, top, bottom, left, right
+    //!                streamInWidth, region corner locations
+    //! \param    [in] regionId
+    //!                region ID
+    //! \param    [out] deltaQpMap
+    //!                pointer to DeltaQpForROI
     //!
     //! \return   void
     //!
@@ -428,7 +432,7 @@ public:
     //!
     //! \brief    Set VDENC_SRC_SURFACE_STATE, VDENC_REF_SURFACE_STATE and 
     //!           VDENC_DS_REF_SURFACE_STATE parameters
-    //!           
+    //! 
     //! \param    [in, out] srcSurfaceParams
     //!           Source picture surface parameters
     //! \param    [in, out] reconSurfaceParams
@@ -516,14 +520,36 @@ public:
     //!
     //! \brief    Read slice size info from PAK
     //!
+    //! \param    [in] cmdBuffer
+    //!            Pointer to command buffer
+    //!
     //! \return   MOS_STATUS
     //!           MOS_STATUS_SUCCESS if success, else fail reason
     //!
-    virtual MOS_STATUS ReadSliceSize();
+    virtual MOS_STATUS ReadSliceSize(PMOS_COMMAND_BUFFER cmdBuffer);
 
+    //! \brief    Copies a page aligned chunk of memory using HuC
+    //!
+    //! \param    [in] cmdBuffer
+    //!           Pointer to command buffer
+    //! \param    [in] Source/ Dest surfaces/ offsets page aligned
+    //!            Pointer to surfaces
+    //! \param    [in] copySize
+    //!            Size in bytes of data to be copied
+    //!
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    virtual MOS_STATUS CopyDataBlock(
+        PMOS_COMMAND_BUFFER cmdBuffer,
+        PMOS_RESOURCE sourceSurface,
+        uint32_t sourceOffset,
+        PMOS_RESOURCE destSurface,
+        uint32_t destOffset,
+        uint32_t copySize);
     //!
     //! \brief    Get maximal number of slices allowed for specific LevelId
-    //!          
+    //! 
     //! \param    [in] levelIdc
     //!           Level Id
     //!
@@ -533,7 +559,7 @@ public:
 
     //!
     //! \brief    Specify if VDEnc+PAK or Pak only pass is used
-    //!          
+    //! 
     //! \return   void
     //!
     void SetPakPassType();
@@ -553,7 +579,7 @@ public:
     //!           MOS_STATUS_SUCCESS if success, else fail reason
     //!
     virtual MOS_STATUS HuCBrcUpdate();
-    
+
     //!
     //! \brief    Use dummy stream object for HuC BRC FW.
     //!
@@ -569,7 +595,7 @@ public:
     //! \brief    Computer QP initialization value used for BRC
     //!
     //! \param    [out] initQPIP
-    //!           QP initialization value for I/P frame  
+    //!           QP initialization value for I/P frame 
     //! \param    [out] initQPB
     //!           QP initialization value for B frame
     //!
@@ -599,7 +625,7 @@ public:
     //! \return   MOS_STATUS
     //!           MOS_STATUS_SUCCESS if success, else fail reason
     //!
-    MOS_STATUS SendHwSliceEncodeCommand(PMOS_COMMAND_BUFFER cmdBuffer, PMHW_VDBOX_HEVC_SLICE_STATE params);
+    virtual MOS_STATUS SendHwSliceEncodeCommand(PMOS_COMMAND_BUFFER cmdBuffer, PMHW_VDBOX_HEVC_SLICE_STATE params);
 
     //!
     //! \brief    Sort and set distinct delta QPs
@@ -609,7 +635,7 @@ public:
     virtual void ProcessRoiDeltaQp();
 
     // Inherited virtual function
-    MOS_STATUS Initialize(PCODECHAL_SETTINGS settings);
+    MOS_STATUS Initialize(CodechalSetting * settings);
     MOS_STATUS AllocatePakResources();
     MOS_STATUS FreePakResources();
     MOS_STATUS AllocateEncResources();
@@ -626,7 +652,7 @@ public:
     MOS_STATUS ReadHcpStatus(PMOS_COMMAND_BUFFER cmdBuffer);
     MOS_STATUS UserFeatureKeyReport();
     MOS_STATUS GetStatusReport(
-        EncodeStatus *encodeStatus, 
+        EncodeStatus *encodeStatus,
         EncodeStatusReport *encodeStatusReport);
     void SetHcpSliceStateCommonParams(MHW_VDBOX_HEVC_SLICE_STATE& sliceStateParams);
     MOS_STATUS AddHcpPakInsertSliceHeader(
@@ -638,6 +664,34 @@ public:
     virtual MOS_STATUS DumpHucBrcInit();
     virtual MOS_STATUS DumpHucBrcUpdate(bool isInput);
     virtual MOS_STATUS DumpVdencOutputs();
+    virtual MOS_STATUS DumpSeqParFile();
+
+    //!
+    //! \brief  Modify the frame size with fake header size
+    //!
+    //! \param  [in] cmdBuffer
+    //!         command buffer
+    //! \param  [in] fakeHeaderSizeInByte
+    //!         fake header size in bytes
+    //! \param  [in] resBrcUpdateCurbe
+    //!         Curebe/Dmem for brcupdate kernel
+    //! \param  [in] targetSizePos
+    //!         offset of targetSize in resBrcUpdateCurbe
+    //! \param  [in] resPakStat
+    //!         Pak stastics
+    //! \param  [in] slcHrdSizePos
+    //!         offset of slcHrdSizePos in resPakStat
+    //!
+    //! \return MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    MOS_STATUS ModifyEncodedFrameSizeWithFakeHeaderSize(
+        PMOS_COMMAND_BUFFER                 cmdBuffer,
+        uint32_t                            fakeHeaderSizeInByte,
+        PMOS_RESOURCE                       resBrcUpdateCurbe,
+        uint32_t                            targetSizePos,
+        PMOS_RESOURCE                       resPakStat,
+        uint32_t                            slcHrdSizePos);
 #endif
 
 };

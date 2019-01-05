@@ -20,63 +20,117 @@
 
 cmake_minimum_required(VERSION 3.5)
 
+
+include(os_release_info.cmake)
+
+get_os_release_info(os_name os_version)
+
+if(NOT DEFINED CMAKE_INSTALL_PREFIX OR CMAKE_INSTALL_PREFIX STREQUAL "")
+    set(CMAKE_INSTALL_PREFIX "/usr/local" CACHE PATH "..." FORCE)
+endif()
+message(STATUS "CMAKE_INSTALL_PREFIX = ${CMAKE_INSTALL_PREFIX}")
+
+if(NOT DEFINED MEDIA_VERSION OR MEDIA_VERSION STREQUAL "")
+    set(MEDIA_VERSION "1.0.0")
+endif()
+
+if("${os_name}" STREQUAL "clear-linux-os")
+    # clear-linux-os distribution avoids /etc for distribution defaults.
+    # Set this variable explicitly before including GNUInstallDirs.
+    set(CMAKE_INSTALL_SYSCONFDIR "usr/share/defaults/etc")
+endif()
+
+include(CMakeDependentOption)
+
+option (ENABLE_KERNELS "Build driver with shaders (kernels) support" ON)
+# FREE_KERNELS option means using only open source EU shaders (kernels) and
+# fixed function hardware. The opposite is a full-feature build which permits
+# usage of shaders (kernels) in binary form.
+cmake_dependent_option( FREE_KERNELS
+    "Use only shaders (kernels) with available sources" OFF
+    "ENABLE_KERNELS" OFF)
+cmake_dependent_option( BUILD_KERNELS
+    "Rebuild shaders (kernels) from sources" OFF
+    "ENABLE_KERNELS;FREE_KERNELS" OFF)
+option (BUILD_CMRTLIB "Build and Install cmrtlib together with media driver" ON)
+
 include(GNUInstallDirs)
 
-add_subdirectory(cmrtlib)
+if (BUILD_CMRTLIB)
+    add_subdirectory(cmrtlib)
+endif()
+
+if (BUILD_KERNELS)
+    find_program(IGA iga64)
+    if (NOT IGA)
+        message(FATAL_ERROR "Failed to find IGA")
+    endif()
+
+    add_subdirectory(Tools/MediaDriverTools)
+endif()
 
 add_subdirectory(media_driver)
 
-if (TARGET iHD_drv_video AND TARGET igfxcmrt)
-
-    if("${LIBVA_DRIVERS_PATH}" STREQUAL "")
-        set(LIBVA_DRIVERS_PATH "${CMAKE_INSTALL_FULL_LIBDIR}/dri/")
-    endif()
-    message(STATUS "LIBVA_DRIVERS_PATH = ${LIBVA_DRIVERS_PATH}")
-
-    install (FILES ${CMAKE_CURRENT_BINARY_DIR}/media_driver/iHD_drv_video.so DESTINATION ${LIBVA_DRIVERS_PATH})
-    install (FILES ${CMAKE_CURRENT_BINARY_DIR}/cmrtlib/linux/igfxcmrt64.so DESTINATION ${CMAKE_INSTALL_LIBDIR})
-
-    option (INSTALL_DRIVER_SYSCONF "Install driver system configuration file" ON)
-    if (INSTALL_DRIVER_SYSCONF)
-        configure_file (
-            ${CMAKE_CURRENT_SOURCE_DIR}/media_driver/cmake/linux/intel-media.sh.in
-            ${CMAKE_CURRENT_BINARY_DIR}/media_driver/cmake/linux/intel-media.sh)
-        install (FILES ${CMAKE_CURRENT_BINARY_DIR}/media_driver/cmake/linux/intel-media.sh
-            DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/profile.d/)
-    endif()
-
-    if (IS_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/../libva-install/usr/bin)
-        install (DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/../libva-install/usr/bin DESTINATION ${CMAKE_INSTALL_PREFIX}
-                 FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-    endif()
-    if (IS_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/../libva-install/usr/include)
-        install (DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/../libva-install/usr/include DESTINATION ${CMAKE_INSTALL_PREFIX})
-    endif()
-    if (IS_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/../libva-install/usr/lib)
-        install (DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/../libva-install/usr/lib DESTINATION ${CMAKE_INSTALL_PREFIX})
-    endif()
-
-    if (IS_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/../libdrm-install/usr/lib)
-        install (DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/../libdrm-install/usr/lib DESTINATION ${CMAKE_INSTALL_PREFIX})
-    endif()
-
-    set(CPACK_GENERATOR "DEB")
-    set(CPACK_PACKAGE_NAME "intel-media")
-    set(CPACK_PACKAGE_VENDOR "Intel")
-    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "intel-media deb package for internal usage only")
-
-    if (DEFINED MEDIA_VERSION)
-        string(REPLACE "." ";" MEDIA_VERSION_LIST ${MEDIA_VERSION})
-        list(GET MEDIA_VERSION_LIST 0 MEDIA_VERSION_MAJOR)
-        list(GET MEDIA_VERSION_LIST 1 MEDIA_VERSION_MINOR)
-        list(GET MEDIA_VERSION_LIST 2 MEDIA_VERSION_PATCH)
-        set(CPACK_PACKAGE_VERSION_MAJOR "${MEDIA_VERSION_MAJOR}")
-        set(CPACK_PACKAGE_VERSION_MINOR "${MEDIA_VERSION_MINOR}")
-        set(CPACK_PACKAGE_VERSION_PATCH "${MEDIA_VERSION_PATCH}")
-    endif()
-
-    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Intel")
-
-    include(CPack)
-
+if("${LIBVA_DRIVERS_PATH}" STREQUAL "")
+    set(LIBVA_DRIVERS_PATH "${CMAKE_INSTALL_FULL_LIBDIR}/dri/")
 endif()
+message(STATUS "LIBVA_DRIVERS_PATH = ${LIBVA_DRIVERS_PATH}")
+
+install (FILES ${CMAKE_CURRENT_BINARY_DIR}/media_driver/iHD_drv_video.so DESTINATION ${LIBVA_DRIVERS_PATH} COMPONENT media)
+
+option (INSTALL_DRIVER_SYSCONF "Install driver system configuration file" OFF)
+if (INSTALL_DRIVER_SYSCONF)
+    configure_file (
+        ${CMAKE_CURRENT_SOURCE_DIR}/media_driver/cmake/linux/intel-media.sh.in
+        ${CMAKE_CURRENT_BINARY_DIR}/media_driver/cmake/linux/intel-media.sh)
+    install (FILES ${CMAKE_CURRENT_BINARY_DIR}/media_driver/cmake/linux/intel-media.sh
+        DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/profile.d/ COMPONENT media)
+endif()
+
+include(${CMAKE_CURRENT_LIST_DIR}/pack_ext.cmake OPTIONAL)
+
+if (NOT MEDIA_PACKING)
+    set(CPACK_GENERATOR "DEB" "RPM")
+else()
+    set(CPACK_GENERATOR ${MEDIA_PACKAGING})
+endif()
+set(CPACK_PACKAGE_NAME "intel-media")
+set(CPACK_PACKAGE_VENDOR "Intel")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "intel-media Open Source Driver")
+set(CPACK_RPM_PACKAGE_ARCHITECTURE "x86_64")
+set(CPACK_RPM_PACKAGE_GROUP "System Environment/Libraries")
+set(CPACK_RPM_PACKAGE_LICENSE "Intel")
+
+if (DEFINED MEDIA_VERSION)
+    string(REPLACE "." ";" MEDIA_VERSION_LIST ${MEDIA_VERSION})
+    list(GET MEDIA_VERSION_LIST 0 MEDIA_VERSION_MAJOR)
+    list(GET MEDIA_VERSION_LIST 1 MEDIA_VERSION_MINOR)
+    list(GET MEDIA_VERSION_LIST 2 MEDIA_VERSION_PATCH)
+    set(CPACK_PACKAGE_VERSION_MAJOR "${MEDIA_VERSION_MAJOR}")
+    set(CPACK_PACKAGE_VERSION_MINOR "${MEDIA_VERSION_MINOR}")
+    set(CPACK_PACKAGE_VERSION_PATCH "${MEDIA_VERSION_PATCH}")
+endif()
+
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Intel")
+
+# Create Distro OS initial based on 1st-2nd letter of string
+# or label "generic" for unsupported/unknown distros for CPACK_PACKAGE_FILE_NAME
+if("${os_name}" STREQUAL "ubuntu")
+    set(DISTRO_INFO "u${os_version}")
+elseif("${os_name}" STREQUAL "fedora")
+    set(DISTRO_INFO "f${os_version}")
+elseif("${os_name}" STREQUAL "clear-linux-os")
+    set(DISTRO_INFO "cl${os_version}")
+elseif("${os_name}" STREQUAL "centos")
+    set(DISTRO_INFO "ce${os_version}")
+else()
+    set(DISTRO_INFO "generic")
+endif()
+
+# Format Package Version and Build Type Strings for CPACK_PACKAGE_FILE_NAME
+set(PACKAGE_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}")
+string(TOLOWER "${BUILD_TYPE}.${CPACK_RPM_PACKAGE_ARCHITECTURE}" PACKAGE_TYPE)
+
+set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${PACKAGE_VERSION}-${DISTRO_INFO}-${PACKAGE_TYPE}")
+
+include(CPack)

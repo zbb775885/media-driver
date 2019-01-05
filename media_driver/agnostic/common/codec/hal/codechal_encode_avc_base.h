@@ -92,6 +92,10 @@ struct EncodeAvcPar
     uint32_t                    NumSlices;
     bool                        ConstrainedIntraPred;
     uint8_t                     SliceMode;
+    int16_t                     hme0XOffset;
+    int16_t                     hme0YOffset;
+    int16_t                     hme1XOffset;
+    int16_t                     hme1YOffset;
 
     // HME Params
     uint8_t                     SuperCombineDist;
@@ -199,6 +203,8 @@ struct EncodeAvcPar
     bool                        VDEncPerfMode;
     bool                        VdencExtPakObjDisable;
     bool                        PPMVDisable;
+    uint8_t                     ImePredOverlapThr;
+    uint8_t                     LeftNbrPelMode;
 
     // PAK Params
     uint8_t                     RoundingIntra;
@@ -1236,22 +1242,6 @@ typedef struct _CODECHAL_ENCODE_AVC_SFD_CURBE_PARAMS
         uint32_t                            index);
 
      //!
-     //! \brief    Build slices with header insertion
-     //! \param    [in] hwInterface
-     //!           HW Encoder interface pointer
-     //! \param    [in] cmdBuffer
-     //!           command buffer
-     //! \param    [in] params
-     //!           VDBOX AVC slice state params
-     //! \return   MOS_STATUS
-     //!           MOS_STATUS_SUCCESS if success, else fail reason
-     //!
-     MOS_STATUS CodecHalAvcEncode_SendSlice(
-        CodechalHwInterface            *hwInterface,
-        PMOS_COMMAND_BUFFER             cmdBuffer,
-        PMHW_VDBOX_AVC_SLICE_STATE      params);
-
-     //!
      //! \brief    Get profile level max frame size
      //! \param    [in] seqParams
      //!           Encoder Sequence params
@@ -1331,6 +1321,16 @@ public:
         PCODECHAL_STANDARD_INFO standardInfo);
 
     //!
+    //! \brief    Copy constructor
+    //!
+    CodechalEncodeAvcBase(const CodechalEncodeAvcBase&) = delete;
+
+    //!
+    //! \brief    Copy assignment operator
+    //!
+    CodechalEncodeAvcBase& operator=(const CodechalEncodeAvcBase&) = delete;
+
+    //!
     //! \brief    Destructor
     //!
     virtual ~CodechalEncodeAvcBase();
@@ -1346,7 +1346,7 @@ public:
     //! \return   MOS_STATUS
     //!           MOS_STATUS_SUCCESS if success
     //!
-    virtual MOS_STATUS Initialize(PCODECHAL_SETTINGS settings);
+    virtual MOS_STATUS Initialize(CodechalSetting * settings);
 
     virtual MOS_STATUS GetStatusReport(
         EncodeStatus* encodeStatus,
@@ -1363,7 +1363,6 @@ public:
     //!           MOS_STATUS_SUCCESS if success
     //!
     virtual MOS_STATUS UserFeatureKeyReport();
-
 
     //!
     //! \brief    Initialize Encode ME kernel state
@@ -1400,15 +1399,24 @@ public:
         MeSurfaceParams* params) = 0;
     //!
     //! \brief    AVC State Initialization.
-    //!           
+    //! 
     //! \return   MOS_STATUS
     //!           MOS_STATUS_SUCCESS if success
     //!
     virtual MOS_STATUS Initialize();
 
+
     //!
-    //! \brief    AVC Resource Allocation.
-    //!           
+    //! \brief    AVC Resource Allocation for ENC.
+    //! 
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success
+    //!
+    virtual MOS_STATUS AllocateEncResources();
+
+    //!
+    //! \brief    AVC Resource Allocation for Encoder.
+    //! 
     //! \return   MOS_STATUS
     //!           MOS_STATUS_SUCCESS if success
     //!
@@ -1416,7 +1424,7 @@ public:
 
     //!
     //! \brief    Set AVC Sequence Structs.
-    //!           
+    //! 
     //! \return   MOS_STATUS
     //!           MOS_STATUS_SUCCESS if success
     //!
@@ -1424,7 +1432,7 @@ public:
 
     //!
     //! \brief    Set AVC Picture Structs.
-    //!           
+    //! 
     //! \return   MOS_STATUS
     //!           MOS_STATUS_SUCCESS if success
     //!
@@ -1432,7 +1440,7 @@ public:
 
     //!
     //! \brief    Set AVC Slice Structs.
-    //!           
+    //! 
     //! \return   MOS_STATUS
     //!           MOS_STATUS_SUCCESS if success
     //!
@@ -1452,11 +1460,10 @@ public:
     virtual MOS_STATUS EncodeMeKernel(
         EncodeBrcBuffers* brcBuffers,
         HmeLevel          hmeLevel);
-    
 
     //!
     //! \brief    Allocate Batch Buffer For PakSlice.
-    //!           
+    //! 
     //! \param    [in] numSlices
     //!           Number of Slice
     //! \param    [in] numPakPasses
@@ -1474,7 +1481,7 @@ public:
 
     //!
     //! \brief    Release Batch Buffer For PakSlice.
-    //!           
+    //! 
     //! \param    [in] currRecycledBufIdx
     //!           Current Recycle Buffer Index.
     //!
@@ -1485,7 +1492,7 @@ public:
 
     //!
     //! \brief    Initialize kernel binary size info.
-    //!           
+    //! 
     //! \return   MOS_STATUS
     //!           MOS_STATUS_SUCCESS if success
     //!
@@ -1532,13 +1539,26 @@ public:
     //!           Bidirectional weight
     //!
     int32_t GetBiWeight(
-        uint32_t distScaleFactorRefID0List0, 
+        uint32_t distScaleFactorRefID0List0,
         uint16_t weightedBiPredIdc);
 
     //!
     //! \brief    Update the slice count according to the slice shutdown policy
     //!
     virtual void UpdateSSDSliceCount();
+
+    //!
+    //! \brief    Build slices with header insertion
+    //! \param    [in] cmdBuffer
+    //!           command buffer
+    //! \param    [in] params
+    //!           VDBOX AVC slice state params
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    MOS_STATUS SendSlice(
+        PMOS_COMMAND_BUFFER             cmdBuffer,
+        PMHW_VDBOX_AVC_SLICE_STATE      params);
 
     //!
     //! \brief      Store number passes
@@ -1581,7 +1601,7 @@ public:
         PCODECHAL_ENCODE_AVC_VUI_PARAMS avcVuiParams);
 
 #endif
-    
+
 protected:
     //!
     //! \brief    Set MFX_PIPE_MODE_SELECT parameter
@@ -1594,7 +1614,7 @@ protected:
     //! \return   void
     //!
     virtual void SetMfxPipeModeSelectParams(
-        CODECHAL_ENCODE_AVC_GENERIC_PICTURE_LEVEL_PARAMS genericParam,
+        const CODECHAL_ENCODE_AVC_GENERIC_PICTURE_LEVEL_PARAMS& genericParam,
         MHW_VDBOX_PIPE_MODE_SELECT_PARAMS& param);
 
     //!
@@ -1654,7 +1674,6 @@ protected:
     //!
     virtual void SetMfxAvcImgStateParams(MHW_VDBOX_AVC_IMG_PARAMS& param);
 
-
 public:
     PMOS_INTERFACE                              m_origOsInterface           = nullptr;    //!< Os Interface
     CodechalHwInterface                         *m_origHwInterface          = nullptr;    //!< Hw Interface
@@ -1687,7 +1706,6 @@ public:
     bool                                        m_hmeEnabled        = false;        //!< Enable HME flag
     bool                                        m_16xMeEnabled      = false;        //!< Enable 16x ME flag
     bool                                        m_32xMeEnabled      = false;        //!< Enable 32x ME flag
-    bool                                        m_vdencStreamInEnabled      = false;//!< Enable VDEnc stream in flag
     bool                                        m_skipBiasAdjustmentEnable  = false;//!< Enable SkipBiasAdjustment flag
     bool                                        m_staticFrameDetectionInUse = false;//!< Enable Static Frame Detection flag
     uint32_t                                    m_sliceStructCaps = 0;              //!< Slice struct
@@ -1729,27 +1747,17 @@ public:
     bool                                        m_crePrefetchEnable = false;              //!< Enable CRE prefetch flag
     bool                                        m_tlbPrefetchEnable = false;              //!< Enable TLB prefetch flag
 
-    const uint8_t CODECHAL_ENCODE_AVC_SFD_CostTable_P_FRAME[CODEC_AVC_NUM_QP] =
-    {
-        44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 60, 60, 60, 60,
-        73, 73, 73, 76, 76, 76, 88, 89, 89, 91, 92, 93, 104, 104, 106, 107, 108, 109, 120,
-        120, 122, 123, 124, 125, 136, 136, 138, 139, 140, 141, 143, 143
-    };
+    const uint8_t m_codechalEncodeAvcSfdCostTablePFrame[CODEC_AVC_NUM_QP] =
+        {
+            44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 44, 60, 60, 60, 60, 73, 73, 73, 76, 76, 76, 88, 89, 89, 91, 92, 93, 104, 104, 106, 107, 108, 109, 120, 120, 122, 123, 124, 125, 136, 136, 138, 139, 140, 141, 143, 143};
 
-    const uint8_t CODECHAL_ENCODE_AVC_SFD_CostTable_B_FRAME[CODEC_AVC_NUM_QP] =
-    {
-        57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 73, 73, 73, 73,
-        77, 77, 77, 89, 89, 89, 91, 93, 93, 95, 105, 106, 107, 108, 110, 111, 121, 122,
-        123, 124, 125, 127, 137, 138, 139, 140, 142, 143, 143, 143, 143, 143
-    };
+    const uint8_t m_codechalEncodeAvcSfdCostTableBFrame[CODEC_AVC_NUM_QP] =
+        {
+            57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 57, 73, 73, 73, 73, 77, 77, 77, 89, 89, 89, 91, 93, 93, 95, 105, 106, 107, 108, 110, 111, 121, 122, 123, 124, 125, 127, 137, 138, 139, 140, 142, 143, 143, 143, 143, 143};
 
-    const uint8_t CODECHAL_ENCODE_AVC_SFD_CostTable_VDEnc[CODEC_AVC_NUM_QP] =
-    {
-        45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45,
-        47, 56, 57, 59, 44, 45, 47, 56, 44, 47, 47, 45, 47,
-        47, 47, 47, 45, 47, 47, 56, 47, 47, 47, 47, 47, 47,
-        47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47
-    };
+    const uint8_t m_codechalEncodeAvcSfdCostTableVdEnc[CODEC_AVC_NUM_QP] =
+        {
+            45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 47, 56, 57, 59, 44, 45, 47, 56, 44, 47, 47, 45, 47, 47, 47, 47, 45, 47, 47, 56, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47, 47};
 
 #if USE_CODECHAL_DEBUG_TOOL
 protected:
@@ -1913,7 +1921,7 @@ protected:
         PMOS_COMMAND_BUFFER cmdBuffer,
         PMHW_BATCH_BUFFER   secondLevelBatchBuffer) { return MOS_STATUS_SUCCESS; }
 
-    EncodeAvcPar *avcPar = nullptr;            //!< AVC PAR parameters
+    EncodeAvcPar *m_avcPar = nullptr;  //!< AVC PAR parameters
 #endif
 
     //!

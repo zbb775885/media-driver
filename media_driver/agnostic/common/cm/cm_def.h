@@ -42,6 +42,7 @@
 #define CM_SURFACE_FORMAT_NV12                  Format_NV12
 #define CM_SURFACE_FORMAT_P016                  Format_P016
 #define CM_SURFACE_FORMAT_P010                  Format_P010
+#define CM_SURFACE_FORMAT_P208                  Format_P208
 #define CM_SURFACE_FORMAT_V8U8                  Format_V8U8
 #define CM_SURFACE_FORMAT_A8L8                  Format_A8L8
 #define CM_SURFACE_FORMAT_D16                   Format_D16
@@ -79,7 +80,7 @@
 #define CM_SURFACE_FORMAT_R16_UNORM             Format_R16UN
 #define CM_SURFACE_FORMAT_R8G8_UNORM            Format_R8G8UN
 #define CM_SURFACE_FORMAT_R16_UINT              Format_R16U
-#define CM_SURFACE_FORMAT_R16_TYPELESS          Format_D16
+#define CM_SURFACE_FORMAT_R16_TYPELESS          Format_R16
 #define CM_SURFACE_FORMAT_R16G16_UNORM          Format_R16G16UN
 #define CM_SURFACE_FORMAT_L16                   Format_L16
 #define CM_SURFACE_FORMAT_YUY2                  Format_YUY2
@@ -91,6 +92,15 @@
 #define CM_SURFACE_FORMAT_Y16_UNORM             Format_Y16U
 #define CM_SURFACE_FORMAT_Y8_UNORM              Format_Y8
 #define CM_SURFACE_FORMAT_BUFFER_2D             Format_Buffer_2D
+#define CM_SURFACE_FORMAT_D32F                  Format_D32F
+#define CM_SURFACE_FORMAT_D24_UNORM_S8_UINT     Format_D24S8UN
+#define CM_SURFACE_FORMAT_D32F_S8X24_UINT       Format_D32S8X24_FLOAT
+#define CM_SURFACE_FORMAT_R16G16_SINT           Format_R16G16S
+#define CM_SURFACE_FORMAT_R24G8_TYPELESS        Format_R24G8
+#define CM_SURFACE_FORMAT_R32_TYPELESS          Format_R32
+#define CM_SURFACE_FORMAT_R32G8X24_TYPELESS     Format_R32G8X24
+#define CM_SURFACE_FORMAT_R8_UNORM              Format_R8UN
+#define CM_SURFACE_FORMAT_R32G32B32A32F         Format_R32G32B32A32F
 
 typedef unsigned char byte;
 
@@ -113,7 +123,6 @@ typedef unsigned char byte;
 #define CM_MAX_3D_SURF_WIDTH            2048
 #define CM_MAX_3D_SURF_HEIGHT           2048
 #define CM_MAX_3D_SURF_DEPTH            2048
-
 
 #define CM_INIT_PROGRAM_COUNT       16
 #define CM_INIT_KERNEL_COUNT        64
@@ -152,7 +161,6 @@ typedef unsigned char byte;
 #define CM_MAX_ENTRY_FOR_A_SURFACE      6   //maxium planes(3)*dual state(2)
 #define CM_GTPIN_BUFFER_NUM             3
 
-
 #define CM_INIT_KERNEL_PER_PROGRAM              64  //
 
 #define CM_MAX_SURFACE3D_FORMAT_COUNT   3
@@ -177,7 +185,6 @@ typedef unsigned char byte;
 #define CM_MAX_THREADSPACE_HEIGHT_FOR_MW       511
 #define CM_MAX_THREADSPACE_WIDTH_SKLUP_FOR_MW  2047
 #define CM_MAX_THREADSPACE_HEIGHT_SKLUP_FOR_MW 2047
-
 
 #define MAX_SLM_SIZE_PER_GROUP_IN_1K        64 // 64KB PER Group on Gen7+
 #define CM_MAX_THREAD_GROUP                 64
@@ -339,6 +346,8 @@ typedef enum _MEMORY_OBJECT_CONTROL{
     MEMORY_OBJECT_CONTROL_BDW_L3_LLC_ELLC_ALLOWED,
 
     // SKL
+    // CNL
+    // ICL
     MEMORY_OBJECT_CONTROL_SKL_DEFAULT = 0,
     MEMORY_OBJECT_CONTROL_SKL_NO_L3,
     MEMORY_OBJECT_CONTROL_SKL_NO_LLC_ELLC,
@@ -348,6 +357,18 @@ typedef enum _MEMORY_OBJECT_CONTROL{
     MEMORY_OBJECT_CONTROL_SKL_NO_ELLC_L3,
     MEMORY_OBJECT_CONTROL_SKL_NO_CACHE,
 
+    // Unified memory object control type for SKL+
+    MEMORY_OBJECT_CONTROL_DEFAULT = 0x0,
+    MEMORY_OBJECT_CONTROL_NO_L3,
+    MEMORY_OBJECT_CONTROL_NO_LLC_ELLC,
+    MEMORY_OBJECT_CONTROL_NO_LLC,
+    MEMORY_OBJECT_CONTROL_NO_ELLC,
+    MEMORY_OBJECT_CONTROL_NO_LLC_L3,
+    MEMORY_OBJECT_CONTROL_NO_ELLC_L3,
+    MEMORY_OBJECT_CONTROL_NO_CACHE,
+    MEMORY_OBJECT_CONTROL_L1_ENABLED,
+
+    MEMORY_OBJECT_CONTROL_TOTAL,
     //
     MEMORY_OBJECT_CONTROL_UNKNOW = 0xff
 } MEMORY_OBJECT_CONTROL;

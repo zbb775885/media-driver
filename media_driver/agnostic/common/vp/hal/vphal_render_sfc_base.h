@@ -492,7 +492,6 @@ protected:
         PVPHAL_VEBOX_RENDER_DATA    veboxRenderData,
         PMHW_SFC_STATE_PARAMS       sfcStateParams);
 
-
     //!
     //! \brief    Send SFC pipe commands
     //! \details  Register the surfaces and send the commands needed by SFC pipe
@@ -543,8 +542,6 @@ private:
     //!
     MOS_STATUS SetAvsStateParams();
 
-
-
 protected:
     bool                            disableSFC    = false;                      //!< Disable SFC for validation purposes
     bool                            enableSfcMMC  = false;                      //!< Memory compression enbale flag - read from User feature keys
@@ -554,7 +551,7 @@ protected:
     PMHW_SFC_INTERFACE              m_sfcInterface;                             //!< Pointer to SFC Structure Interface
 
                                                                                 // AVS related params
-    MHW_AVS_PARAMS                  m_AvsParameters;                            //!< AVS parameters
+    MHW_AVS_PARAMS                  m_AvsParameters       = {};                 //!< AVS parameters
     VPHAL_SFC_AVS_STATE             m_avsState            = {};                 //!< AVS State and Coeff. table
 
                                                                                 // ColorFill CSC related params
@@ -609,7 +606,7 @@ public:
     //! \return   void
     void SetSfcOutputMmcStatus(bool enable)
     {
-        
+
     }
     //!
     //! \brief    Check if SFC functionality is disabled
@@ -626,7 +623,7 @@ public:
     //! \return   void
     void SetStereoChannel(uint32_t currentChannel)
     {
-        
+
     }
 
     MOS_FORMAT GetInputFormat()

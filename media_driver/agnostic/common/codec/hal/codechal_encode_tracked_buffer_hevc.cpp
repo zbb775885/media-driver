@@ -36,11 +36,11 @@ void CodechalEncodeTrackedBufferHevc::LookUpBufIndexMbCode()
     m_mbCodeCurrIdx += CODEC_NUM_REF_BUFFERS;
 }
 
-MOS_STATUS CodechalEncodeTrackedBufferHevc::AllocateMvTemporalBuffer(uint8_t bufIndex)
+MOS_STATUS CodechalEncodeTrackedBufferHevc::AllocateMvTemporalBuffer()
 {
     CODECHAL_ENCODE_FUNCTION_ENTER;
 
-    if (m_trackedBufCurrMvTemporal = (MOS_RESOURCE*)m_allocator->GetResource(m_standard, mvTemporalBuffer, bufIndex))
+    if ((m_trackedBufCurrMvTemporal = (MOS_RESOURCE*)m_allocator->GetResource(m_standard, mvTemporalBuffer, m_trackedBufCurrIdx)))
     {
         return MOS_STATUS_SUCCESS;
     }
@@ -48,31 +48,21 @@ MOS_STATUS CodechalEncodeTrackedBufferHevc::AllocateMvTemporalBuffer(uint8_t buf
     CODECHAL_ENCODE_CHK_NULL_RETURN(m_hevcState);
 
     CODECHAL_ENCODE_CHK_NULL_RETURN(m_trackedBufCurrMvTemporal = (MOS_RESOURCE*)m_allocator->AllocateResource(
-        m_standard, m_hevcState->dwSizeOfMvTemporalBuffer, 1, mvTemporalBuffer, bufIndex, true));
+        m_standard, m_hevcState->m_sizeOfMvTemporalBuffer, 1, mvTemporalBuffer, "mvTemporalBuffer", m_trackedBufCurrIdx, true));
 
     return MOS_STATUS_SUCCESS;
 }
 
-void CodechalEncodeTrackedBufferHevc::ReleaseBufferOnResChange()
+void CodechalEncodeTrackedBufferHevc::DeferredDeallocateOnResChange()
 {
-    if ((m_trackedBufAnteIdx != m_trackedBufPenuIdx) &&
-        (m_trackedBufAnteIdx != m_trackedBufCurrIdx))
-    {
-        ReleaseMvData(m_trackedBufAnteIdx);
-        ReleaseDsRecon(m_trackedBufAnteIdx);
-#ifndef _FULL_OPEN_SOURCE
-        m_encoder->m_cscDsState->ReleaseSurfaceDS(m_trackedBufAnteIdx);
-#endif
-        m_trackedBuffer[m_trackedBufAnteIdx].ucSurfIndex7bits = PICTURE_MAX_7BITS;
-        CODECHAL_ENCODE_NORMALMESSAGE("Tracked buffer = %d re-allocated", m_trackedBufAnteIdx);
-    }
+    CodechalEncodeTrackedBuffer::DeferredDeallocateOnResChange();
 
     // release MbCode buffer
     if ((m_mbCodeAnteIdx != m_mbCodePenuIdx) &&
         (m_mbCodeAnteIdx != m_mbCodeCurrIdx))
     {
         ReleaseMbCode(m_mbCodeAnteIdx);
-    }    
+    }
 }
 
 CodechalEncodeTrackedBufferHevc::CodechalEncodeTrackedBufferHevc(CodechalEncoderState* encoder)

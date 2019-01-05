@@ -28,7 +28,7 @@
 #define  __MEDIA_LIBVA_ENCODER_H__
 
 #include "media_libva.h"
-#include "media_libva_cp.h"
+#include "media_libva_cp_interface.h"
 #include <vector>
 
 // change to 0x1000 for memory optimization, double check when implement slice header packing in app
@@ -94,6 +94,7 @@ typedef struct _DDI_ENCODE_CONTEXT
     CODECHAL_MODE                     wModeType;
     CODECHAL_FUNCTION                 codecFunction;
     VAProfile                         vaProfile;
+    VAEntrypoint                      vaEntrypoint;
     void                             *pSeqParams;
     void                             *pVuiParams;
     void                             *pPicParams;
@@ -123,6 +124,8 @@ typedef struct _DDI_ENCODE_CONTEXT
     uint16_t                          wOriPicHeightInMB;
     uint16_t                          wContextPicWidthInMB;
     uint16_t                          wContextPicHeightInMB;
+    uint32_t                          dworiFrameWidth;        // Original Frame width in luma samples
+    uint32_t                          dworiFrameHeight;       // Original Frame height in luma samples
     uint32_t                          dwFrameWidth;           // Frame width in luma samples
     uint32_t                          dwFrameHeight;          // Frame height in luma samples
     PBSBuffer                         pbsBuffer;
@@ -167,6 +170,8 @@ typedef struct _DDI_ENCODE_CONTEXT
     DDI_CODEC_COM_BUFFER_MGR          BufMgr;
     PDDI_MEDIA_CONTEXT                pMediaCtx;
 
+    uint8_t                           targetUsage;
+
 } DDI_ENCODE_CONTEXT, *PDDI_ENCODE_CONTEXT;
 
 typedef struct _DDI_ENCODE_MFE_CONTEXT
@@ -175,6 +180,7 @@ typedef struct _DDI_ENCODE_MFE_CONTEXT
     MEDIA_MUTEX_T                    encodeMfeMutex;
     uint32_t                         currentStreamId;               // Current allocated id, increased monotonically
     MfeSharedState                   *mfeEncodeSharedState;         // Keep shared state across sub contexts
+    bool                             isFEI;                         // Support legacy only or FEI only
 }DDI_ENCODE_MFE_CONTEXT, *PDDI_ENCODE_MFE_CONTEXT;
 
 static __inline PDDI_ENCODE_CONTEXT DdiEncode_GetEncContextFromPVOID (void *encCtx)
@@ -424,7 +430,7 @@ VAStatus DdiEncode_DestroyContext (
 //! \param  [in] data
 //!     Data
 //! \param  [in] buf_id
-//!     VA buffer ID    
+//!     VA buffer ID 
 //!
 //! \return VAStatus
 //!     VA_STATUS_SUCCESS if success, else fail reason

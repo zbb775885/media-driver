@@ -212,6 +212,7 @@ void CodechalDebugConfigMgr::GenerateDefaultConfig()
 
     ofs << "#" << CodechalDbgAttr::attrPicParams <<":0"<< std::endl;
     ofs << "#" << CodechalDbgAttr::attrSlcParams << ":0" << std::endl;
+    ofs << "#" << CodechalDbgAttr::attrSubsetsParams << ":0" << std::endl;
     ofs << "#" << CodechalDbgAttr::attrIqParams << ":0" << std::endl;
     ofs << "#" << CodechalDbgAttr::attrBitstream << ":0" << std::endl;
     ofs << "#" << CodechalDbgAttr::attrHucRegions << ":0" << std::endl;
@@ -244,14 +245,20 @@ void CodechalDebugConfigMgr::GenerateDefaultConfig()
     ofs << "##" << CodechalDbgAttr::attrCoeffPredCs << ":0" << std::endl;
     ofs << "##" << CodechalDbgAttr::attrMbRecord << ":0" << std::endl;
     ofs << "##" << CodechalDbgAttr::attrPakObjStreamout << ":0" << std::endl;
+    ofs << "##" << CodechalDbgAttr::attrTileBasedStats << ":0" << std::endl;    
     ofs << "##" << CodechalDbgAttr::attrOverwriteCommands << ":0" << std::endl;
     ofs << "##" << CodechalDbgAttr::attrForceCmdDumpLvl << ":0" << std::endl;
     ofs << "##" << CodechalDbgAttr::attrForceCurbeDumpLvl << ":0" << std::endl;
     ofs << "##" << CodechalDbgAttr::attrFrameState << ":0" << std::endl;
+    ofs << "##" << CodechalDbgAttr::attrBrcPakStats<< ":0" << std::endl;
+    ofs << "##" << CodechalDbgAttr::attrCUStreamout<< ":0" << std::endl;
     ofs << "##" << CodechalDbgAttr::attrImageState << ":0" << std::endl;
     ofs << "##" << CodechalDbgAttr::attrSliceSizeStreamout << ":0" << std::endl;
     ofs << "##" << CodechalDbgAttr::attrCoeffProb << ":0" << std::endl;
-    // MD5 attributes
+    ofs << "##" << CodechalDbgAttr::attrROISurface << ":0" << std::endl;
+    ofs << "##" << CodechalDbgAttr::attrHuCStitchDataBuf << ":0" << std::endl;
+    
+   // MD5 attributes
     ofs << "##" << CodechalDbgAttr::attrMD5HashEnable << ":0" << std::endl;
     ofs << "##" << CodechalDbgAttr::attrMD5FlushInterval << ":0" << std::endl;
     ofs << "##" << CodechalDbgAttr::attrMD5PicWidth << ":0" << std::endl;
@@ -266,13 +273,13 @@ void CodechalDebugConfigMgr::GenerateDefaultConfig()
     ofs << "#@Frame ALL" << std::endl;
     ofs << std::endl;
 
-    ofs << "#" << CodechalDbgAttr::attrMvcExtPicParams << ":0" << std::endl;
     ofs << "#" << CodechalDbgAttr::attrSegmentParams << ":0" << std::endl;
     ofs << "#" << CodechalDbgAttr::attrMbParams << ":0" << std::endl;
     ofs << "#" << CodechalDbgAttr::attrVc1Bitplane << ":0" << std::endl;
     ofs << "#" << CodechalDbgAttr::attrCoefProb << ":0" << std::endl;
     ofs << "#" << CodechalDbgAttr::attrSegId << ":0" << std::endl;
     ofs << "#" << CodechalDbgAttr::attrDecodeOutputSurface << ":0" << std::endl;
+    ofs << "#" << CodechalDbgAttr::attrDecodeAuxSurface << ":0" << std::endl;
     ofs << "#" << CodechalDbgAttr::attrDecodeProcParams << ":0" << std::endl;
     ofs << std::endl;
 
@@ -445,7 +452,7 @@ std::string CodechalDebugConfigMgr::GetMediaStateStr(CODECHAL_MEDIA_STATE_TYPE m
         return it->second;
     }
 
-    return nullptr;    
+    return nullptr;
 }
 
 bool CodechalDebugConfigMgr::AttrIsEnabled(std::string attrName)
@@ -461,7 +468,7 @@ bool CodechalDebugConfigMgr::AttrIsEnabled(std::string attrName)
 
     for (auto it : m_debugFrameConfigs)
     {
-        if (it.frameIndex == m_debugInterface->dwBufferDumpFrameNum)
+        if (it.frameIndex == m_debugInterface->m_bufferDumpFrameNum)
         {
             int attrValue = it.cmdAttribs[attrName];
             return attrValue > 0;
@@ -493,7 +500,7 @@ bool CodechalDebugConfigMgr::AttrIsEnabled(
 
     for (auto it : m_debugFrameConfigs)
     {
-        if (it.frameIndex == m_debugInterface->dwBufferDumpFrameNum)
+        if (it.frameIndex == m_debugInterface->m_bufferDumpFrameNum)
         {
             KernelDumpConfig attrs = it.kernelAttribs[kernelName];
             return KernelAttrEnabled(attrs, attrName);

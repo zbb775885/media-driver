@@ -35,23 +35,10 @@
                                                                  VPHAL_NUM_RGB_CHANNEL                    * \
                                                                  VPHAL_VEBOX_MAX_SLICES_G9)
 //!
-//! \brief Noise Detection Definitions for SKL+
-//!
-#define NOISE_HIGH_NOISE_LEVEL_G9                               450
-
-//!
 //! \brief Temporal Denoise Definitions for SKL+
 //!
 #define NOISE_HISTORY_MAX_DEFAULT_G9                            208
-#define NOISE_NUMMOTIONPIXELS_THRESHOLD_LOW_G9                  0 
-#define NOISE_NUMMOTIONPIXELS_THRESHOLD_HIGH_G9                 2
 #define NOISE_NUMMOTIONPIXELS_THRESHOLD_DEFAULT_G9              2
-#define NOISE_CHROMA_LOWTEMPORALPIXELDIFF_THRESHOLD_LOW_G9      4
-#define NOISE_CHROMA_LOWTEMPORALPIXELDIFF_THRESHOLD_HIGH_G9     8
-#define NOISE_CHROMA_TEMPORALPIXELDIFF_THRESHOLD_LOW_G9         10
-#define NOISE_CHROMA_TEMPORALPIXELDIFF_THRESHOLD_HIGH_G9        14
-#define NOISE_CHROMA_SUMABSTEMPORALDIFF_THRESHOLD_LOW_G9        128
-#define NOISE_CHROMA_SUMABSTEMPORALDIFF_THRESHOLD_HIGH_G9       144
 
 //!
 //! \brief SKL+ added 4 LSB for ASD/STAD/SCM/LTDT/TDT, hence shifting 4 below.
@@ -228,7 +215,7 @@ public:
     virtual bool IsNeeded(
         PCVPHAL_RENDER_PARAMS       pcRenderParams,
         RenderpassData              *pRenderPassData);
-    
+
 #if VEBOX_AUTO_DENOISE_SUPPORTED
     virtual MOS_STATUS LoadUpdateDenoiseKernelStaticData(
         int32_t*                        iCurbeOffsetOutDN);
@@ -361,7 +348,7 @@ protected:
 
     //!
     //! \brief    Check if 2 passes CSC are supported on the platform
-    //!               
+    //!
     virtual bool Is2PassesCscPlatformSupported()
     {
         return true;

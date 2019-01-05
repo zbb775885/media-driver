@@ -42,11 +42,11 @@ struct _CM_HAL_STATE;
 typedef struct _CM_HAL_STATE *PCM_HAL_STATE;
 typedef struct _CM_CONTEXT
 {
-    MOS_CONTEXT  VphalDrvCtx;
+    MOS_CONTEXT  mosCtx;
     union
     {
-        void                  *pCmHal;
-        PCM_HAL_STATE         pCmHalState;
+        void                  *cmHal;
+        PCM_HAL_STATE         cmHalState;
     };
 } CM_CONTEXT, *PCM_CONTEXT;
 
@@ -55,7 +55,7 @@ extern "C" {
 #endif
 //Public APIs to access CM acceleration capability in VPG drivers
 VAStatus DdiDestroyContextCM (
-    VADriverContextP    pVaDrvCtx,
+    VADriverContextP    vaDriverCtx,
     VAContextID         vaCtxID);
 
 MEDIAAPI_EXPORT VAStatus vaCmExtSendReqMsg(
@@ -69,7 +69,7 @@ MEDIAAPI_EXPORT VAStatus vaCmExtSendReqMsg(
      uint32_t  *outputDataLen);
 
 uint32_t CmGetFreeCtxIndex (
-    PDDI_MEDIA_CONTEXT pMediaCtx);
+    PDDI_MEDIA_CONTEXT mediaCtx);
 
 #ifdef __cplusplus
 }

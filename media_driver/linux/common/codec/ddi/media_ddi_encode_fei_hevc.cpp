@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, Intel Corporation
+* Copyright (c) 2018, Intel Corporation
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -34,8 +34,6 @@
 #include "media_ddi_encode_const.h"
 #include "media_ddi_factory.h"
 
-static const uint8_t feiHevcMaxPassesNum = 4;
-
 extern template class MediaDdiFactoryNoArg<DdiEncodeBase>;
 
 static bool isEncodeHevcFeiRegistered =
@@ -52,7 +50,7 @@ DdiEncodeHevcFei::~DdiEncodeHevcFei()
 
 }
 
-VAStatus DdiEncodeHevcFei::ContextInitialize(PCODECHAL_SETTINGS codecHalSettings)
+VAStatus DdiEncodeHevcFei::ContextInitialize(CodechalSetting * codecHalSettings)
 {
     VAStatus status = DdiEncodeHevc::ContextInitialize(codecHalSettings);
     if (VA_STATUS_SUCCESS != status)
@@ -60,7 +58,7 @@ VAStatus DdiEncodeHevcFei::ContextInitialize(PCODECHAL_SETTINGS codecHalSettings
         return status;
     }
 
-    codecHalSettings->CodecFunction = m_encodeCtx->codecFunction;
+    codecHalSettings->codecFunction = m_encodeCtx->codecFunction;
 
     m_encodeCtx->pFeiPicParams = (void *)MOS_AllocAndZeroMemory(CODECHAL_HEVC_MAX_PPS_NUM * sizeof(CodecEncodeHevcFeiPicParams));
     DDI_CHK_NULL(m_encodeCtx->pFeiPicParams, "nullptr m_encodeCtx->pFeiPicParams", VA_STATUS_ERROR_ALLOCATION_FAILED);
@@ -119,6 +117,9 @@ VAStatus DdiEncodeHevcFei::EncodeInCodecHal(uint32_t numSlices)
     }
 
     DdiMedia_MediaSurfaceToMosResource(rtTbl->pCurrentReconTarget, &(reconSurface.OsResource));
+
+    //clear registered recon/ref surface flags
+    DDI_CHK_RET(ClearRefList(&m_encodeCtx->RTtbl, true), "ClearRefList failed!");
 
     // Bitstream surface
     MOS_RESOURCE bitstreamSurface;
@@ -222,8 +223,8 @@ VAStatus DdiEncodeHevcFei::ResetAtFrameLevel()
     feiPicParams->MultiPredL1             = 0;     // 000: no neighbor MVs will be used as predictor for L1, 001: spatial MVs, 010 temporal MVs, others: reserved.
     feiPicParams->SubPelMode              = 3;     // half/quater pixels mode, 00b integer mode search, 01b half mode search, 11b quater mode search
     feiPicParams->AdaptiveSearch          = true;  // whether adaptive searching is enabled for IME
-    feiPicParams->MVPredictorInput        = 0;     // 000: disable MV Predictor input, 001: enabled per 16x16 block, 
-                                                    // 010: enabled per 32x32 block, 
+    feiPicParams->MVPredictorInput        = 0;     // 000: disable MV Predictor input, 001: enabled per 16x16 block,
+                                                    // 010: enabled per 32x32 block,
                                                     // 011: enabled per 64x64 block,
                                                     // 111: block size can vary and is determined by BlockSize in MVP
                                                     // others: reserved
@@ -304,7 +305,7 @@ VAStatus DdiEncodeHevcFei::RenderPicture(VADriverContextP ctx, VAContextID conte
 
         case VAEncSliceParameterBufferType:
         {
-            uint32_t numSlices = buf->iNumElements;
+            uint32_t numSlices = buf->uiNumElements;
             DDI_CHK_STATUS(ParseSlcParams(mediaCtx, data, numSlices), VA_STATUS_ERROR_INVALID_BUFFER);
             break;
         }
@@ -346,7 +347,7 @@ VAStatus DdiEncodeHevcFei::RenderPicture(VADriverContextP ctx, VAContextID conte
 
     DDI_FUNCTION_EXIT(vaStatus);
     return vaStatus;
-   
+
 }
 
 VAStatus DdiEncodeHevcFei::ParseMiscParamFeiPic(void *data)
@@ -384,6 +385,7 @@ VAStatus DdiEncodeHevcFei::ParseMiscParamFeiPic(void *data)
     feiPicParams->RefHeight               = vaEncMiscParamFeiPic->ref_height;
     feiPicParams->SearchWindow            = vaEncMiscParamFeiPic->search_window;
     feiPicParams->MaxNumIMESearchCenter   = vaEncMiscParamFeiPic->max_num_ime_search_center;
+    feiPicParams->FastIntraMode           = vaEncMiscParamFeiPic->fast_intra_mode;
     feiPicParams->NumConcurrentEncFramePartition = vaEncMiscParamFeiPic->num_concurrent_enc_frame_partition;
     feiPicParams->dwMaxFrameSize          = vaEncMiscParamFeiPic->max_frame_size;
 

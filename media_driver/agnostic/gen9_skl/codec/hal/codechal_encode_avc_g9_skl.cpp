@@ -86,7 +86,7 @@ typedef struct _CODECHAL_ENCODE_AVC_MBENC_CURBE_CM_G9
             uint32_t   Value;
         };
     } DW1;
-    
+
     // DW2
     union
     {
@@ -1811,8 +1811,7 @@ MOS_STATUS CodechalEncodeAvcEncG9Skl::InitMfe()
         MOS_ZeroMemory(pData, size);
         m_osInterface->pfnUnlockResource(m_osInterface, &BrcBuffers.resMbEncBrcBuffer);
         CODECHAL_DEBUG_TOOL(
-            m_debugInterface->dwStreamId = m_mfeEncodeParams.streamId;
-        )
+            m_debugInterface->m_streamId = m_mfeEncodeParams.streamId;)
 
         // bookkeeping the orignal interfaces, which are changed during mfe mbenc kernel
         m_origHwInterface           = m_hwInterface;
@@ -1978,9 +1977,7 @@ MOS_STATUS CodechalEncodeAvcEncG9Skl::SetCurbeAvcMbEnc(PCODECHAL_ENCODE_AVC_MBEN
     CODECHAL_ENCODE_ASSERT(pSeqParams->TargetUsage < NUM_TARGET_USAGE_MODES);
 
     uint8_t ucMeMethod =
-        (m_pictureCodingType == B_TYPE) ?
-        m_BMeMethodGeneric[pSeqParams->TargetUsage] :
-        m_MeMethodGeneric[pSeqParams->TargetUsage];
+        (m_pictureCodingType == B_TYPE) ? m_bMeMethodGeneric[pSeqParams->TargetUsage] : m_meMethodGeneric[pSeqParams->TargetUsage];
     // set SliceQP to MAX_SLICE_QP for MbEnc Adv kernel, we can use it to verify whether QP is changed or not
     uint8_t SliceQP = (pParams->bUseMbEncAdvKernel && pParams->bBrcEnabled) ? CODECHAL_ENCODE_AVC_MAX_SLICE_QP : pPicParams->pic_init_qp_minus26 + 26 + pSlcParams->slice_qp_delta;
     bool bFramePicture = CodecHal_PictureIsFrame(pPicParams->CurrOriginalPic);
@@ -2098,7 +2095,7 @@ MOS_STATUS CodechalEncodeAvcEncG9Skl::SetCurbeAvcMbEnc(PCODECHAL_ENCODE_AVC_MBEN
     if (pPicParams->UserFlags.bDisableSubMBPartition)
     {
         Cmd.common.DW3.SubMbPartMask = CODECHAL_ENCODE_AVC_DISABLE_4X4_SUB_MB_PARTITION | CODECHAL_ENCODE_AVC_DISABLE_4X8_SUB_MB_PARTITION | CODECHAL_ENCODE_AVC_DISABLE_8X4_SUB_MB_PARTITION;
-    } 
+    }
 
     if (pPicParams->bEnableSubMbPartMask)
     {
@@ -2264,7 +2261,7 @@ MOS_STATUS CodechalEncodeAvcEncG9Skl::SetCurbeAvcMbEnc(PCODECHAL_ENCODE_AVC_MBEN
         }
     }
     Cmd.common.DW34.RemoveIntraRefreshOverlap = pPicParams->bDisableRollingIntraRefreshOverlap;
-    if (bAdaptiveTransformDecisionEnabled)
+    if (m_adaptiveTransformDecisionEnabled)
     {
         if (m_pictureCodingType != I_TYPE)
         {
@@ -2274,7 +2271,7 @@ MOS_STATUS CodechalEncodeAvcEncG9Skl::SetCurbeAvcMbEnc(PCODECHAL_ENCODE_AVC_MBEN
         Cmd.common.DW58.TxDecisonThreshold = CODECHAL_ENCODE_AVC_ADAPTIVE_TX_DECISION_THRESHOLD_G9;
     }
 
-    if (bAdaptiveTransformDecisionEnabled || m_flatnessCheckEnabled)
+    if (m_adaptiveTransformDecisionEnabled || m_flatnessCheckEnabled)
     {
         Cmd.common.DW58.MBTextureThreshold = CODECHAL_ENCODE_AVC_MB_TEXTURE_THRESHOLD_G9;
     }
@@ -2289,7 +2286,7 @@ MOS_STATUS CodechalEncodeAvcEncG9Skl::SetCurbeAvcMbEnc(PCODECHAL_ENCODE_AVC_MBEN
         ((m_firstField && (bBottomField)) || (!m_firstField && (!bBottomField)));
     Cmd.common.DW34.EnableMBFlatnessChkOptimization = m_flatnessCheckEnabled;
     Cmd.common.DW34.ROIEnableFlag = pParams->bRoiEnabled;
-    Cmd.common.DW34.MADEnableFlag = m_bMadEnabled;
+    Cmd.common.DW34.MADEnableFlag                   = m_madEnabled;
     Cmd.common.DW34.MBBrcEnable = bMbBrcEnabled || bMbQpDataEnabled;
     Cmd.common.DW34.ArbitraryNumMbsPerSlice = m_arbitraryNumMbsInSlice;
     Cmd.common.DW34.ForceNonSkipMbEnable = pParams->bMbDisableSkipMapEnabled;
@@ -2438,7 +2435,7 @@ MOS_STATUS CodechalEncodeAvcEncG9Skl::SetCurbeAvcMbEnc(PCODECHAL_ENCODE_AVC_MBEN
         {
             CODEC_PICTURE    RefPic;
             RefPic = pSlcParams->RefPicList[LIST_1][0];
-            
+
             Cmd.common.DW64.L1ListRef0PictureCodingType = m_refList[m_picIdx[RefPic.FrameIdx].ucPicIdx]->ucAvcPictureCodingType;
             if(bFramePicture && ((Cmd.common.DW64.L1ListRef0PictureCodingType == CODEC_AVC_PIC_CODING_TYPE_TFF_FIELD) || (Cmd.common.DW64.L1ListRef0PictureCodingType == CODEC_AVC_PIC_CODING_TYPE_BFF_FIELD)))
             {
@@ -2916,7 +2913,6 @@ CodechalEncodeAvcEncG9Skl::CodechalEncodeAvcEncG9Skl(
     AddIshSize(m_kuid, m_kernelBase);
 }
 
-
 MOS_STATUS CodechalEncodeAvcEncG9Skl::InitializeState()
 {
     MOS_STATUS eStatus = MOS_STATUS_SUCCESS;
@@ -3086,17 +3082,17 @@ MOS_STATUS CodechalEncodeAvcEncG9Skl::InitKernelStateMfeMbEnc()
     pKernelStatePtr->KernelParams.iBlockWidth = CODECHAL_MACROBLOCK_WIDTH;
     pKernelStatePtr->KernelParams.iBlockHeight = CODECHAL_MACROBLOCK_HEIGHT;
     pKernelStatePtr->KernelParams.iIdCount = 1;
-    
+
     pKernelStatePtr->dwCurbeOffset = m_stateHeapInterface->pStateHeapInterface->GetSizeofCmdInterfaceDescriptorData();
     pKernelStatePtr->KernelParams.pBinary = kernelBinary + (CurrKrnHeader.KernelStartPointer << MHW_KERNEL_OFFSET_SHIFT);
     pKernelStatePtr->KernelParams.iSize = kernelSize;
-    
+
     CODECHAL_ENCODE_CHK_STATUS_RETURN(m_stateHeapInterface->pfnCalculateSshAndBtSizesRequested(
         m_stateHeapInterface,
         pKernelStatePtr->KernelParams.iBTCount,
         &pKernelStatePtr->dwSshSize,
         &pKernelStatePtr->dwBindingTableSize));
-    
+
     CODECHAL_ENCODE_CHK_STATUS_RETURN(m_hwInterface->MhwInitISH(m_stateHeapInterface, pKernelStatePtr));
 
     return eStatus;
@@ -3156,7 +3152,7 @@ MOS_STATUS CodechalEncodeAvcEncG9Skl::InitKernelStateBrc()
     pBindingTable->dwFrameBrcDistortionBuffer = CODECHAL_ENCODE_AVC_FRAME_BRC_UPDATE_DISTORTION_G9;
     pBindingTable->dwFrameBrcConstantData = CODECHAL_ENCODE_AVC_FRAME_BRC_UPDATE_CONSTANT_DATA_G9;
     pBindingTable->dwFrameBrcMbStatBuffer = CODECHAL_ENCODE_AVC_FRAME_BRC_UPDATE_MB_STAT_G9;
-    // starting GEN9 BRC kernel has split into a frame level update, and an MB level update. 
+    // starting GEN9 BRC kernel has split into a frame level update, and an MB level update.
     // above is BTI for frame level, below is BTI for MB level
     pBindingTable->dwMbBrcHistoryBuffer = CODECHAL_ENCODE_AVC_MB_BRC_UPDATE_HISTORY_G9;
     pBindingTable->dwMbBrcMbQpBuffer = CODECHAL_ENCODE_AVC_MB_BRC_UPDATE_MB_QP_G9;
@@ -3171,15 +3167,37 @@ void CodechalEncodeAvcEncG9Skl::UpdateSSDSliceCount()
     CodechalEncodeAvcBase::UpdateSSDSliceCount();
 
     uint32_t sliceCount;
-    if (m_frameHeight * m_frameWidth >= 1920*1080 && m_targetUsage <= 4 ||
-        m_frameHeight * m_frameWidth >= 1280*720 && m_targetUsage <= 2 ||
-        m_frameHeight * m_frameWidth >= 3840*2160)
+
+    // Adjust DymanicSliceShutdown policy for multi-frame encode cases
+    if (m_mfeEnabled  && m_mfeEncodeParams.submitNumber > 1)
     {
-        sliceCount = 2;
+        if (m_frameHeight * m_frameWidth >= 1920*1080 && m_targetUsage <= 4)
+        {
+            sliceCount = 3;
+        }
+        else if (m_frameHeight * m_frameWidth >= 3840*2160 ||
+            m_frameHeight * m_frameWidth >= 1920*1080 && m_targetUsage > 4 ||
+            m_frameHeight * m_frameWidth >= 1280*720 && m_targetUsage <= 4)
+        {
+            sliceCount = 2;
+        }
+        else
+        {
+            sliceCount = 1;
+        }
     }
     else
     {
-        sliceCount = 1;
+        if (m_frameHeight * m_frameWidth >= 1920*1080 && m_targetUsage <= 4 ||
+            m_frameHeight * m_frameWidth >= 1280*720 && m_targetUsage <= 2 ||
+            m_frameHeight * m_frameWidth >= 3840*2160)
+        {
+            sliceCount = 2;
+        }
+        else
+        {
+            sliceCount = 1;
+        }
     }
 
     if (m_osInterface->pfnSetSliceCount)
@@ -3227,11 +3245,11 @@ MOS_STATUS CodechalEncodeAvcEncG9Skl::PopulatePakParam(
 
     if (m_pictureCodingType == I_TYPE)
     {
-        avcPar->TrellisQuantizationEnable         = mfxCmd.DW5.TrellisQuantizationEnabledTqenb;
-        avcPar->EnableAdaptiveTrellisQuantization = mfxCmd.DW5.TrellisQuantizationEnabledTqenb;
-        avcPar->TrellisQuantizationRounding       = mfxCmd.DW5.TrellisQuantizationRoundingTqr;
-        avcPar->TrellisQuantizationChromaDisable  = mfxCmd.DW5.TrellisQuantizationChromaDisableTqchromadisable;
-        avcPar->ExtendedRhoDomainEn               = mfxCmd.DW16_17.ExtendedRhodomainStatisticsEnable;
+        m_avcPar->TrellisQuantizationEnable         = mfxCmd.DW5.TrellisQuantizationEnabledTqenb;
+        m_avcPar->EnableAdaptiveTrellisQuantization = mfxCmd.DW5.TrellisQuantizationEnabledTqenb;
+        m_avcPar->TrellisQuantizationRounding       = mfxCmd.DW5.TrellisQuantizationRoundingTqr;
+        m_avcPar->TrellisQuantizationChromaDisable  = mfxCmd.DW5.TrellisQuantizationChromaDisableTqchromadisable;
+        m_avcPar->ExtendedRhoDomainEn               = mfxCmd.DW16_17.ExtendedRhodomainStatisticsEnable;
     }
 
     if (data && (cmdBuffer == nullptr) && (secondLevelBatchBuffer == nullptr))

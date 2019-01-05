@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011-2017, Intel Corporation
+* Copyright (c) 2011-2018, Intel Corporation
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -38,6 +38,9 @@
 #define VPHAL_VEBOX_STATISTICS_SURFACE_GNE_OFFSET_G8   0x42C
 #define VPHAL_VEBOX_STATISTICS_SURFACE_STD_OFFSET_G8   0x444
 
+#define NOISE_ABSSUMTEMPORALDIFF_THRESHOLD_DEFAULT      32
+#define NOISE_SPATIALCOMPLEXITYMATRIX_THRESHOLD_DEFAULT 32
+
 struct VEBOX_STATE_UPDATE_STATIC_DATA_G8
 {
     // DWORD 0 - GRF R1.0
@@ -46,7 +49,7 @@ struct VEBOX_STATE_UPDATE_STATIC_DATA_G8
         // DN State Update
         struct
         {
-            uint32_t       OffsetToSlice0;            
+            uint32_t       OffsetToSlice0;
         };
 
         uint32_t       Value;
@@ -58,7 +61,7 @@ struct VEBOX_STATE_UPDATE_STATIC_DATA_G8
         // DN State Update
         struct
         {
-            uint32_t       OffsetToSlice1;            
+            uint32_t       OffsetToSlice1;
         };
 
         uint32_t       Value;
@@ -70,8 +73,8 @@ struct VEBOX_STATE_UPDATE_STATIC_DATA_G8
         // DN State Update
         struct
         {
-            uint32_t       FirstFrameFlag              : 16; 
-            uint32_t       NoiseLevel                  : 16;            
+            uint32_t       FirstFrameFlag              : 16;
+            uint32_t       NoiseLevel                  : 16;
         };
 
         uint32_t   Value;
@@ -83,7 +86,7 @@ struct VEBOX_STATE_UPDATE_STATIC_DATA_G8
         // Vebox Statistics Surface
         struct
         {
-            uint32_t       VeboxStatisticsSurface;             
+            uint32_t       VeboxStatisticsSurface;
         };
 
         uint32_t   Value;
@@ -95,7 +98,7 @@ struct VEBOX_STATE_UPDATE_STATIC_DATA_G8
         // Vebox DnDi State Surface
         struct
         {
-            uint32_t       VeboxDndiStateSurface;             
+            uint32_t       VeboxDndiStateSurface;
         };
 
         uint32_t   Value;
@@ -107,7 +110,7 @@ struct VEBOX_STATE_UPDATE_STATIC_DATA_G8
         // Vebox GNE surface
         struct
         {
-            uint32_t       VeboxTempSurface;             
+            uint32_t       VeboxTempSurface;
         };
 
         uint32_t   Value;

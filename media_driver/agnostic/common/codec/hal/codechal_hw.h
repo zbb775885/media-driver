@@ -20,8 +20,8 @@
 * OTHER DEALINGS IN THE SOFTWARE.
 */
 //!
-//! \file      codechal_hw.h  
-//! \brief         This modules implements HW interface layer to be used on all platforms on     all operating systems/DDIs, across CODECHAL components.  
+//! \file      codechal_hw.h 
+//! \brief         This modules implements HW interface layer to be used on all platforms on     all operating systems/DDIs, across CODECHAL components. 
 //!
 #ifndef __CODECHAL_HW_H__
 #define __CODECHAL_HW_H__
@@ -33,7 +33,7 @@
 #include "mhw_vdbox.h"
 #include "mhw_vebox.h"
 #include "mhw_sfc.h"
-#include "mhw_cp.h"
+#include "mhw_cp_interface.h"
 
 #include "mhw_vdbox_mfx_interface.h"
 #include "mhw_vdbox_hcp_interface.h"
@@ -77,6 +77,9 @@
 
 #define CODECHAL_HW_CHK_NULL_NO_STATUS(_ptr)                                            \
     MOS_CHK_NULL_NO_STATUS(MOS_COMPONENT_CODEC, MOS_CODEC_SUBCOMP_HW, _ptr)
+
+#define CODECHAL_HW_CHK_COND_RETURN(_expr, _message, ...)                           \
+    MOS_CHK_COND_RETURN(MOS_COMPONENT_CODEC, MOS_CODEC_SUBCOMP_HW,_expr,_message, ##__VA_ARGS__)
 
 #define CODECHAL_CACHELINE_SIZE                 64
 #define CODECHAL_PAGE_SIZE                      0x1000
@@ -290,13 +293,62 @@ struct CodechalDataCopyParams
     uint32_t        dstOffset;
 };
 
+//!
+//! \struct    EncodeStatusReadParams
+//! \brief     Read encode states parameters
+//!
+struct EncodeStatusReadParams
+{
+    bool          vdencBrcEnabled;
+    bool          waReadVDEncOverflowStatus;
+    uint32_t      mode ;
+
+    uint32_t      vdencBrcNumOfSliceOffset;
+    PMOS_RESOURCE *resVdencBrcUpdateDmemBufferPtr;
+
+    PMOS_RESOURCE resBitstreamByteCountPerFrame;
+    uint32_t      bitstreamByteCountPerFrameOffset;
+
+    PMOS_RESOURCE resBitstreamSyntaxElementOnlyBitCount;
+    uint32_t      bitstreamSyntaxElementOnlyBitCountOffset;
+
+    PMOS_RESOURCE resQpStatusCount;
+    uint32_t      qpStatusCountOffset;
+
+    PMOS_RESOURCE resNumSlices;
+    uint32_t      numSlicesOffset;
+
+    PMOS_RESOURCE resImageStatusMask;
+    uint32_t      imageStatusMaskOffset;
+
+    PMOS_RESOURCE resImageStatusCtrl;
+    uint32_t      imageStatusCtrlOffset;
+};
+
+//!
+//! \struct    BrcPakStatsReadParams
+//! \brief     Read brc pak states parameters
+//!
+struct BrcPakStatsReadParams
+{
+    PMOS_RESOURCE           presBrcPakStatisticBuffer;
+    uint32_t                bitstreamBytecountFrameOffset;
+    uint32_t                bitstreamBytecountFrameNoHeaderOffset;
+    uint32_t                imageStatusCtrlOffset;
+
+    PMOS_RESOURCE           presStatusBuffer;
+    uint32_t                dwStatusBufNumPassesOffset;
+    uint8_t                 ucPass;
+    MOS_GPU_CONTEXT         VideoContext;
+};
+
 //!  Codechal hw interface
 /*!
 This class defines the interfaces for hardware dependent settings and functions used in Codechal
 */
 class CodechalHwInterface
 {
-protected:
+protected: 
     // Slice Shutdown Threshold
     static const uint32_t m_sliceShutdownAvcTargetUsageThreshold = 2;         //!< slice shutdown AVC target usage threshold
     static const uint32_t m_sliceShutdownAvcResolutionThreshold = 2073600;    //!< slice shutdown AVC resolution threshold: 1080p - 1920x1080
@@ -329,7 +381,7 @@ protected:
     MOS_RESOURCE                m_dummyStreamIn;          //!> Resource of dummy stream in
     MOS_RESOURCE                m_dummyStreamOut;         //!> Resource of dummy stream out
     MOS_RESOURCE                m_hucDmemDummy;           //!> Resource of Huc DMEM for dummy streamout WA
-    uint32_t                    m_dmemBufSize = 0;        //!> 
+    uint32_t                    m_dmemBufSize = 0;        //!>
 
     // COND BBE WA
     MOS_RESOURCE                m_conditionalBbEndDummy;  //!> Dummy Resource for conditional batch buffer end WA
@@ -353,12 +405,14 @@ public:
     uint32_t                    m_vdencBrcImgStateBufferSize = 0;               //!> vdenc brc img state buffer size
     uint32_t                    m_vdencBatchBuffer1stGroupSize = 0;             //!> vdenc batch buffer 1st group size
     uint32_t                    m_vdencBatchBuffer2ndGroupSize = 0;             //!> vdenc batch buffer 2nd group size
-    uint32_t                    m_vdencReadBatchBufferSize = 0;                 //!> vdenc read batch buffer size
+    uint32_t                    m_vdencReadBatchBufferSize = 0;                 //!> vdenc read batch buffer size for group1 and group2
+    uint32_t                    m_vdencGroup3BatchBufferSize = 0;               //!> vdenc read batch buffer size for group3
+    uint32_t                    m_vdencCopyBatchBufferSize = 0;                 //!> vdenc copy batch buffer size
     uint32_t                    m_vdenc2ndLevelBatchBufferSize = 0;             //!> vdenc 2nd level batch buffer size
     uint32_t                    m_vdencBatchBufferPerSliceConstSize = 0;        //!> vdenc batch buffer per slice const size
+    uint32_t                    m_HucStitchCmdBatchBufferSize = 0;              //!> huc stitch cmd 2nd level batch buffer size
     uint32_t                    m_mpeg2BrcConstantSurfaceWidth = 64;            //!> mpeg2 brc constant surface width
     uint32_t                    m_mpeg2BrcConstantSurfaceHeight = 43;           //!> mpeg2 brc constant surface height
-    bool                        m_mmcEnabled = false;                           //!> media memory compression enabled flag
     uint32_t                    m_avcMbStatBufferSize = 0;                      //!> AVC Mb status buffer size
     uint32_t                    m_pakIntTileStatsSize = 0;                      //!> Size of combined statistics across all tiles
     uint32_t                    m_pakIntAggregatedFrameStatsSize = 0;           //!> Size of HEVC/ VP9 PAK Stats, HEVC Slice Streamout, VDEnc Stats
@@ -385,6 +439,16 @@ public:
         MhwInterfaces     *mhwInterfaces);
 
     //!
+    //! \brief    Copy constructor
+    //!
+    CodechalHwInterface(const CodechalHwInterface&) = delete;
+
+    //!
+    //! \brief    Copy assignment operator
+    //!
+    CodechalHwInterface& operator=(const CodechalHwInterface&) = delete;
+
+    //!
     //! \brief    Destructor
     //!
     virtual ~CodechalHwInterface()
@@ -406,7 +470,7 @@ public:
 
         m_osInterface->pfnFreeResource(m_osInterface, &m_conditionalBbEndDummy);
 
-        MOS_Delete(m_cpInterface);
+        Delete_MhwCpInterface(m_cpInterface); 
         m_cpInterface = nullptr;
 
         if (m_miInterface)
@@ -837,7 +901,7 @@ public:
     //!           MOS_STATUS_SUCCESS if success, else fail reason
     //!
     MOS_STATUS Initialize(
-        PCODECHAL_SETTINGS settings);
+        CodechalSetting * settings);
 
     //!
     //! \brief    Get meida object buffer size
@@ -1102,7 +1166,6 @@ public:
         MHW_COMMON_MI_SEMAPHORE_COMPARE_OPERATION   opCode,
         PMOS_COMMAND_BUFFER                         cmdBuffer);
 
-
     //!
     //! \brief    Send mi atomic dword cmd
     //! \details  Send mi atomic dword cmd for sync perpose 
@@ -1190,7 +1253,192 @@ public:
         uint32_t                    forcedDshSize,
         bool                        noSshSpaceRequested,
         uint32_t                    currCmdBufId);
+    //!
+    //! \brief    Select Vdbox by index and get MMIO register 
+    //! \details  Uses input parameters to Select VDBOX from KMD and get MMIO register
+    //! \param    index
+    //!           [in] vdbox index interface
+    //! \param    pCmdBuffer
+    //!           [in] get mos vdbox id from cmd buffer
+    //! \return   MmioRegistersMfx
+    //!           return the vdbox mmio register
+    //!
+    MmioRegistersMfx * SelectVdboxAndGetMmioRegister(
+                       MHW_VDBOX_NODE_IND index,
+                       PMOS_COMMAND_BUFFER pCmdBuffer);
 
+    //!
+    //! \brief    Send mi store data imm cmd
+    //! \param    [in] resource
+    //!           Reource used in mi store data imm cmd
+    //! \param    [in] immData
+    //!           Immediate data
+    //! \param    [in,out] cmdBuffer
+    //!           command buffer
+    //!
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    MOS_STATUS SendMiStoreDataImm(
+        PMOS_RESOURCE       resource,
+        uint32_t            immData,
+        PMOS_COMMAND_BUFFER cmdBuffer);
+
+    //!
+    //! \brief    Read MFC status for status report
+    //! \param    vdboxIndex
+    //!           [in] the vdbox index
+    //! \param    params
+    //!           [in] the parameters for Mfc status read
+    //! \param    cmdBuffer
+    //!           [in, out] the command buffer
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    MOS_STATUS ReadMfcStatus(
+        MHW_VDBOX_NODE_IND vdboxIndex,
+        const EncodeStatusReadParams &params,
+        PMOS_COMMAND_BUFFER cmdBuffer);
+
+    //!
+    //! \brief    Read Image status for status report
+    //! \param    vdboxIndex
+    //!           [in] the vdbox index
+    //! \param    params
+    //!           [in] the parameters for Image status read
+    //! \param    cmdBuffer
+    //!           [in, out] the command buffer
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    MOS_STATUS ReadImageStatus(
+        MHW_VDBOX_NODE_IND vdboxIndex,
+        const EncodeStatusReadParams &params,
+        PMOS_COMMAND_BUFFER cmdBuffer);
+
+    //!
+    //! \brief    Read BRC PAK statistics for status report
+    //! \param    vdboxIndex
+    //!           [in] the vdbox index
+    //! \param    params
+    //!           [in] the parameters for BRC PAK statistics specific
+    //! \param    cmdBuffer
+    //!           [in, out] the command buffer
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    MOS_STATUS ReadBrcPakStatistics(
+        MHW_VDBOX_NODE_IND vdboxIndex,
+        const BrcPakStatsReadParams &params,
+        PMOS_COMMAND_BUFFER cmdBuffer);
+
+    //!
+    //! \brief    Read HCP status for status report
+    //! \param    vdboxIndex
+    //!           [in] the vdbox index
+    //! \param    params
+    //!           [in] the parameters for HCP status read
+    //! \param    cmdBuffer
+    //!           [in, out] the command buffer
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    MOS_STATUS ReadHcpStatus(
+        MHW_VDBOX_NODE_IND vdboxIndex,
+        const EncodeStatusReadParams &params,
+        PMOS_COMMAND_BUFFER cmdBuffer);
+
+    //!
+    //! \brief    Read HCP specific image status for status report
+    //! \param    vdboxIndex
+    //!           [in] the vdbox index
+   //! \param    params
+    //!           [in] the parameters for HCP IMG status read
+    //! \param    cmdBuffer
+    //!           [in, out] the command buffer
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    MOS_STATUS ReadImageStatusForHcp(
+        MHW_VDBOX_NODE_IND vdboxIndex,
+        const EncodeStatusReadParams &params,
+        PMOS_COMMAND_BUFFER cmdBuffer);
+
+    //!
+    //! \brief    Read HCP specific BRC PAK statistics for status report
+    //! \param    vdboxIndex
+    //!           [in] the vdbox index
+    //! \param    params
+    //!           [in] the parameters for BRC PAK statistics specific
+    //! \param    cmdBuffer
+    //!           [in, out] the command buffer
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    MOS_STATUS ReadBrcPakStatisticsForHcp(
+        MHW_VDBOX_NODE_IND vdboxIndex,
+        const BrcPakStatsReadParams &params,
+        PMOS_COMMAND_BUFFER cmdBuffer);
+
+    //!
+    //! \brief    Set the status tag(start/end) for status report by PIPE contol command,
+    //!           this function is for render engine.
+    //! \param    osResource
+    //!           [in] Reource used in the cmd
+    //! \param    offset
+    //!           [in] Reource offset used the cmd
+    //! \param    tag
+    //!           [in] queryStart/queryEnd defined in the media_status_report.h
+    //! \param    needFlushCache
+    //!           [in] whether need to flush the cache or not. For queryStart, need to flush cache, otherwise
+    //!                don't need.
+    //! \param    cmdBuffer
+    //!           [in, out] the command buffer
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    MOS_STATUS SetStatusTagByPipeCtrl(
+        PMOS_RESOURCE osResource,
+        uint32_t offset,
+        uint32_t tag,
+        bool needFlushCache,
+        PMOS_COMMAND_BUFFER cmdBuffer);
+
+    //!
+    //! \brief    Set the status tag(start/end) for status report by MI command
+    //!           this function is for vdbox.
+    //! \param    osResource
+    //!           [in] Reource used in the cmd
+    //! \param    offset
+    //!           [in] Reource offset used the cmd
+    //! \param    tag
+    //!           [in] queryStart/queryEnd defined in the media_status_report.h
+    //! \param    cmdBuffer
+    //!           [in, out] the command buffer
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    MOS_STATUS SetStatusTagByMiCommand(
+        MOS_RESOURCE *osResource,
+        uint32_t offset,
+        uint32_t tag,
+        PMOS_COMMAND_BUFFER cmdBuffer);
+
+    //!
+    //! \brief    Check if simulation/emulation is active
+    //! \return   bool
+    //!           True if simulation/emulation is active, else false.
+    //!
+    bool IsSimActive()
+    {
+        return m_osInterface ? m_osInterface->bSimIsActive : false;
+    }
+
+    //! \brief    default disable vdbox balancing by UMD
+    bool bEnableVdboxBalancingbyUMD = false;
+    
+    //! \brief    default disable the get vdbox node by UMD, decided by MHW and MOS
+    bool m_getVdboxNodeByUMD = false;
 };
 
 extern const MOS_SYNC_PARAMS                        g_cInitSyncParams;

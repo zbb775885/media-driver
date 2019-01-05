@@ -51,7 +51,7 @@ public:
     ~CodechalEncodeMpeg2G10() {};
 
 protected:
-    MOS_STATUS Initialize(PCODECHAL_SETTINGS codecHalSettings);
+    MOS_STATUS Initialize(CodechalSetting * codecHalSettings);
 
     MOS_STATUS InitKernelState();
 
@@ -87,9 +87,9 @@ protected:
     static MOS_STATUS GetKernelHeaderAndSize(
         void                           *binary,
         EncOperation                   operation,
-		uint32_t                       krnStateIdx,
+        uint32_t                       krnStateIdx,
         void                           *krnHeader,
-		uint32_t                       *krnSize);
+        uint32_t                       *krnSize);
 
 };
 

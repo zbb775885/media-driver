@@ -280,8 +280,10 @@ typedef struct _CODECHAL_ENCODE_AVC_MBENC_SURFACE_PARAMS
     uint32_t                                    dwMbCodeBottomFieldOffset;
     uint32_t                                    dwMvBottomFieldOffset;
     PMOS_SURFACE                                ps4xMeMvDataBuffer;
+    CmSurface2D                                 *ps4xMeMvDataCmBuffer;
     uint32_t                                    dwMeMvBottomFieldOffset;
     PMOS_SURFACE                                ps4xMeDistortionBuffer;
+    CmSurface2D                                 *ps4xMeDistortionCmBuffer;
     uint32_t                                    dwMeDistortionBottomFieldOffset;
     uint32_t                                    dwRefPicSelectBottomFieldOffset;
     PMOS_SURFACE                                psMeBrcDistortionBuffer;
@@ -417,7 +419,7 @@ typedef struct _CODECHAL_ENCODE_AVC_WP_SURFACE_PARAMS
 //!
 struct CodechalEncodeAvcEnc : public CodechalEncodeAvcBase
 {
-    
+
     typedef struct _CODECHAL_ENCODE_AVC_MB_SPECIFIC_PARAMS
     {
         union
@@ -563,14 +565,13 @@ struct CodechalEncodeAvcEnc : public CodechalEncodeAvcBase
     // Static frame detection
     bool                                bStaticFrameDetectionEnable;                                    //!< Static frame detection enable.
     bool                                bApdatvieSearchWindowEnable;                                    //!< allow search window size change when SFD enabled.
-    bool                                bPerMbSFD;                                                      //!< 
+    bool                                bPerMbSFD;                                                      //!<
     MOS_RESOURCE                        resSFDOutputBuffer[CODECHAL_ENCODE_RECYCLED_BUFFER_NUM];        //!< Array of SFDOutputBuffer.
     MOS_RESOURCE                        resSFDCostTablePFrameBuffer;                                    //!< SFD CostTable of P Frame.
     MOS_RESOURCE                        resSFDCostTableBFrameBuffer;                                    //!< SFD CostTable of B Frame.
     PMHW_KERNEL_STATE                   pSFDKernelState;                                                //!< Point to SFD kernel state.
 
-
-    // Generation Specific Support Flags & User Feature Key Reads                                                
+    // Generation Specific Support Flags & User Feature Key Reads
     bool                                bBrcDistortionBufferSupported;                                  //!< BRC DistortionBuffer Support Flag.
     bool                                bRefPicSelectListSupported;                                     //!< RefPicSelectList Support Flag.
     uint8_t                             ucMbBrcSupportCaps;                                             //!< MbBrcSupport Capability.
@@ -626,7 +627,7 @@ struct CodechalEncodeAvcEnc : public CodechalEncodeAvcBase
     static const uint32_t TQ_LAMBDA_I_FRAME[CODEC_AVC_NUM_QP][2];
     static const uint32_t TQ_LAMBDA_P_FRAME[CODEC_AVC_NUM_QP][2];
     static const uint32_t TQ_LAMBDA_B_FRAME[CODEC_AVC_NUM_QP][2];
-    static const uint8_t  IntraScalingFactor_Cm_Common[64]; 
+    static const uint8_t  IntraScalingFactor_Cm_Common[64];
     static const uint8_t  AdaptiveIntraScalingFactor_Cm_Common[64];
     static const uint32_t OldIntraModeCost_Cm_Common[CODEC_AVC_NUM_QP];
     static const uint32_t MvCost_PSkipAdjustment_Cm_Common[CODEC_AVC_NUM_QP];
@@ -634,7 +635,7 @@ struct CodechalEncodeAvcEnc : public CodechalEncodeAvcBase
     static const uint16_t SkipVal_P_Common[2][2][64];
     static const uint32_t PreProcFtqLut_Cm_Common[CODEC_AVC_NUM_QP][16];
     static const uint32_t MBBrcConstantData_Cm_Common[3][CODEC_AVC_NUM_QP][16];
-    
+
     static const uint32_t ModeMvCost_Common[3][CODEC_AVC_NUM_QP][8];
     static const uint16_t RefCost_Common[3][64];
     static const uint8_t  MaxRefIdx0_Progressive_4K[NUM_TARGET_USAGE_MODES];
@@ -675,7 +676,16 @@ struct CodechalEncodeAvcEnc : public CodechalEncodeAvcBase
         CodechalDebugInterface *debugInterface,
         PCODECHAL_STANDARD_INFO standardInfo);
 
-    
+    //!
+    //! \brief    Copy constructor
+    //!
+    CodechalEncodeAvcEnc(const CodechalEncodeAvcEnc&) = delete;
+
+    //!
+    //! \brief    Copy assignment operator
+    //!
+    CodechalEncodeAvcEnc& operator=(const CodechalEncodeAvcEnc&) = delete;
+
     //!
     //! \brief    Destructor
     //!
@@ -694,7 +704,7 @@ struct CodechalEncodeAvcEnc : public CodechalEncodeAvcBase
     //!           MOS_STATUS_SUCCESS if success
     //!
     virtual MOS_STATUS Initialize(
-        PCODECHAL_SETTINGS settings) override;
+        CodechalSetting * settings) override;
 
     //!
     //! \brief    Initialize encoder related members.
@@ -709,7 +719,7 @@ struct CodechalEncodeAvcEnc : public CodechalEncodeAvcBase
     //!
     //! \brief    Call media kernel functions.
     //! \details  Call to related encode kernel functions.
-    //!           
+    //! 
     //! \return   MOS_STATUS
     //!           MOS_STATUS_SUCCESS if success
     //!
@@ -738,18 +748,17 @@ struct CodechalEncodeAvcEnc : public CodechalEncodeAvcBase
     //!
     //! \brief    Encode User Feature Key Report.
     //! \details  Report user feature values set by encode.
-    //!           
+    //! 
     //! \return   MOS_STATUS
     //!           MOS_STATUS_SUCCESS if success
     //!
     virtual MOS_STATUS UserFeatureKeyReport() override;
 
-
     virtual MOS_STATUS ExecutePreEnc(EncoderParams* encodeParams) override;
     //!
     //! \brief    Slice map surface programming
     //! \details  Set slice map data.
-    //!           
+    //! 
     //! \param    [in] data
     //!           Encode interface
     //! \param    [in] avcSliceParams
@@ -764,7 +773,7 @@ struct CodechalEncodeAvcEnc : public CodechalEncodeAvcBase
 
     //!
     //! \brief    Allocate necessary resources.
-    //!           
+    //! 
     //! \return   MOS_STATUS
     //!           MOS_STATUS_SUCCESS if success
     //!
@@ -772,35 +781,35 @@ struct CodechalEncodeAvcEnc : public CodechalEncodeAvcBase
 
     //!
     //! \brief    Allocate necessary resources for BRC case.
-    //!           
+    //! 
     //! \return   MOS_STATUS
     //!           MOS_STATUS_SUCCESS if success
     //!
-    MOS_STATUS AllocateResourcesBrc();
+    virtual MOS_STATUS AllocateResourcesBrc();
 
     //!
     //! \brief    Allocate necessary resources for MBBRC case.
-    //!           
+    //! 
     //! \return   MOS_STATUS
     //!           MOS_STATUS_SUCCESS if success
     //!
-    MOS_STATUS AllocateResourcesMbBrc();
+    virtual MOS_STATUS AllocateResourcesMbBrc();
 
     //!
     //! \brief    Release allocated resources for BRC case.
-    //!           
+    //! 
     //! \return   MOS_STATUS
     //!           MOS_STATUS_SUCCESS if success
     //!
-    MOS_STATUS ReleaseResourcesBrc();
+    virtual MOS_STATUS ReleaseResourcesBrc();
 
     //!
     //! \brief    Release allocated resources for MBBRC case.
-    //!           
+    //! 
     //! \return   MOS_STATUS
     //!           MOS_STATUS_SUCCESS if success
     //!
-    MOS_STATUS ReleaseResourcesMbBrc();
+    virtual MOS_STATUS ReleaseResourcesMbBrc();
 
     //!
     //! \brief    AVC Enc State Initialization.
@@ -873,7 +882,7 @@ struct CodechalEncodeAvcEnc : public CodechalEncodeAvcBase
     // AvcState functions.
     //!
     //! \brief    Initialize data members of AVC encoder instance
-    //!          
+    //! 
     //! \return   void
     //!
     virtual void InitializeDataMember();
@@ -1087,7 +1096,7 @@ struct CodechalEncodeAvcEnc : public CodechalEncodeAvcBase
     {
         return MOS_STATUS_SUCCESS;
     }
- 
+
     //!
     //! \brief    Init SFD(still frame detection) kernel state
     //!
@@ -1095,6 +1104,14 @@ struct CodechalEncodeAvcEnc : public CodechalEncodeAvcBase
     //!           MOS_STATUS_SUCCESS if success, else fail reason
     //!
     virtual MOS_STATUS InitKernelStateSFD();
+
+    //!
+    //! \brief    Init kernel state
+    //!
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    virtual MOS_STATUS InitKernelState();
 
     //!
     //! \brief    Insert RefPic Select List
@@ -1115,7 +1132,7 @@ struct CodechalEncodeAvcEnc : public CodechalEncodeAvcBase
     //!
     virtual MOS_STATUS MbEncKernel(
         bool mbEncIFrameDistInUse);
- 
+
     //!
     //! \brief    Run Brc Frame Update Kernel.
     //!
@@ -1365,7 +1382,6 @@ struct CodechalEncodeAvcEnc : public CodechalEncodeAvcBase
     virtual MOS_STATUS SetCurbeAvcSFD(
         PCODECHAL_ENCODE_AVC_SFD_CURBE_PARAMS params);
 
-
     //!
     //! \brief    Set Sequence Structs
     //!
@@ -1534,6 +1550,22 @@ struct CodechalEncodeAvcEnc : public CodechalEncodeAvcBase
         PMOS_COMMAND_BUFFER         cmdBuffer,
         bool                        frameTracking) override;
 
+    //!
+    //! \brief  Realize the scene change report
+    //! \param  [in] cmdBuffer
+    //!         Command buffer
+    //!         [in]  params
+    //!           Pointer to the CODECHAL_ENCODE_AVC_GENERIC_PICTURE_LEVEL_PARAMS
+    //! \return MOS_STATUS
+    //!         MOS_STATUS_SUCCESS if success
+    //!
+    virtual MOS_STATUS SceneChangeReport(
+        PMOS_COMMAND_BUFFER       cmdBuffer,
+        PCODECHAL_ENCODE_AVC_GENERIC_PICTURE_LEVEL_PARAMS  params)
+    {
+        return MOS_STATUS_SUCCESS;
+    };
+
     //! \brief    Dump encode kernel output
     //!
     //! \return   MOS_STATUS
@@ -1595,7 +1627,7 @@ struct CodechalEncodeAvcEnc : public CodechalEncodeAvcBase
     uint8_t AVCGetQPValueFromRefList(
         PCODECHAL_ENCODE_AVC_MBENC_CURBE_PARAMS     params,
         uint32_t                                    list,
-        uint32_t                                    index);    
+        uint32_t                                    index);
 
      //!
      //! \brief    Send surfaces for the AVC BRC Block Copy kernel
@@ -1618,25 +1650,6 @@ struct CodechalEncodeAvcEnc : public CodechalEncodeAvcBase
         PMHW_KERNEL_STATE       mbEncKernelState,
         PMHW_KERNEL_STATE       kernelState,
         PMOS_RESOURCE           presAdvancedDsh);
-
-    //!
-    //! \brief    Encoder pre enc look up buffer index
-    //! \param    [in] encoder
-    //!           codechal encoder pointer
-    //! \param    [in] frameIdx
-    //!           ucFrame Index
-    //! \param    [in] fristFrameinPreenc
-    //!           Indicate if it's the first frame in Preenc
-    //! \param    [in] inCache
-    //!           Indicate if it's in cache
-    //! \return   uint8_t
-    //!           uiEmptyEntry
-    //!
-    uint8_t PreencLookUpBufIndex(
-        CodechalEncoderState*       encoder,
-        uint8_t                     frameIdx,
-        bool                        fristFrameinPreenc,
-        bool                        *inCache);
 
 #if USE_CODECHAL_DEBUG_TOOL
 protected:

@@ -56,9 +56,9 @@ public:
         VAContextID      context,
         VABufferID       *buffers,
         int32_t          numBuffers) override;
-    
+
     virtual VAStatus SetDecodeParams() override;
-    
+
     virtual void ContextInit(
         int32_t picWidth,
         int32_t picHeight) override;
@@ -66,13 +66,13 @@ public:
     virtual VAStatus CodecHalInit(
         DDI_MEDIA_CONTEXT *mediaCtx,
         void              *ptr) override;
-    
+
     virtual VAStatus AllocSliceControlBuffer(
         DDI_MEDIA_BUFFER       *buf) override;
 
-    virtual uint8_t* GetPicParamBuf( 
+    virtual uint8_t* GetPicParamBuf(
     DDI_CODEC_COM_BUFFER_MGR    *bufMgr) override;
-    
+
 private:
     //!
     //! \brief   ParaSliceParam for Avc
@@ -84,14 +84,14 @@ private:
     //! \param   [in] *slcParam
     //!          VASliceParameterBufferH264
     //! \param   [in] numSlices
-    //!             int32_t
+    //!             uint32_t
     //!
     //! \return  VA_STATUS_SUCCESS is returned if it is parsed successfully.
     //!          else fail reason
     VAStatus ParseSliceParams(
         DDI_MEDIA_CONTEXT           *mediaCtx,
         VASliceParameterBufferH264  *slcParam,
-        int32_t                     numSlices);
+        uint32_t                     numSlices);
 
     //!
     //! \brief   ParaQMatrixParam for Avc
@@ -131,12 +131,12 @@ private:
     //! \details Alloc/resize SlicePram content for AVC decoding
     //!
     //! \param   [in] numSlices
-    //!          int32_t the required number of slices
+    //!          uint32_t the required number of slices
     //!
     //! \return  VA_STATUS_SUCCESS is returned if it is parsed successfully.
     //!          else fail reason
     VAStatus AllocSliceParamContext(
-        int32_t numSlices);
+        uint32_t numSlices);
 
     //! \brief   Init resource buffer for AVC
     //! \details Initialize and allocate the resource buffer for AVC

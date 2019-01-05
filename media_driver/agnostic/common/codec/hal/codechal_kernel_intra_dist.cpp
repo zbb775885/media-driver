@@ -29,7 +29,7 @@
 CodechalKernelIntraDist::CodechalKernelIntraDist(CodechalEncoderState *encoder) :
         CodechalKernelBase(encoder)
 {
-    
+
 }
 
 CodechalKernelIntraDist::~CodechalKernelIntraDist()
@@ -91,7 +91,6 @@ MOS_STATUS CodechalKernelIntraDist::SendSurfaces(PMOS_COMMAND_BUFFER cmd, MHW_KE
     surfaceParams.bIsWritable           = true;
     surfaceParams.bMediaBlockRW         = true;
     surfaceParams.psSurface             = m_surfaceParam.intraDistSurface;
-    surfaceParams.dwOffset              = m_surfaceParam.intraDistBottomFieldOffset;
     surfaceParams.dwVerticalLineStride  = m_verticalLineStride;
     surfaceParams.dwCacheabilityControl = m_hwInterface->GetCacheabilitySettings()[MOS_CODEC_RESOURCE_USAGE_SURFACE_INTRA_DISTORTION_ENCODE].Value;
     surfaceParams.dwBindingTableOffset  = BindingTableOffset::intraDistOutputSurf;
@@ -163,8 +162,8 @@ CODECHAL_MEDIA_STATE_TYPE CodechalKernelIntraDist::GetMediaStateType()
 
 MOS_STATUS CodechalKernelIntraDist::Execute( CurbeParam &curbeParam, SurfaceParams &surfaceParam )
 {
-    memcpy_s(&m_curbeParam, sizeof(m_curbeParam), &curbeParam, sizeof(m_curbeParam));
-    memcpy_s(&m_surfaceParam, sizeof(m_surfaceParam), &surfaceParam, sizeof(m_surfaceParam));
+    MOS_SecureMemcpy(&m_curbeParam, sizeof(m_curbeParam), &curbeParam, sizeof(m_curbeParam));
+    MOS_SecureMemcpy(&m_surfaceParam, sizeof(m_surfaceParam), &surfaceParam, sizeof(m_surfaceParam));
 
     return Run();
 }

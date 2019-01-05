@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, Intel Corporation
+* Copyright (c) 2017-2018, Intel Corporation
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -36,7 +36,7 @@
 VAStatus DdiDecodeAVC::ParseSliceParams(
     DDI_MEDIA_CONTEXT           *mediaCtx,
     VASliceParameterBufferH264  *slcParam,
-    int32_t                     numSlices)
+    uint32_t                     numSlices)
 {
     PCODEC_AVC_SLICE_PARAMS avcSliceParams;
     avcSliceParams = (PCODEC_AVC_SLICE_PARAMS)(m_ddiDecodeCtx->DecodeParams.m_sliceParams);
@@ -62,7 +62,7 @@ VAStatus DdiDecodeAVC::ParseSliceParams(
     uint32_t sliceBaseOffset;
     sliceBaseOffset = GetBsBufOffset(m_groupIndex);
 
-    int32_t i, slcCount;
+    uint32_t i, slcCount;
     for (slcCount = 0; slcCount < numSlices; slcCount++)
     {
         if (m_ddiDecodeCtx->bShortFormatInUse)
@@ -323,14 +323,16 @@ VAStatus DdiDecodeAVC::ParseIQMatrix(
     int32_t i;
     for (i = 0; i < 6; i++)
     {
-        memcpy(avcIqMatrix->ScalingList4x4[i],
+        MOS_SecureMemcpy(avcIqMatrix->ScalingList4x4[i],
+            16,
             matrix->ScalingList4x4[i],
             16);
     }
     // 8x8 block
     for (i = 0; i < 2; i++)
     {
-        memcpy(avcIqMatrix->ScalingList8x8[i],
+        MOS_SecureMemcpy(avcIqMatrix->ScalingList8x8[i],
+            64,
             matrix->ScalingList8x8[i],
             64);
     }
@@ -338,7 +340,7 @@ VAStatus DdiDecodeAVC::ParseIQMatrix(
 }
 
 VAStatus DdiDecodeAVC::AllocSliceParamContext(
-    int32_t numSlices)
+    uint32_t numSlices)
 {
     uint32_t baseSize = sizeof(CODEC_AVC_SLICE_PARAMS);
 
@@ -346,7 +348,7 @@ VAStatus DdiDecodeAVC::AllocSliceParamContext(
     {
         // in order to avoid that the buffer is reallocated multi-times,
         // extra 10 slices are added.
-        int32_t extraSlices                           = numSlices + 10;
+        uint32_t extraSlices                           = numSlices + 10;
         m_ddiDecodeCtx->DecodeParams.m_sliceParams = realloc(m_ddiDecodeCtx->DecodeParams.m_sliceParams,
             baseSize * (m_sliceParamBufNum + extraSlices));
 
@@ -385,7 +387,7 @@ VAStatus DdiDecodeAVC::RenderPicture(
             return VA_STATUS_ERROR_INVALID_BUFFER;
         }
         uint32_t dataSize = buf->iSize;
-		
+
         DdiMedia_MapBuffer(ctx, buffers[i], &data);
 
         if (data == nullptr)
@@ -397,7 +399,7 @@ VAStatus DdiDecodeAVC::RenderPicture(
         {
         case VASliceDataBufferType:
         {
-            int32_t index = m_ddiDecodeCtx->m_ddiDecode->GetBitstreamBufIndexFromBuffer(&m_ddiDecodeCtx->BufMgr, buf);
+            int32_t index = GetBitstreamBufIndexFromBuffer(&m_ddiDecodeCtx->BufMgr, buf);
             if (index == DDI_CODEC_INVALID_BUFFER_INDEX)
             {
                 return VA_STATUS_ERROR_INVALID_BUFFER;
@@ -410,15 +412,15 @@ VAStatus DdiDecodeAVC::RenderPicture(
         case VASliceParameterBufferType:
         {
             VASliceParameterBufferH264 *slcInfoH264;
-            if (buf->iNumElements == 0)
+            if (buf->uiNumElements == 0)
             {
                 return VA_STATUS_ERROR_INVALID_BUFFER;
             }
 
             slcInfoH264        = (VASliceParameterBufferH264 *)data;
-            uint32_t numSlices = buf->iNumElements;
+            uint32_t numSlices = buf->uiNumElements;
             DDI_CHK_RET(AllocSliceParamContext(numSlices),"AllocSliceParamContext failed!");
-			DDI_CHK_RET(ParseSliceParams(mediaCtx, slcInfoH264, numSlices),"ParseSliceParams failed!");
+            DDI_CHK_RET(ParseSliceParams(mediaCtx, slcInfoH264, numSlices),"ParseSliceParams failed!");
             m_ddiDecodeCtx->DecodeParams.m_numSlices += numSlices;
             m_groupIndex++;
             break;
@@ -426,19 +428,19 @@ VAStatus DdiDecodeAVC::RenderPicture(
         case VAIQMatrixBufferType:
         {
             VAIQMatrixBufferH264 *imxBuf = (VAIQMatrixBufferH264 *)data;
-			DDI_CHK_RET(ParseIQMatrix(mediaCtx, imxBuf),"ParseIQMatrix failed!");
+            DDI_CHK_RET(ParseIQMatrix(mediaCtx, imxBuf),"ParseIQMatrix failed!");
             break;
         }
         case VAPictureParameterBufferType:
         {
             VAPictureParameterBufferH264 *picParam;
             picParam = (VAPictureParameterBufferH264 *)data;
-			DDI_CHK_RET(ParsePicParams(mediaCtx, picParam),"ParsePicParams failed!");
+            DDI_CHK_RET(ParsePicParams(mediaCtx, picParam),"ParsePicParams failed!");
             break;
         }
         case VAProcPipelineParameterBufferType:
         {
-			DDI_CHK_RET(ParseProcessingBuffer(mediaCtx, data),"ParseProcessingBuffer failed!");
+            DDI_CHK_RET(ParseProcessingBuffer(mediaCtx, data),"ParseProcessingBuffer failed!");
             break;
         }
         case VADecodeStreamoutBufferType:
@@ -463,17 +465,17 @@ VAStatus DdiDecodeAVC::SetDecodeParams()
 {
     DDI_CHK_RET(DdiMediaDecode::SetDecodeParams(),"SetDecodeParams failed!");
 #ifdef _DECODE_PROCESSING_SUPPORTED
-		// Bridge the SFC input with VDBOX output
+        // Bridge the SFC input with VDBOX output
     if (m_decProcessingType == VA_DEC_PROCESSING)
     {
-        PCODECHAL_DECODE_PROCESSING_PARAMS procParams = nullptr;
-	    procParams				  = (&m_ddiDecodeCtx->DecodeParams)->m_procParams;
+        auto procParams = 
+            (PCODECHAL_DECODE_PROCESSING_PARAMS)m_ddiDecodeCtx->DecodeParams.m_procParams;
         procParams->pInputSurface = (&m_ddiDecodeCtx->DecodeParams)->m_destSurface;
         // codechal_decode_sfc.c expects Input Width/Height information.
-        procParams->pInputSurface->dwWidth	= procParams->pInputSurface->OsResource.iWidth;
+        procParams->pInputSurface->dwWidth    = procParams->pInputSurface->OsResource.iWidth;
         procParams->pInputSurface->dwHeight = procParams->pInputSurface->OsResource.iHeight;
-        procParams->pInputSurface->dwPitch	= procParams->pInputSurface->OsResource.iPitch;
-        procParams->pInputSurface->Format	= procParams->pInputSurface->OsResource.Format;
+        procParams->pInputSurface->dwPitch    = procParams->pInputSurface->OsResource.iPitch;
+        procParams->pInputSurface->Format    = procParams->pInputSurface->OsResource.Format;
     }
 #endif
 
@@ -502,11 +504,11 @@ void DdiDecodeAVC::ContextInit(int32_t picWidth, int32_t picHeight)
     return;
 }
 
-uint8_t* DdiDecodeAVC::GetPicParamBuf( 
-    DDI_CODEC_COM_BUFFER_MGR    *bufMgr) 
-    { 
-         return (uint8_t*)(&(bufMgr->Codec_Param.Codec_Param_H264.PicParam264)); 
-    } 
+uint8_t* DdiDecodeAVC::GetPicParamBuf(
+    DDI_CODEC_COM_BUFFER_MGR    *bufMgr)
+    {
+         return (uint8_t*)(&(bufMgr->Codec_Param.Codec_Param_H264.PicParam264));
+    }
 
 VAStatus DdiDecodeAVC::AllocSliceControlBuffer(
     DDI_MEDIA_BUFFER       *buf)
@@ -517,41 +519,41 @@ VAStatus DdiDecodeAVC::AllocSliceControlBuffer(
 
     bufMgr     = &(m_ddiDecodeCtx->BufMgr);
     availSize = m_sliceCtrlBufNum - bufMgr->dwNumSliceControl;
-    
-	if(m_ddiDecodeCtx->bShortFormatInUse)
+
+    if(m_ddiDecodeCtx->bShortFormatInUse)
     {
-        if(availSize < buf->iNumElements)
+        if(availSize < buf->uiNumElements)
                 {
-            newSize   = sizeof(VASliceParameterBufferBase) * (m_sliceCtrlBufNum - availSize + buf->iNumElements);
+            newSize   = sizeof(VASliceParameterBufferBase) * (m_sliceCtrlBufNum - availSize + buf->uiNumElements);
             bufMgr->Codec_Param.Codec_Param_H264.pVASliceParaBufH264Base = (VASliceParameterBufferBase *)realloc(bufMgr->Codec_Param.Codec_Param_H264.pVASliceParaBufH264Base, newSize);
             if(bufMgr->Codec_Param.Codec_Param_H264.pVASliceParaBufH264Base == nullptr)
             {
                 return VA_STATUS_ERROR_ALLOCATION_FAILED;
             }
-            MOS_ZeroMemory(bufMgr->Codec_Param.Codec_Param_H264.pVASliceParaBufH264Base + m_sliceCtrlBufNum, sizeof(VASliceParameterBufferBase) * (buf->iNumElements - availSize));
-            m_sliceCtrlBufNum = m_sliceCtrlBufNum - availSize + buf->iNumElements;
+            MOS_ZeroMemory(bufMgr->Codec_Param.Codec_Param_H264.pVASliceParaBufH264Base + m_sliceCtrlBufNum, sizeof(VASliceParameterBufferBase) * (buf->uiNumElements - availSize));
+            m_sliceCtrlBufNum = m_sliceCtrlBufNum - availSize + buf->uiNumElements;
         }
         buf->pData      = (uint8_t*)bufMgr->Codec_Param.Codec_Param_H264.pVASliceParaBufH264Base;
         buf->uiOffset   = bufMgr->dwNumSliceControl * sizeof(VASliceParameterBufferBase);
     }
     else
     {
-        if(availSize < buf->iNumElements)
+        if(availSize < buf->uiNumElements)
         {
-            newSize   = sizeof(VASliceParameterBufferH264) * (m_sliceCtrlBufNum - availSize + buf->iNumElements);
+            newSize   = sizeof(VASliceParameterBufferH264) * (m_sliceCtrlBufNum - availSize + buf->uiNumElements);
             bufMgr->Codec_Param.Codec_Param_H264.pVASliceParaBufH264 = (VASliceParameterBufferH264 *)realloc(bufMgr->Codec_Param.Codec_Param_H264.pVASliceParaBufH264, newSize);
             if(bufMgr->Codec_Param.Codec_Param_H264.pVASliceParaBufH264 == nullptr)
             {
                 return VA_STATUS_ERROR_ALLOCATION_FAILED;
             }
-            MOS_ZeroMemory(bufMgr->Codec_Param.Codec_Param_H264.pVASliceParaBufH264 + m_sliceCtrlBufNum, sizeof(VASliceParameterBufferH264) * (buf->iNumElements - availSize));
-            m_sliceCtrlBufNum = m_sliceCtrlBufNum - availSize + buf->iNumElements;
+            MOS_ZeroMemory(bufMgr->Codec_Param.Codec_Param_H264.pVASliceParaBufH264 + m_sliceCtrlBufNum, sizeof(VASliceParameterBufferH264) * (buf->uiNumElements - availSize));
+            m_sliceCtrlBufNum = m_sliceCtrlBufNum - availSize + buf->uiNumElements;
          }
          buf->pData      = (uint8_t*)bufMgr->Codec_Param.Codec_Param_H264.pVASliceParaBufH264;
          buf->uiOffset   = bufMgr->dwNumSliceControl * sizeof(VASliceParameterBufferH264);
       }
 
-    bufMgr->dwNumSliceControl += buf->iNumElements;
+    bufMgr->dwNumSliceControl += buf->uiNumElements;
 
     return VA_STATUS_SUCCESS;
 }
@@ -563,31 +565,29 @@ VAStatus DdiDecodeAVC::CodecHalInit(
     VAStatus     vaStatus = VA_STATUS_SUCCESS;
     MOS_CONTEXT *mosCtx = (MOS_CONTEXT *)ptr;
 
-    CODECHAL_FUNCTION codecFunction = CODECHAL_FUNCTION_DECODE;
-    m_ddiDecodeCtx->pCpDdiInterface->SetEncryptionType(m_ddiDecodeAttr->uiEncryptionType, &codecFunction);
+    m_codechalSettings->shortFormatInUse = m_ddiDecodeCtx->bShortFormatInUse;
 
-    CODECHAL_SETTINGS      codecHalSettings;
+    CODECHAL_FUNCTION codecFunction = CODECHAL_FUNCTION_DECODE;
+    m_ddiDecodeCtx->pCpDdiInterface->SetCpParams(m_ddiDecodeAttr->uiEncryptionType, m_codechalSettings);
+
     CODECHAL_STANDARD_INFO standardInfo;
     memset(&standardInfo, 0, sizeof(standardInfo));
-    memset(&codecHalSettings, 0, sizeof(codecHalSettings));
 
     standardInfo.CodecFunction = codecFunction;
     standardInfo.Mode          = (CODECHAL_MODE)m_ddiDecodeCtx->wMode;
 
-    codecHalSettings.CodecFunction = codecFunction;
-    codecHalSettings.dwWidth       = m_width;
-    codecHalSettings.dwHeight      = m_height;
+    m_codechalSettings->codecFunction = codecFunction;
+    m_codechalSettings->width       = m_width;
+    m_codechalSettings->height      = m_height;
     //For Avc Decoding:
     // if the slice header contains the emulation_prevention_three_byte, we need to set bIntelEntrypointInUse to false.
     // Because in this case, driver can not get the correct BsdStartAddress by itself. We need to turn to GEN to calculate the correct address.
-    codecHalSettings.bIntelEntrypointInUse = false;
+    m_codechalSettings->intelEntrypointInUse = false;
 
-    codecHalSettings.ucLumaChromaDepth = CODECHAL_LUMA_CHROMA_DEPTH_8_BITS;
+    m_codechalSettings->lumaChromaDepth = CODECHAL_LUMA_CHROMA_DEPTH_8_BITS;
 
-    codecHalSettings.bShortFormatInUse = m_ddiDecodeCtx->bShortFormatInUse;
-
-    codecHalSettings.Mode     = CODECHAL_DECODE_MODE_AVCVLD;
-    codecHalSettings.Standard = CODECHAL_AVC;
+    m_codechalSettings->mode     = CODECHAL_DECODE_MODE_AVCVLD;
+    m_codechalSettings->standard = CODECHAL_AVC;
 
     m_ddiDecodeCtx->DecodeParams.m_iqMatrixBuffer = (void*)MOS_AllocAndZeroMemory(sizeof(CODEC_AVC_IQ_MATRIX_PARAMS));
     if (m_ddiDecodeCtx->DecodeParams.m_iqMatrixBuffer == nullptr)
@@ -609,13 +609,13 @@ VAStatus DdiDecodeAVC::CodecHalInit(
         vaStatus = VA_STATUS_ERROR_ALLOCATION_FAILED;
         goto CleanUpandReturn;
     }
-    
+
 #ifdef _DECODE_PROCESSING_SUPPORTED
     if (m_decProcessingType == VA_DEC_PROCESSING)
     {
         PCODECHAL_DECODE_PROCESSING_PARAMS procParams = nullptr;
 
-        codecHalSettings.bDownsamplingHinted = true;
+        m_codechalSettings->downsamplingHinted = true;
 
         procParams = (PCODECHAL_DECODE_PROCESSING_PARAMS)MOS_AllocAndZeroMemory(sizeof(CODECHAL_DECODE_PROCESSING_PARAMS));
         if (procParams == nullptr)
@@ -635,7 +635,6 @@ VAStatus DdiDecodeAVC::CodecHalInit(
 #endif
     vaStatus = CreateCodecHal(mediaCtx,
                                  ptr,
-                                 &codecHalSettings,
                                  &standardInfo);
 
     if (vaStatus != VA_STATUS_SUCCESS)
@@ -653,12 +652,6 @@ VAStatus DdiDecodeAVC::CodecHalInit(
 
 CleanUpandReturn:
     FreeResourceBuffer();
-
-    if (m_decodeStatusReport)
-    {
-        MOS_DeleteArray(m_decodeStatusReport);
-        m_decodeStatusReport = nullptr;
-    }
 
     if (m_ddiDecodeCtx->pCodecHal)
     {
@@ -678,9 +671,8 @@ CleanUpandReturn:
 #ifdef _DECODE_PROCESSING_SUPPORTED
     if (m_ddiDecodeCtx->DecodeParams.m_procParams)
     {
-        PCODECHAL_DECODE_PROCESSING_PARAMS procParams;
-
-        procParams = m_ddiDecodeCtx->DecodeParams.m_procParams;
+        auto procParams = 
+            (PCODECHAL_DECODE_PROCESSING_PARAMS)m_ddiDecodeCtx->DecodeParams.m_procParams;
         MOS_FreeMemory(procParams->pOutputSurface);
 
         MOS_FreeMemory(m_ddiDecodeCtx->DecodeParams.m_procParams);

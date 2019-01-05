@@ -33,7 +33,7 @@ const uint32_t CodechalKernelHmeG9::Curbe::m_initCurbe[39] =
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
-    0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff    
+    0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff
 };
 // clang-format on
 
@@ -43,7 +43,6 @@ CodechalKernelHmeG9::CodechalKernelHmeG9(
         : CodechalKernelHme(encoder, me4xDistBufferSupported)
 {
 }
-
 
 MOS_STATUS CodechalKernelHmeG9::SetCurbe(MHW_KERNEL_STATE *kernelState)
 {
@@ -160,7 +159,7 @@ MOS_STATUS CodechalKernelHmeG9::SetCurbe(MHW_KERNEL_STATE *kernelState)
     }
 
     uint8_t tableIndex = (m_pictureCodingType == B_TYPE) ? 1 : 0;
-    memcpy_s(&curbe.m_data.SpDelta, 14 * sizeof(uint32_t), codechalEncodeSearchPath[tableIndex][methodIndex], 14 * sizeof(uint32_t));
+    MOS_SecureMemcpy(&curbe.m_data.SpDelta, 14 * sizeof(uint32_t), codechalEncodeSearchPath[tableIndex][methodIndex], 14 * sizeof(uint32_t));
 
     //r5
     curbe.m_data.DW32._4xMeMvOutputDataSurfIndex      = BindingTableOffset::meOutputMvDataSurface;
@@ -208,23 +207,21 @@ MOS_STATUS CodechalKernelHmeG9::SendSurfaces(PMOS_COMMAND_BUFFER cmd, MHW_KERNEL
     surfaceParams.bIsWritable = true;
     surfaceParams.bRenderTarget = true;
 
-    uint32_t scaledIdx = m_surfaceParam.refList[m_surfaceParam.currReconstructedPic->FrameIdx]->ucScalingIdx;
-
     if (m_32xMeInUse)
     {
-        currScaledSurface = &m_surfaceParam.trackedBuffer[scaledIdx].sScaled32xSurface;
+        currScaledSurface = m_encoder->m_trackedBuf->Get32xDsSurface(CODEC_CURR_TRACKED_BUFFER);
         surfaceParams.psSurface = GetSurface(SurfaceId::me32xMvDataBuffer);
         surfaceParams.dwOffset = m_32xMeMvBottomFieldOffset;
     }
     else if (m_16xMeInUse)
     {
-        currScaledSurface = &m_surfaceParam.trackedBuffer[scaledIdx].sScaled16xSurface;
+        currScaledSurface = m_encoder->m_trackedBuf->Get16xDsSurface(CODEC_CURR_TRACKED_BUFFER);
         surfaceParams.psSurface = GetSurface(SurfaceId::me16xMvDataBuffer);
         surfaceParams.dwOffset = m_16xMeMvBottomFieldOffset;
     }
     else
     {
-        currScaledSurface = &m_surfaceParam.trackedBuffer[scaledIdx].sScaled4xSurface;
+        currScaledSurface = m_encoder->m_trackedBuf->Get4xDsSurface(CODEC_CURR_TRACKED_BUFFER);
         surfaceParams.psSurface = GetSurface(SurfaceId::me4xMvDataBuffer);
         surfaceParams.dwOffset = m_4xMeMvBottomFieldOffset;
     }
@@ -355,20 +352,44 @@ MOS_STATUS CodechalKernelHmeG9::SendSurfaces(PMOS_COMMAND_BUFFER cmd, MHW_KERNEL
 
             bool    refBottomField = (CodecHal_PictureIsBottomField(refPic)) ? 1 : 0;
             uint8_t refPicIdx = m_surfaceParam.picIdx[refPic.FrameIdx].ucPicIdx;
-            scaledIdx = m_surfaceParam.refList[refPicIdx]->ucScalingIdx;
+            uint8_t scaledIdx = m_surfaceParam.refList[refPicIdx]->ucScalingIdx;
             if (m_32xMeInUse)
             {
-                refScaledSurface.OsResource = m_surfaceParam.trackedBuffer[scaledIdx].sScaled32xSurface.OsResource;
+                MOS_SURFACE* p32xSurface = m_encoder->m_trackedBuf->Get32xDsSurface(scaledIdx);
+                if (p32xSurface != nullptr)
+                {
+                    refScaledSurface.OsResource = p32xSurface->OsResource;
+                }
+                else
+                {
+                    CODECHAL_ENCODE_ASSERTMESSAGE("NULL pointer of DsSurface");
+                }
                 refScaledBottomFieldOffset = refBottomField ? m_surfaceParam.downScaledBottomFieldOffset : 0;
             }
             else if (m_16xMeInUse)
             {
-                refScaledSurface.OsResource = m_surfaceParam.trackedBuffer[scaledIdx].sScaled16xSurface.OsResource;
+                MOS_SURFACE* p16xSurface = m_encoder->m_trackedBuf->Get16xDsSurface(scaledIdx);
+                if (p16xSurface != nullptr)
+                {
+                    refScaledSurface.OsResource = p16xSurface->OsResource;
+                }
+                else
+                {
+                    CODECHAL_ENCODE_ASSERTMESSAGE("NULL pointer of DsSurface");
+                }
                 refScaledBottomFieldOffset = refBottomField ? m_surfaceParam.downScaledBottomFieldOffset : 0;
             }
             else
             {
-                refScaledSurface.OsResource = m_surfaceParam.trackedBuffer[scaledIdx].sScaled4xSurface.OsResource;
+                MOS_SURFACE* p4xSurface = m_encoder->m_trackedBuf->Get4xDsSurface(scaledIdx);
+                if (p4xSurface != nullptr)
+                {
+                    refScaledSurface.OsResource = p4xSurface->OsResource;
+                }
+                else
+                {
+                    CODECHAL_ENCODE_ASSERTMESSAGE("NULL pointer of DsSurface");
+                }
                 refScaledBottomFieldOffset = refBottomField ? m_surfaceParam.downScaledBottomFieldOffset : 0;
             }
 
@@ -420,23 +441,46 @@ MOS_STATUS CodechalKernelHmeG9::SendSurfaces(PMOS_COMMAND_BUFFER cmd, MHW_KERNEL
 
             bool    refBottomField = (CodecHal_PictureIsBottomField(refPic)) ? true : false;
             uint8_t refPicIdx = m_surfaceParam.picIdx[refPic.FrameIdx].ucPicIdx;
-            scaledIdx = m_surfaceParam.refList[refPicIdx]->ucScalingIdx;
+            uint8_t scaledIdx = m_surfaceParam.refList[refPicIdx]->ucScalingIdx;
             if (m_32xMeInUse)
             {
-                refScaledSurface.OsResource = m_surfaceParam.trackedBuffer[scaledIdx].sScaled32xSurface.OsResource;
+                MOS_SURFACE* p32xSurface = m_encoder->m_trackedBuf->Get32xDsSurface(scaledIdx);
+                if (p32xSurface != nullptr)
+                {
+                    refScaledSurface.OsResource = p32xSurface->OsResource;
+                }
+                else
+                {
+                    CODECHAL_ENCODE_ASSERTMESSAGE("NULL pointer of DsSurface");
+                }
                 refScaledBottomFieldOffset = refBottomField ? m_surfaceParam.downScaledBottomFieldOffset : 0;
             }
             else if (m_16xMeInUse)
             {
-                refScaledSurface.OsResource = m_surfaceParam.trackedBuffer[scaledIdx].sScaled16xSurface.OsResource;
+                MOS_SURFACE* p16xSurface = m_encoder->m_trackedBuf->Get16xDsSurface(scaledIdx);
+                if (p16xSurface != nullptr)
+                {
+                    refScaledSurface.OsResource = p16xSurface->OsResource;
+                }
+                else
+                {
+                    CODECHAL_ENCODE_ASSERTMESSAGE("NULL pointer of DsSurface");
+                }
                 refScaledBottomFieldOffset = refBottomField ? m_surfaceParam.downScaledBottomFieldOffset : 0;
             }
             else
             {
-                refScaledSurface.OsResource = m_surfaceParam.trackedBuffer[scaledIdx].sScaled4xSurface.OsResource;
+                MOS_SURFACE* p4xSurface = m_encoder->m_trackedBuf->Get4xDsSurface(scaledIdx);
+                if (p4xSurface != nullptr)
+                {
+                    refScaledSurface.OsResource = p4xSurface->OsResource;
+                }
+                else
+                {
+                    CODECHAL_ENCODE_ASSERTMESSAGE("NULL pointer of DsSurface");
+                }
                 refScaledBottomFieldOffset = refBottomField ? m_surfaceParam.downScaledBottomFieldOffset : 0;
             }
-
             // L1 Reference Picture Y - VME
             MOS_ZeroMemory(&surfaceParams, sizeof(surfaceParams));
             surfaceParams.bUseAdvState = true;

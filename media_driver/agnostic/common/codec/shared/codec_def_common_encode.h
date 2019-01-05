@@ -32,8 +32,7 @@
 #define CODEC_NUM_REF_BUFFERS               (CODEC_MAX_NUM_REF_FRAME + 1) // Max 16 references (for AVC) + 1 for the current frame
 #define CODEC_NUM_NON_REF_BUFFERS           3
 #define CODEC_NUM_TRACKED_BUFFERS           (CODEC_NUM_REF_BUFFERS + CODEC_NUM_NON_REF_BUFFERS)
-#define CODEC_TRACKED_BUF_RESIZE_START      1
-#define CODEC_TRACKED_BUF_RESIZE_END        2
+#define CODEC_CURR_TRACKED_BUFFER           CODEC_NUM_TRACKED_BUFFERS
 
 //BRC
 #define BRC_IMG_STATE_SIZE_PER_PASS         128
@@ -53,6 +52,10 @@
 
 #define CODEC_MAX_PIC_WIDTH            1920
 #define CODEC_MAX_PIC_HEIGHT           1920                // Tablet usage in portrait mode, image resolution = 1200x1920, so change MAX_HEIGHT to 1920
+
+#define CODEC_2K_MAX_PIC_WIDTH         2048
+#define CODEC_2K_MAX_PIC_HEIGHT        2048
+
 #define CODEC_4K_MAX_PIC_WIDTH         4096
 #define CODEC_4K_MAX_PIC_HEIGHT        4096
 

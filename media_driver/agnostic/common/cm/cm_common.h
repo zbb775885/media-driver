@@ -30,9 +30,6 @@
 #include "mhw_mi.h"
 #include "cm_innerdef_os.h"
 #include <list>
-#if USE_EXTENSION_CODE
-#include "cm_private.h"
-#endif
 
 // this marco is used to remove warning from clang to unused parameters
 // which is harmless and useless but to make clang happy
@@ -48,6 +45,8 @@
 #define MDF_COMMAND_BUFFER_DUMP         1 //avaliable in Debug/Release-internal
 #define MDF_CURBE_DATA_DUMP             1
 #define MDF_SURFACE_CONTENT_DUMP        1
+#define MDF_SURFACE_STATE_DUMP          1
+#define MDF_INTERFACE_DESCRIPTOR_DATA_DUMP  1
 #endif
 
 //===============<Definitions>==================================================
@@ -162,7 +161,6 @@ typedef enum _CM_RETURN_CODE
     CM_INVALID_CAP_NAME                         = -101,
     CM_INVALID_USER_GPU_CONTEXT_FOR_QUEUE_EX    = -102,
 
-
     /*
      * RANGE -10000 ~ -19999 FOR INTERNAL ERROR CODE
      */
@@ -227,7 +225,7 @@ typedef enum _CM_RETURN_CODE
 #define CM_HAL_MAX_NUM_2D_ALIASES           10                                  // maximum number of aliases for one 2D surface. Arbitrary - can be increased
 #define CM_HAL_MAX_NUM_BUFFER_ALIASES       10                                  // maximum number of aliases for one Buffer. Arbitrary - can be increased
 
-#define CM_MAX_SIP_SIZE                     0x2000                              // 8k system routine size
+#define CM_MAX_SIP_SIZE                     0x4000                              // 16k system routine size
 #define CM_DEBUG_SURFACE_INDEX              252                                 // reserved for tools
 #define CM_DEBUG_SURFACE_SIZE               0x10000                             // 64k for all threads
 #define CM_CSR_SURFACE_SIZE                 0x800000                            // 8 M Bytes for CSR surface
@@ -344,6 +342,9 @@ typedef enum _CM_RETURN_CODE
 #define CM_DEVICE_CONFIG_KERNEL_DEBUG_OFFSET                23
 #define CM_DEVICE_CONFIG_KERNEL_DEBUG_ENABLE               (1 << CM_DEVICE_CONFIG_KERNEL_DEBUG_OFFSET)
 
+#define CM_DEVICE_CONFIG_FAST_PATH_OFFSET                   30
+#define CM_DEVICE_CONFIG_FAST_PATH_ENABLE                   (1 << CM_DEVICE_CONFIG_FAST_PATH_OFFSET)
+
 #define CM_DEVICE_CONFIG_MOCK_RUNTIME_OFFSET                31
 #define CM_DEVICE_CONFIG_MOCK_RUNTIME_ENABLE                (1 << CM_DEVICE_CONFIG_MOCK_RUNTIME_OFFSET)
 
@@ -376,7 +377,6 @@ typedef enum _CM_RETURN_CODE
 
 #define CM_KERNELBINARY_BLOCKSIZE_2MB (1024 * 1024 * 2)
 #define CM_64BYTE (64)
-
 
 #define CM_DDI_1_0 100
 #define CM_DDI_1_1 101
@@ -414,6 +414,12 @@ enum CM_QUEUE_TYPE
     CM_QUEUE_TYPE_VEBOX = 3
 };
 
+enum CM_QUEUE_SSEU_USAGE_HINT_TYPE
+{
+    CM_QUEUE_SSEU_USAGE_HINT_DEFAULT = 0,
+    CM_QUEUE_SSEU_USAGE_HINT_VME  = 1
+};
+
 struct CM_QUEUE_CREATE_OPTION
 {
     CM_QUEUE_TYPE QueueType : 3;
@@ -421,30 +427,30 @@ struct CM_QUEUE_CREATE_OPTION
     unsigned int Reserved0  : 3;
     bool UserGPUContext     : 1;
     unsigned int GPUContext : 8; // user provided GPU CONTEXT in enum MOS_GPU_CONTEXT, this will override CM_QUEUE_TYPE if set
-    unsigned int Reserved2  : 16;
+    CM_QUEUE_SSEU_USAGE_HINT_TYPE SseuUsageHint : 3;
+    unsigned int Reserved2  : 13;
 };
 
-const CM_QUEUE_CREATE_OPTION CM_DEFAULT_QUEUE_CREATE_OPTION = { CM_QUEUE_TYPE_RENDER, false, 0, 0, 0, 0 };
-
+const CM_QUEUE_CREATE_OPTION CM_DEFAULT_QUEUE_CREATE_OPTION = { CM_QUEUE_TYPE_RENDER, false, 0, false, 0, CM_QUEUE_SSEU_USAGE_HINT_DEFAULT, 0 };
 
 //------------------------------------------------------------------------------
 //|GT-PIN
 typedef struct _CM_SURFACE_DETAILS
 {
-    uint32_t            dwWidth;    //width of surface
-    uint32_t            dwHeight;   //height of surface, 0 if surface is CmBuffer
-    uint32_t            dwDepth;    //depth of surface, 0 if surface is CmBuffer or CmSurface2D
+    uint32_t            width;                  //width of surface
+    uint32_t            height;                 //height of surface, 0 if surface is CmBuffer
+    uint32_t            depth;                  //depth of surface, 0 if surface is CmBuffer or CmSurface2D
 
-    DdiSurfaceFormat    dwFormat;   //format of surface, UNKNOWN if surface is CmBuffer
-    uint32_t            dwPlaneIndex;//plane Index for this BTI, 0 if surface is not planar surface
+    DdiSurfaceFormat    format;                 //format of surface, UNKNOWN if surface is CmBuffer
+    uint32_t            planeIndex;             //plane Index for this BTI, 0 if surface is not planar surface
 
-    uint32_t            dwPitch;    //pitch of suface, 0 if surface is CmBuffer
-    uint32_t            dwSlicePitch; //pitch of a slice in CmSurface3D, 0 if surface is CmBuffer or CmSurface2D
-    uint32_t            dwSurfaceBaseAddress;
-    uint8_t             u8TiledSurface;//bool
-    uint8_t             u8TileWalk;//bool
-    uint32_t            dwXOffset;
-    uint32_t            dwYOffset;
+    uint32_t            pitch;                  //pitch of suface, 0 if surface is CmBuffer
+    uint32_t            slicePitch;             //pitch of a slice in CmSurface3D, 0 if surface is CmBuffer or CmSurface2D
+    uint32_t            surfaceBaseAddress;
+    uint8_t             tiledSurface;           //bool
+    uint8_t             tileWalk;               //bool
+    uint32_t            xOffset;
+    uint32_t            yOffset;
 }CM_SURFACE_DETAILS,*PCM_SURFACE_DETAILS;
 
 //------------------------------------------------------------------------------
@@ -476,7 +482,10 @@ typedef enum _CM_WALKING_PATTERN
     CM_WALK_WAVEFRONT26X = 5,
     CM_WALK_WAVEFRONT26ZIG = 6,
     CM_WALK_WAVEFRONT45D = 7,
-    CM_WALK_WAVEFRONT45XD_2 = 8
+    CM_WALK_WAVEFRONT45XD_2 = 8,
+    CM_WALK_WAVEFRONT26XALT = 9,
+    CM_WALK_WAVEFRONT26D = 10,
+    CM_WALK_WAVEFRONT26XD = 11
 } CM_WALKING_PATTERN;
 
 //------------------------------------------------------------------------------
@@ -500,7 +509,6 @@ typedef struct _CM_WALKING_PARAMETERS
     uint32_t Value[CM_NUM_DWORD_FOR_MW_PARAM];
 } CM_WALKING_PARAMETERS, *PCM_WALKING_PARAMETERS;
 
-
 #define  CM_FUSED_EU_DISABLE                 0
 #define  CM_FUSED_EU_ENABLE                  1
 #define  CM_FUSED_EU_DEFAULT                 CM_FUSED_EU_DISABLE
@@ -509,16 +517,26 @@ typedef struct _CM_WALKING_PARAMETERS
 #define  CM_TURBO_BOOST_ENABLE                1
 #define  CM_TURBO_BOOST_DEFAULT              CM_TURBO_BOOST_ENABLE
 
-#if !(USE_EXTENSION_CODE)
 typedef struct _CM_TASK_CONFIG
 {
-    uint32_t turboBoostFlag;         //CM_TURBO_BOOST_DISABLE----disabled, CM_TURBO_BOOST_ENABLE--------enabled.
+    bool     turboBoostFlag     : 1;
+    uint32_t reserved_bits      :31;
     uint32_t reserved0;
     uint32_t reserved1;
-    uint32_t reserved2;              //reserve 2 uint32_t fields for future extention
+    uint32_t reserved2;
 }CM_TASK_CONFIG, *PCM_TASK_CONFIG;
-#endif
 
+typedef enum _CM_KERNEL_EXEC_MODE
+{
+    CM_KERNEL_EXECUTION_MODE_MONOPOLIZED =  0, // Kernel need occupy all DSS for execution.
+    CM_KERNEL_EXECUTION_MODE_CONCURRENT,       // Kernel can occupy part of DSS and concurrently execute together with other workloads.
+} CM_KERNEL_EXEC_MODE;
+
+struct CM_EXECUTION_CONFIG
+{
+    CM_KERNEL_EXEC_MODE kernelExecutionMode = CM_KERNEL_EXECUTION_MODE_MONOPOLIZED;
+    int                 concurrentPolicy    = 0; //Reserve for future extension.
+};
 
 struct L3ConfigRegisterValues
 {
@@ -556,7 +574,6 @@ typedef struct _CM_VEBOX_STATE
     uint32_t    ForwardGammaCorrectionEnable : BITFIELD_BIT(21);
     uint32_t    __CODEGEN_UNIQUE(Reserved) : BITFIELD_RANGE(22, 24);
     uint32_t    StateSurfaceControlBits : BITFIELD_RANGE(25, 31);
-
 
 }  CM_VEBOX_STATE, *PCM_VEBOX_STATE;
 
@@ -604,7 +621,6 @@ typedef enum _CM_GPUCOPY_KERNEL_ID
     GPU_COPY_KERNEL_CPU2CPU_ID                  = 0x9
 } CM_GPUCOPY_KERNEL_ID;
 
-
 // referenced in both g9 and g10.
 typedef enum _CM_HAL_MEMORY_OBJECT_CONTROL_G9
 {
@@ -618,6 +634,20 @@ typedef enum _CM_HAL_MEMORY_OBJECT_CONTROL_G9
     CM_MEMORY_OBJECT_CONTROL_SKL_NO_CACHE    = 0x7
 }CM_HAL_MEMORY_OBJECT_CONTROL_G9;
 
+// Unified  CM_MEMORY_OBJECT_CONTROL enumeration
+typedef enum _CM_HAL_MEMORY_OBJECT_CONTROL
+{
+    CM_MEMORY_OBJECT_CONTROL_DEFAULT          = 0x0,
+    CM_MEMORY_OBJECT_CONTROL_NO_L3            = 0x1,
+    CM_MEMORY_OBJECT_CONTROL_NO_LLC_ELLC      = 0x2,
+    CM_MEMORY_OBJECT_CONTROL_NO_LLC           = 0x3,
+    CM_MEMORY_OBJECT_CONTROL_NO_ELLC          = 0x4,
+    CM_MEMORY_OBJECT_CONTROL_NO_LLC_L3        = 0x5,
+    CM_MEMORY_OBJECT_CONTROL_NO_ELLC_L3       = 0x6,
+    CM_MEMORY_OBJECT_CONTROL_NO_CACHE         = 0x7,
+    CM_MEMORY_OBJECT_CONTROL_L1_ENABLED       = 0x8
+}CM_HAL_MEMORY_OBJECT_CONTROL;
+
 
 typedef struct _CM_POWER_OPTION
 {
@@ -625,7 +655,6 @@ typedef struct _CM_POWER_OPTION
     uint16_t nSubSlice;                   // set number of subslice to use: 0(default number), 1, 2...
     uint16_t nEU;                         // set number of EU to use: 0(default number), 1, 2...
 } CM_POWER_OPTION, *PCM_POWER_OPTION;
-
 
 //*-----------------------------------------------------------------------------
 //| CM Convolve type for SKL+
@@ -636,7 +665,6 @@ typedef enum _CM_CONVOLVE_SKL_TYPE
     CM_CONVOLVE_SKL_TYPE_1D = 1,
     CM_CONVOLVE_SKL_TYPE_1P = 2
 } CM_CONVOLVE_SKL_TYPE;
-
 
 // to define frame type for interlace frame support
 typedef enum _CM_FRAME_TYPE
@@ -649,7 +677,7 @@ typedef enum _CM_FRAME_TYPE
 
 //L3 Configurations
 typedef struct _L3_CONFIG {
-    uint32_t    slm;            //shared local memory
+    uint32_t    slm;            //sharedlocalmemory
     uint32_t    urb;            //unified return buffer
     uint32_t    rest;           //rest
     uint32_t    datacluster;    //data cluster
@@ -704,7 +732,8 @@ enum CM_ARG_KIND
     ARG_KIND_IMPLICIT_LOCALID = 0x10,
     ARG_KIND_STATE_BUFFER = 0x11,
     ARG_KIND_GENERAL_DEPVEC = 0x20,
-    ARG_KIND_SURFACE_2D_SCOREBOARD = 0x2A  //used for SW scoreboarding
+    ARG_KIND_SURFACE_2D_SCOREBOARD = 0x2A,  //used for SW scoreboarding
+    ARG_KIND_GENERAL_DEPCNT = 0x30          //dependency count, used for SW scoreboarding
 };
 
 //non-depend on rtti::dynamic_cast

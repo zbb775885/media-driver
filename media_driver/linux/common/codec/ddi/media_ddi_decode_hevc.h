@@ -21,7 +21,7 @@
 */
 //!
 //! \file      media_ddi_decode_hevc.h 
-//! \brief     libva(and its extension) decoder implementation  
+//! \brief     libva(and its extension) decoder implementation 
 //!
 //!
 //! \file     media_ddi_decode_hevc.h
@@ -60,11 +60,11 @@ public:
         VAContextID      context,
         VABufferID       *buffers,
         int32_t          numBuffers) override;
-    
+
     virtual MOS_FORMAT GetFormat() override;
 
     virtual VAStatus SetDecodeParams() override;
-    
+
     virtual void ContextInit(
         int32_t picWidth,
         int32_t picHeight) override;
@@ -76,10 +76,10 @@ public:
     virtual VAStatus AllocSliceControlBuffer(
         DDI_MEDIA_BUFFER       *buf) override;
 
-    virtual uint8_t* GetPicParamBuf( 
+    virtual uint8_t* GetPicParamBuf(
     DDI_CODEC_COM_BUFFER_MGR      *bufMgr) override;
 
-private:
+protected:
     //!
     //! \brief   ParaSliceParam for HEVC
     //! \details parse the sliceParam info required by HEVC decoding for
@@ -90,14 +90,14 @@ private:
     //! \param   [in] *slcParam
     //!          VASliceParameterBufferHEVC
     //! \param   [in] numSlices
-    //!             int32_t
+    //!             uint32_t
     //!
     //! \return  VA_STATUS_SUCCESS is returned if it is parsed successfully.
     //!          else fail reason
-    VAStatus ParseSliceParams(
+    virtual VAStatus ParseSliceParams(
         DDI_MEDIA_CONTEXT           *mediaCtx,
         VASliceParameterBufferHEVC  *slcParam,
-        int32_t                     numSlices);
+        uint32_t                     numSlices);
 
     //!
     //! \brief   ParseIQMatrixParam for HEVC
@@ -124,7 +124,7 @@ private:
     //!
     //! \return  VA_STATUS_SUCCESS is returned if it is parsed successfully.
     //!          else fail reason
-    VAStatus ParsePicParams(
+    virtual VAStatus ParsePicParams(
         DDI_MEDIA_CONTEXT            *mediaCtx,
         VAPictureParameterBufferHEVC *picParam);
 
@@ -132,23 +132,23 @@ private:
     //! \details Alloc/resize SlicePram content for HEVC decoding
     //!
     //! \param   [in] numSlices
-    //!          int32_t the required number of slices
+    //!          uint32_t the required number of slices
     //!
     //! \return  VA_STATUS_SUCCESS is returned if it is parsed successfully.
     //!          else fail reason
-    VAStatus AllocSliceParamContext(
-        int32_t numSlices);
+    virtual VAStatus AllocSliceParamContext(
+        uint32_t numSlices);
 
     //! \brief   Init Resource buffer for HEVC
     //! \details Initialize and allocate the Resource buffer for HEVC
     //!
     //! \return  VA_STATUS_SUCCESS is returned if it is parsed successfully.
     //!          else fail reason
-    VAStatus InitResourceBuffer();
+    virtual VAStatus InitResourceBuffer();
 
     //! \brief   Free Resource buffer for HEVC
     //!
-    void FreeResourceBuffer();
+    virtual void FreeResourceBuffer();
 
     //!
     //! \brief    Setup Codec Picture for Hevc

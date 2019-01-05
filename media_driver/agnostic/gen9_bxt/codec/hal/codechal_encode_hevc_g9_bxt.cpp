@@ -25,7 +25,8 @@
 //!
 
 #include "codechal_encode_hevc_g9_bxt.h"
-#include "igcodeckrn_g9_bxt.h"
+//#include "igcodeckrn_g9_bxt.h"
+#include "igcodeckrn_g9.h"
 
 //! HEVC encoder kernel header structure for G9 BXT
 struct CODECHAL_ENC_HEVC_KERNEL_HEADER_G9_BXT
@@ -56,7 +57,7 @@ struct CODECHAL_ENC_HEVC_KERNEL_HEADER_G9_BXT
     CODECHAL_KERNEL_HEADER Hevc_LCUEnc_P_Adv;                               //!< P frame Adv kernel
 };
 
-//! \brief  typedef of struct CODECHAL_ENC_HEVC_KERNEL_HEADER_G9_BXT 
+//! \brief  typedef of struct CODECHAL_ENC_HEVC_KERNEL_HEADER_G9_BXT
 using PCODECHAL_ENC_HEVC_KERNEL_HEADER_G9_BXT = struct CODECHAL_ENC_HEVC_KERNEL_HEADER_G9_BXT*;
 
 MOS_STATUS CodechalEncHevcStateG9Bxt::GetKernelHeaderAndSize(
@@ -87,8 +88,8 @@ MOS_STATUS CodechalEncHevcStateG9Bxt::GetKernelHeaderAndSize(
     else if (operation == ENC_ME)
     {
         // Only BXT supports P frame. P HME index CODECHAL_ENCODE_ME_IDX_P is 0 and B HME index CODECHAL_ENCODE_ME_IDX_B is 1
-        // Use kernel total number to check if P frame is supported 
-        // MBEnc kernels + BRC kernels + DownSampling kernel + DS combined kernel 
+        // Use kernel total number to check if P frame is supported
+        // MBEnc kernels + BRC kernels + DownSampling kernel + DS combined kernel
         if (kernelHeaderTable->nKernelCount == (CODECHAL_HEVC_MBENC_NUM_BXT_SKL + CODECHAL_HEVC_BRC_NUM + 2))
         {
             if (krnStateIdx == 0)
@@ -159,6 +160,11 @@ MOS_STATUS CodechalEncHevcStateG9Bxt::GetKernelHeaderAndSize(
             currKrnHeader = &kernelHeaderTable->Hevc_LCUEnc_PB_Adv;
             break;
 
+        case CODECHAL_HEVC_MBENC_DS_COMBINED:
+            // Ignore this kernel on BXT.
+            *krnSize = 0;
+            return eStatus;
+
         case CODECHAL_HEVC_MBENC_PENC:
             currKrnHeader = &kernelHeaderTable->HEVC_LCUEnc_P_MB;
             break;
@@ -193,13 +199,13 @@ MOS_STATUS CodechalEncHevcStateG9Bxt::GetKernelHeaderAndSize(
     return eStatus;
 }
 
-MOS_STATUS CodechalEncHevcStateG9Bxt::Initialize(PCODECHAL_SETTINGS settings)
+MOS_STATUS CodechalEncHevcStateG9Bxt::Initialize(CodechalSetting * settings)
 {
     MOS_STATUS eStatus = MOS_STATUS_SUCCESS;
 
     CODECHAL_ENCODE_FUNCTION_ENTER;
 
-    // common initilization 
+    // common initilization
     CODECHAL_ENCODE_CHK_STATUS_RETURN(CodechalEncHevcStateG9::Initialize(settings));
 
     m_cscDsState->EnableMmc();
@@ -213,10 +219,17 @@ CodechalEncHevcStateG9Bxt::CodechalEncHevcStateG9Bxt(
     PCODECHAL_STANDARD_INFO standardInfo)
     :CodechalEncHevcStateG9(hwInterface, debugInterface, standardInfo)
 {
-    m_kernelBase = (uint8_t *)IGCODECKRN_G9_BXT;
+    //m_kernelBase = (uint8_t *)IGCODECKRN_G9_BXT;
+    m_kernelBase = (uint8_t *)IGCODECKRN_G9; //IGCODECKRN_G9_BXT causes GPU HANG, use IGCODECKRN_G9.
     pfnGetKernelHeaderAndSize = GetKernelHeaderAndSize;
     m_noMeKernelForPFrame = false;
 
-    dwNumRegionsInSlice = 2;
+    m_numRegionsInSlice = 2;
+
+    MOS_STATUS eStatus = InitMhw();
+    if (eStatus != MOS_STATUS_SUCCESS)
+    {
+        CODECHAL_ENCODE_ASSERTMESSAGE("HEVC encoder MHW initialization failed.");
+    }
 }
 

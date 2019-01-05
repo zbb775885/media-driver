@@ -48,7 +48,7 @@ public:
     {
         LoadProfileEntrypoints();
         return VA_STATUS_SUCCESS;
-    }   
+    }
 protected:
     static const uint32_t m_maxHevcEncWidth =
         CODEC_8K_MAX_PIC_WIDTH; //!< maxinum width for HEVC encode
@@ -72,6 +72,9 @@ protected:
             uint32_t width,
             uint32_t height);
 
+    virtual VAStatus LoadAvcEncProfileEntrypoints();
+    virtual VAStatus LoadHevcEncProfileEntrypoints();
+
     //!
     //! \brief    Initialize HEVC low-power encode profiles, entrypoints and attributes
     //!
@@ -92,6 +95,8 @@ protected:
     //! 
     //! \param  [in] rcMode
     //!     RC mode
+    //! \param  [in] isVdenc
+    //!     vdenc
     //! \param  [in] maxNum
     //!     Maximum number
     //! \param  [in] isRoiInDeltaQP
@@ -100,6 +105,6 @@ protected:
     //! \return VAStatus
     //!     Return VA_STATUS_SUCCESS if call success, else fail reason
     //!
-    VAStatus QueryAVCROIMaxNum(uint32_t rcMode, int32_t *maxNum, bool *isRoiInDeltaQP);
+    VAStatus QueryAVCROIMaxNum(uint32_t rcMode, bool isVdenc, uint32_t *maxNum, bool *isRoiInDeltaQP);
 };
 #endif

@@ -27,7 +27,9 @@
 #include "codechal_encoder_base.h"
 #include "codechal_encode_csc_ds_g9.h"
 #include "codeckrnheader.h"
+#if defined(ENABLE_KERNELS) && !defined(_FULL_OPEN_SOURCE)
 #include "igcodeckrn_g9.h"
+#endif
 #if USE_CODECHAL_DEBUG_TOOL
 #include "codechal_debug_encode_par_g9.h"
 #endif
@@ -78,7 +80,7 @@ MOS_STATUS CodechalEncodeCscDsG9::SetCurbeCsc()
     {
         curbe.DW3_EnableMBStatSurface = false;
     }
-    
+
     // RGB->YUV CSC coefficients
     if (m_curbeParams.inputColorSpace == ECOLORSPACE_P709)
     {
@@ -134,7 +136,7 @@ MOS_STATUS CodechalEncodeCscDsG9::SetCurbeCsc()
             curbe.DW9_CscCoefficientC10 = 0x0038;
         }
     }
-    else 
+    else
     {
         CODECHAL_ENCODE_ASSERTMESSAGE("Unsupported ARGB input color space = %d!", m_curbeParams.inputColorSpace);
         return MOS_STATUS_INVALID_PARAMETER;
@@ -161,7 +163,7 @@ MOS_STATUS CodechalEncodeCscDsG9::InitKernelStateDS()
     if (CODECHAL_AVC == m_standard)
     {
         m_dsBTCount[0] = ds4xNumSurfaces;
-        m_dsCurbeLength[0] = 
+        m_dsCurbeLength[0] =
         m_dsInlineDataLength = sizeof(Ds4xKernelCurbeData);
         m_dsBTISrcY = ds4xSrcYPlane;
         m_dsBTIDstY = ds4xDstYPlane;
@@ -200,7 +202,7 @@ MOS_STATUS CodechalEncodeCscDsG9::SetCurbeDS4x()
         curbe.DW4_OutputYBTIBottomField = ds4xDstYPlaneBtmField;
     }
 
-    if (curbe.DW6_EnableMBFlatnessCheck = m_curbeParams.bFlatnessCheckEnabled)
+    if ((curbe.DW6_EnableMBFlatnessCheck = m_curbeParams.bFlatnessCheckEnabled))
     {
         curbe.DW5_FlatnessThreshold = 128;
     }
@@ -240,6 +242,7 @@ CodechalEncodeCscDsG9::CodechalEncodeCscDsG9(CodechalEncoderState* encoder)
 {
     m_cscKernelUID = IDR_CODEC_Downscale_Copy;
     m_cscCurbeLength = sizeof(CscKernelCurbeData);
+#if defined(ENABLE_KERNELS) && !defined(_FULL_OPEN_SOURCE)
     m_kernelBase = (uint8_t*)IGCODECKRN_G9;
-    Initialize();
+#endif
 }

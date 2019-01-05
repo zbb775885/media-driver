@@ -29,7 +29,7 @@
 #include "mos_os.h"
 #include "mos_util_debug.h"
 #include "codec_def_common.h"
-#include "mhw_cp.h"
+#include "mhw_cp_interface.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,11 +43,10 @@ class CodechalDebugInterface;
 class CodechalDecode;
 class CodechalEncoderState;
 class CodechalHwInterface;
+class CodechalSetting;
 
 // Forward Declarations
 class USERMODE_DEVICE_CONTEXT;
-
-class CodechalCencDecode;
 
 #if (_DEBUG || _RELEASE_INTERNAL)
 
@@ -196,35 +195,6 @@ typedef struct _CODEC_ENCODE_MBDATA_LAYOUT
     uint32_t    uiMvBottomFieldOffset;      //!< Offset to the MV data for the bottom field
 } CODEC_ENCODE_MBDATA_LAYOUT, *PCODEC_ENCODE_MBDATA_LAYOUT;
 
-/*! \brief Settings used to finalize the creation of the CodecHal device.
-*/
-typedef struct _CODECHAL_SETTINGS
-{
-    CODECHAL_FUNCTION       CodecFunction;                  //!< High level codec functionality requested.
-    /*! \brief Width requested.
-    *
-    *   For encode this width must be the maximum width for the entire stream to be encoded, for decode dynamic allocation is supported and this width is the largest width recieved.
-    */
-    uint32_t                dwWidth;
-    /*! \brief Height requested.
-    *
-    *   For encode this height must be the maximum height for the entire stream to be encoded, for decode dynamic allocation is supported and this height is the largest height recieved.
-    */
-    uint32_t                dwHeight;
-    uint32_t                Mode;                           //!< Mode requested (high level combination between Standard and CodecFunction).
-    uint32_t                Standard;                       //!< Codec standard requested.
-    uint8_t                 ucLumaChromaDepth;              //!< Applies currently to HEVC only, specifies bit depth as either 8 or 10 bits.
-    uint8_t                 ucChromaFormat;                 //!< Applies currently to HEVC/VP9 only, specifies chromaformat as 420/422/444.
-    bool                    bIntelEntrypointInUse;          //!< Applies to decode only, application is using a Intel-specific entrypoint.
-    bool                    bShortFormatInUse;              //!< Applies to decode only, application is passing short format slice data.
-
-    bool                    bDisableDecodeSyncLock;         //!< Flag to indicate if Decode O/P can be locked for sync.
-    void*                   pCpParams;                      //!< Reserved
-
-    // Decode Downsampling
-    bool                            bDownsamplingHinted;    //!< Applies to decode only, application may request field scaling.
-} CODECHAL_SETTINGS, *PCODECHAL_SETTINGS;
-
 /*! \brief Settings used to create the CodecHal device.
 */
 typedef struct _CODECHAL_STANDARD_INFO
@@ -257,6 +227,16 @@ public:
         CodechalDebugInterface* debugInterface);
 
     //!
+    //! \brief    Copy constructor
+    //!
+    Codechal(const Codechal&) = delete;
+
+    //!
+    //! \brief    Copy assignment operator
+    //!
+    Codechal& operator=(const Codechal&) = delete;
+
+    //!
     //! \brief    Destructor
     //!
     virtual ~Codechal();
@@ -268,7 +248,7 @@ public:
     //! \return   MOS_STATUS
     //!           MOS_STATUS_SUCCESS if success else fail reason
     //!
-    virtual MOS_STATUS Allocate(PCODECHAL_SETTINGS codecHalSettings);
+    virtual MOS_STATUS Allocate(CodechalSetting *codecHalSettings);
 
     //!
     //! \brief    Signals the beginning of a picture.
@@ -326,12 +306,6 @@ public:
     virtual void Destroy();
 
     //!
-    //! \brief  Set cenc decode
-    //! \return No return
-    //!
-    void SetCencDecode(CodechalCencDecode *  cencDecoder) { m_cencDecoder = cencDecoder; }
-
-    //!
     //! \brief    Gets hardware interface.
     //! \return   CodechalHwInterface
     //!           return hardware interface
@@ -352,6 +326,12 @@ public:
     //!
     CodechalDebugInterface * GetDebugInterface() { return m_debugInterface; }
 
+    //!
+    //! \brief    Check if Apogeios enabled.
+    //! \return   bool
+    //!           return m_apogeiosEnable
+    //!
+    bool IsApogeiosEnabled() { return m_apogeiosEnable; }
 protected:
     //! \brief    HW Inteface
     //! \details  Responsible for constructing all defined states and commands. 
@@ -367,14 +347,15 @@ protected:
     //! \details  This interface is only valid for release internal and debug builds.
     CodechalDebugInterface  *m_debugInterface   = nullptr;
 
-    /*! \brief CENC interface used by Huc, such as 2nd level BB, extra surface to eStatus register.
-    *
-    *   The decypt interface is only valid for a particular codec standard/funciton/mode combination and may not be re-used for something else. If pDecoder is valid, pEncoder should be nullptr.
-    */
-    CodechalCencDecode      *m_cencDecoder      = nullptr;
+    //! \brief    Interface used for debug dumps in GetStatusReport.
+    //! \details  This interface is only valid for release internal and debug builds.
+    CodechalDebugInterface  *m_statusReportDebugInterface   = nullptr;
 
     //! \brief    Indicates whether or not using null hardware
     bool                    m_useNullHw[MOS_GPU_CONTEXT_MAX] = { false };
+
+    //! \brief    Apogeios Enable Flag
+    bool                    m_apogeiosEnable = false;
 };
 
 //!

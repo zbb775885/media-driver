@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2009-2017, Intel Corporation
+* Copyright (c) 2009-2018, Intel Corporation
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -447,12 +447,12 @@ extern const MHW_SURFACE_PLANES g_cRenderHal_SurfacePlanes[RENDERHAL_PLANES_DEFI
             { MHW_GENERIC_PLANE, 1, 1, 1, 1, 4, 1, MHW_MEDIASTATE_SURFACEFORMAT_R8G8B8A8_UNORM }
         }
     },
-	// RENDERHAL_PLANES_AYUV_ADV
-	{   1,
-	    {
-		    { MHW_GENERIC_PLANE, 1, 1, 1, 1, 1, 1, MHW_MEDIASTATE_SURFACEFORMAT_A8Y8U8V8_UNORM }
-	    }
-	},
+    // RENDERHAL_PLANES_AYUV_ADV
+    {   1,
+        {
+            { MHW_GENERIC_PLANE, 1, 1, 1, 1, 1, 1, MHW_MEDIASTATE_SURFACEFORMAT_A8Y8U8V8_UNORM }
+        }
+    },
     // RENDERHAL_PLANES_STMM_ADV
     {   1,
         {
@@ -692,16 +692,16 @@ extern const MHW_SURFACE_PLANES g_cRenderHal_SurfacePlanes[RENDERHAL_PLANES_DEFI
     // RENDERHAL_PLANES_A16B16G16R16F
     {1,
          {
-            { MHW_GENERIC_PLANE, 1, 1, 1, 1, 0, 0, MHW_GFX3DSTATE_SURFACEFORMAT_R16G16B16A16_FLOAT } //setting "PixelsPerDword = 0" in DP R/W usage, "0" means no need to adjust dwSurfaceWidth. already DWord aligned. 
+            { MHW_GENERIC_PLANE, 1, 1, 1, 1, 0, 0, MHW_GFX3DSTATE_SURFACEFORMAT_R16G16B16A16_FLOAT } //setting "PixelsPerDword = 0" in DP R/W usage, "0" means no need to adjust dwSurfaceWidth. already DWord aligned.
          }
     },
-    // RENDERHAL_PLANES_R16G16_UNORM  
+    // RENDERHAL_PLANES_R16G16_UNORM
     {1,
          {
-             { MHW_GENERIC_PLANE, 1, 1, 1, 1, 1, 0, MHW_GFX3DSTATE_SURFACEFORMAT_R16G16_UNORM } 
+             { MHW_GENERIC_PLANE, 1, 1, 1, 1, 1, 0, MHW_GFX3DSTATE_SURFACEFORMAT_R16G16_UNORM }
         }
     },
-    // RENDERHAL_PLANES_R16F 
+    // RENDERHAL_PLANES_R16F
     {   1,
         {
             { MHW_GENERIC_PLANE, 1, 1, 1, 1, 1, 0, MHW_GFX3DSTATE_SURFACEFORMAT_R16_FLOAT }
@@ -710,7 +710,7 @@ extern const MHW_SURFACE_PLANES g_cRenderHal_SurfacePlanes[RENDERHAL_PLANES_DEFI
     // RENDERHAL_PLANES_A16R16G16B16F
     {1,
          {
-            { MHW_GENERIC_PLANE, 1, 1, 1, 1, 0, 0, MHW_GFX3DSTATE_SURFACEFORMAT_R16G16B16A16_FLOAT } //setting "PixelsPerDword = 0" in DP R/W usage, "0" means no need to adjust dwSurfaceWidth. already DWord aligned. 
+            { MHW_GENERIC_PLANE, 1, 1, 1, 1, 0, 0, MHW_GFX3DSTATE_SURFACEFORMAT_R16G16B16A16_FLOAT } //setting "PixelsPerDword = 0" in DP R/W usage, "0" means no need to adjust dwSurfaceWidth. already DWord aligned.
          }
     },
     // RENDERHAL_PLANES_YUY2_2PLANES
@@ -745,20 +745,63 @@ extern const MHW_SURFACE_PLANES g_cRenderHal_SurfacePlanes[RENDERHAL_PLANES_DEFI
         {
             { MHW_GENERIC_PLANE, 1, 1, 1, 1, 1, 1, MHW_MEDIASTATE_SURFACEFORMAT_R16B16_UNORM }
         }
+    },
+    // RENDERHAL_PLANES_R16G16_SINT
+    { 1,
+        {
+            { MHW_GENERIC_PLANE, 1, 1, 1, 1, 1, 0, MHW_GFX3DSTATE_SURFACEFORMAT_R16G16_SINT }
+        }
+    },
+    // RENDERHAL_PLANES_R24_UNORM_X8_TYPELESS
+    { 1,
+        {
+            { MHW_GENERIC_PLANE, 1, 1, 1, 1, 1, 0, MHW_GFX3DSTATE_SURFACEFORMAT_R24_UNORM_X8_TYPELESS }
+        }
+    },
+    // RENDERHAL_PLANES_R32_FLOAT_X8X24_TYPELESS
+    { 1,
+        {
+            { MHW_GENERIC_PLANE, 1, 1, 1, 1, 0, 0, MHW_GFX3DSTATE_SURFACEFORMAT_R32_FLOAT_X8X24_TYPELESS }
+        }
+    },
+    // RENDERHAL_PLANES_P208
+    { 2,
+        {
+            { MHW_Y_PLANE      , 1, 1, 1, 1, 4, 0, MHW_GFX3DSTATE_SURFACEFORMAT_R8_UNORM },
+            { MHW_U_PLANE      , 2, 1, 1, 1, 2, 0, MHW_GFX3DSTATE_SURFACEFORMAT_R8G8_UNORM }
+        }
+    },
+    // RENDERHAL_PLANES_P208_1PLANE_ADV
+    { 1,
+        {
+            { MHW_GENERIC_PLANE, 1, 1, 2, 1, 4, 1, MHW_MEDIASTATE_SURFACEFORMAT_YCRCB_NORMAL }
+        }
+    },
+    // RENDERHAL_PLANES_Y416_RT
+    { 1,
+        {
+            { MHW_GENERIC_PLANE, 1, 1, 1, 1, 1, 0, MHW_GFX3DSTATE_SURFACEFORMAT_R8G8B8A8_UNORM }
+        }
+    },
+        // RENDERHAL_PLANES_R32G32B32A32
+    {   1,
+        {
+            { MHW_GENERIC_PLANE, 1, 1, 1, 1, 0, 0, MHW_GFX3DSTATE_SURFACEFORMAT_R32G32B32A32_FLOAT }
+        }
     }
 };
 
 //!
 //! \brief    Get Y Offset according to the planeOffset struct and surface pitch
 //! \details  Get Y Offset according to the planeOffset struct and surface pitch
-//! \param   PMOS_PLANE_OFFSET pPlaneOffset
-//!           [in] pointer to the Plane offset
-//! \param    uint32_t pitch
-//!           [in] Pitch of the surface
+//! \param    pOsInterface
+//!           [in] pointer to OS Interface
+//! \param    pOsResource
+//!           [in] Pointers to Surface OsResource
 //! \return   uint16_t
-//!           [out] the Y offset
+//!           [out] the plane Y offset
 //!
-uint16_t RenderHal_CalculateYOffset(PMOS_INTERFACE pOsInterface, PMOS_SURFACE pSurface);
+uint16_t RenderHal_CalculateYOffset(PMOS_INTERFACE pOsInterface, PMOS_RESOURCE pOsResource);
 
 MOS_STATUS RenderHal_AllocateDebugSurface(
     PRENDERHAL_INTERFACE     pRenderHal);
@@ -808,6 +851,8 @@ void RenderHal_GetAlignUnit(
     uint16_t           *pwHeightAlignUnit,
     PRENDERHAL_SURFACE pRenderHalSurface)
 {
+    MHW_RENDERHAL_CHK_NULL_NO_STATUS_RETURN(pRenderHalSurface);
+    
     switch (pRenderHalSurface->OsSurface.Format)
     {
         case Format_YUY2:
@@ -817,7 +862,7 @@ void RenderHal_GetAlignUnit(
         case Format_P208:
             *pwWidthAlignUnit = 1;
 
-            // Height alignment should be 1 but is currently set to 2 because 
+            // Height alignment should be 1 but is currently set to 2 because
             // of an issue in AVS scaling.
             *pwHeightAlignUnit = 2;
             break;
@@ -859,6 +904,12 @@ void RenderHal_AdjustBoundary(
 {
     uint16_t wWidthAlignUnit;
     uint16_t wHeightAlignUnit;
+
+    MHW_RENDERHAL_CHK_NULL_NO_STATUS_RETURN(pRenderHal);
+    MHW_RENDERHAL_CHK_NULL_NO_STATUS_RETURN(pRenderHalSurface);
+    MHW_RENDERHAL_CHK_NULL_NO_STATUS_RETURN(pdwSurfaceWidth);
+    MHW_RENDERHAL_CHK_NULL_NO_STATUS_RETURN(pdwSurfaceHeight);
+    
     PMOS_SURFACE pSurface = &(pRenderHalSurface->OsSurface);
 
     pRenderHal->pfnGetAlignUnit(&wWidthAlignUnit, &wHeightAlignUnit, pRenderHalSurface);
@@ -902,6 +953,8 @@ void RenderHal_GetPixelsPerSample(
     MOS_FORMAT    format,
     uint32_t      *pdwPixelsPerSampleUV)
 {
+    MHW_RENDERHAL_CHK_NULL_NO_STATUS_RETURN(pdwPixelsPerSampleUV);
+    
     *pdwPixelsPerSampleUV = 0;
     switch (format)
     {
@@ -975,7 +1028,7 @@ void RenderHal_GetPixelsPerSample(
 |    |===========================================|
 |     where KH = (sSettings.iKernelHeapSize) bytes in allocation
 |                 blocks of (sSettings.iKernelBlockSize) bytes
-|      
+|
 |     MEDIA STATE ORGANIZATION (Media States in GFX memory)
 |      ~~~~~~~~~~~~~~~~~~~~~~~~
 |              (Gen6, Gen7, Gen75 Layout)
@@ -1013,7 +1066,7 @@ void RenderHal_GetPixelsPerSample(
 |    |              CURBE DATA        (C)             |
 |    |                                                |
 |    |------------------------------------------------|
-|    | SAMPLER STATES         [0] to [S-1]            | 
+|    | SAMPLER STATES         [0] to [S-1]            |
 |    | VA SAMPLER 8x8 STATE   [0] to [VA-1]           | ID[0]
 |    | AVS SAMPLER 8x8 STATE  [0] to [AS-1]           |
 |    |------------------------------------------------|
@@ -1076,14 +1129,14 @@ void RenderHal_GetPixelsPerSample(
 |  |  |      |                    .                      |
 |  |  |  +---| SurfStateEntry[P-1]                       |
 |  |  |  |   |===========================================|
-|  |  |  |  
+|  |  |  |
 |  |  |  |    SSH BUFFER for HW (or SW) - or IndirectBuffer
 |  +--|--|-->|==============================| <-- iBindingTableOffset = 0
 |     |  |   | BI[0]   ......       BI[T-1] |    <- BT[0] (iBindingTableSize)
 |     |  |   | BI[0]   ......       BI[T-1] |    <- BT[1]
 |     |  |   |            .                 |
 |     |  |   | BI[0]   ......       BI[T-1] |    <- BT[N-1]
-|     |  |   |------------------------------| <-- iSurfaceStateOffset 
+|     |  |   |------------------------------| <-- iSurfaceStateOffset
 |     +--|-->| SurfState[0]                 |
 |        |   |        .                     |
 |        |   |        .                     |
@@ -1100,8 +1153,8 @@ void RenderHal_GetPixelsPerSample(
 |           BT = Binding Table (Each Binding Table contains M Binding Indices)
 |           BI = Binding Index
 |
-|        KAID  => Kernel Allocation ID - each value determines the kernel 
-|                 allocation entry in StateHeap (0 to sSettings.iKernelCount - 1) 
+|        KAID  => Kernel Allocation ID - each value determines the kernel
+|                 allocation entry in StateHeap (0 to sSettings.iKernelCount - 1)
 |
 |-----------------------------------------------------------------------------*/
 //! \param    PRENDERHAL_INTERFACE pRenderHal
@@ -1129,9 +1182,7 @@ MOS_STATUS RenderHal_AllocateStateHeaps(
     PMHW_STATE_HEAP              pDshHeap;
     PMHW_STATE_HEAP              pIshHeap;
     int32_t                      i;
-    int32_t                      j;
     uint8_t                      *ptr;
-    uint32_t                     dwOffsetMediaState;
     MOS_STATUS                   eStatus;
 
     // Initialize locals
@@ -1271,7 +1322,7 @@ MOS_STATUS RenderHal_AllocateStateHeaps(
         }
 
         pStateHeap->dwOffsetSamplerAVS = dwSizeMediaState;
-        pStateHeap->dwSizeSamplerAVS   = MOS_ALIGN_CEIL(pSettings->iSamplersAVS * 
+        pStateHeap->dwSizeSamplerAVS   = MOS_ALIGN_CEIL(pSettings->iSamplersAVS *
                                                         pHwSizes->dwSizeSamplerStateAvs,  MHW_SAMPLER_STATE_AVS_ALIGN);
         dwSizeMediaState               += pStateHeap->dwSizeSamplerAVS;
 
@@ -1338,7 +1389,7 @@ MOS_STATUS RenderHal_AllocateStateHeaps(
         // This pointer is relative to the General State Base Address.
         dwSizeGSH = MOS_ALIGN_CEIL(dwSizeGSH, MHW_SCRATCH_SPACE_ALIGN);
 
-        MHW_RENDERHAL_ASSERT(pSettings->iPerThreadScratchSize == 
+        MHW_RENDERHAL_ASSERT(pSettings->iPerThreadScratchSize ==
             MOS_ALIGN_CEIL(pSettings->iPerThreadScratchSize, MHW_SCRATCH_SPACE_ALIGN));
 
         pStateHeap->dwScratchSpaceSize = pRenderHal->pfnGetScratchSpaceSize(pRenderHal, pSettings->iPerThreadScratchSize);
@@ -1380,13 +1431,10 @@ MOS_STATUS RenderHal_AllocateStateHeaps(
     pStateHeap->iSurfaceStateOffset  = pSettings->iBindingTables * pStateHeap->iBindingTableSize;
 
     // Calculate size of a single SSH instance and total SSH buffer size
-    dwSizeSSH = pStateHeap->iSurfaceStateOffset + 
+    dwSizeSSH = pStateHeap->iSurfaceStateOffset +
                 pSettings->iSurfaceStates * pRenderHal->pRenderHalPltInterface->GetSurfaceStateCmdSize();
     pStateHeap->dwSshIntanceSize   = dwSizeSSH;
     pRenderHal->dwIndirectHeapSize = MOS_ALIGN_CEIL(dwSizeSSH, MHW_PAGE_SIZE);
-
-    // Set indirect heap size - limits the size of the command buffer available for rendering
-    MHW_RENDERHAL_CHK_STATUS(pRenderHal->pOsInterface->pfnSetIndirectStateSize(pRenderHal->pOsInterface, pRenderHal->dwIndirectHeapSize));
 
     // Allocate SSH buffer in system memory, not Gfx
     pStateHeap->dwSizeSSH  = dwSizeSSH; // Single SSH instance
@@ -1458,7 +1506,6 @@ finish:
     return eStatus;
 }
 
-
 //!
 //! \brief    Free State Heaps (including MHW interfaces)
 //! \details  Free State Heap resources allocated by RenderHal
@@ -1499,7 +1546,6 @@ MOS_STATUS RenderHal_FreeStateHeaps(PRENDERHAL_INTERFACE pRenderHal)
 finish:
     return eStatus;
 }
-
 
 //!
 //! \brief    Allocate BB
@@ -1551,7 +1597,7 @@ MOS_STATUS RenderHal_AllocateBB(
 
     // Reset Allocation
     pOsInterface->pfnResetResourceAllocationIndex(
-        pOsInterface, 
+        pOsInterface,
         &OsResource);
 
     pBatchBuffer->OsResource       = OsResource;
@@ -1728,7 +1774,7 @@ MOS_STATUS RenderHal_UnlockBB(
     }
 
     MHW_RENDERHAL_CHK_STATUS(pOsInterface->pfnUnlockResource(
-                pOsInterface, 
+                pOsInterface,
                 &pBatchBuffer->OsResource));
 
     pBatchBuffer->bLocked = false;
@@ -1764,11 +1810,11 @@ MOS_STATUS RenderHal_RefreshSync(PRENDERHAL_INTERFACE pRenderHal)
     uint64_t                    uiNS;
     double                      TimeMS;
     uint32_t                    uiComponent;
-    char                        LogData[256];
 
     //----------------------------------
     MHW_RENDERHAL_CHK_NULL(pRenderHal);
     MHW_RENDERHAL_CHK_NULL(pRenderHal->pStateHeap);
+    MHW_RENDERHAL_CHK_NULL(pRenderHal->pOsInterface);
     //----------------------------------
 
     eStatus      = MOS_STATUS_UNKNOWN;
@@ -1785,7 +1831,7 @@ MOS_STATUS RenderHal_RefreshSync(PRENDERHAL_INTERFACE pRenderHal)
     // Most recent tag
     dwCurrentTag = pStateHeap->pSync[0];
     pStateHeap->dwSyncTag = dwCurrentTag - 1;
-    
+
     // Refresh batch buffers
     iBuffersInUse       = 0;
     pBatchBuffer        = pRenderHal->pBatchBufferList;
@@ -2222,7 +2268,6 @@ void RenderHal_TouchKernel(
     pKernelAllocation->dwSync = pStateHeap->dwNextTag;
 }
 
-
 //!
 //! \brief    Reset Kernels
 //! \details  Reset Kernels
@@ -2255,13 +2300,13 @@ void RenderHal_ResetKernels(
         {
             pKernelAllocation->pKernelEntry->dwLoaded = 0;
         }
-        
+
         pKernelAllocation->iKID             = -1;
         pKernelAllocation->iKUID            = -1;
         pKernelAllocation->iKCID            = -1;
-        pKernelAllocation->dwSync           = 0;    
-        pKernelAllocation->dwOffset         = 0;      
-        pKernelAllocation->iSize            = 0; 
+        pKernelAllocation->dwSync           = 0;
+        pKernelAllocation->dwOffset         = 0;
+        pKernelAllocation->iSize            = 0;
         pKernelAllocation->dwFlags          = RENDERHAL_KERNEL_ALLOCATION_FREE;
         pKernelAllocation->dwCount          = 0;
         pKernelAllocation->pKernelEntry     = nullptr;
@@ -2346,7 +2391,6 @@ int32_t RenderHal_AllocateMediaID(
     PRENDERHAL_STATE_HEAP             pStateHeap;
     PRENDERHAL_KRN_ALLOCATION         pKernelAllocation;
     PRENDERHAL_MEDIA_STATE            pCurMediaState;
-    int32_t                           *Allocation;
     int32_t                           iCurbeSize;
     int32_t                           iInterfaceDescriptor;
     RENDERHAL_INTERFACE_DESCRIPTOR_PARAMS InterfaceDescriptorParams;
@@ -2413,7 +2457,6 @@ int32_t RenderHal_AllocateMediaID(
             goto finish;
         }
 
-
     MOS_ZeroMemory((void *)&InterfaceDescriptorParams, sizeof(InterfaceDescriptorParams));
 
     InterfaceDescriptorParams.iMediaID            = iInterfaceDescriptor;
@@ -2440,11 +2483,15 @@ int32_t RenderHal_AllocateMediaID(
     }
 
     // Setup Media ID entry - this call could be HW dependent
-    pRenderHal->pfnSetupInterfaceDescriptor(
-        pRenderHal,
-        pCurMediaState,
-        pKernelAllocation,
-        &InterfaceDescriptorParams);
+    if (MOS_STATUS_SUCCESS != pRenderHal->pfnSetupInterfaceDescriptor(
+                                              pRenderHal,
+                                              pCurMediaState,
+                                              pKernelAllocation,
+                                              &InterfaceDescriptorParams))
+    {
+        MHW_RENDERHAL_ASSERTMESSAGE("Failed to setup interface descriptor.");
+        goto finish;
+    }
 
     // Update kernel usage
     pRenderHal->pfnTouchKernel(pRenderHal, iInterfaceDescriptor);
@@ -2515,9 +2562,14 @@ finish:
     return iInterfaceDescriptor;
 }
 
-
 uint32_t RenderHal_SetSurfacesPerBT(PRENDERHAL_INTERFACE pRenderHal, uint32_t dwSurfacesPerBT)
 {
+    if (pRenderHal == nullptr)
+    {
+        MHW_RENDERHAL_ASSERT("Invalid renderhal interface.");
+        return dwSurfacesPerBT;
+    }
+
     // Set number of surfaces per Binding Table
     uint32_t dwSizeBT = (uint32_t)pRenderHal->StateHeapSettings.iBTAlignment/pRenderHal->pRenderHalPltInterface->GetBTStateCmdSize();
     while (dwSizeBT < dwSurfacesPerBT) dwSizeBT <<= 1;
@@ -2534,7 +2586,6 @@ uint32_t RenderHal_SetSurfacesPerBT(PRENDERHAL_INTERFACE pRenderHal, uint32_t dw
 
     return dwSurfacesPerBT;
 }
-
 
 //!
 //! \brief    Assign Surface State
@@ -2575,8 +2626,9 @@ MOS_STATUS RenderHal_AssignSurfaceState(
     }
 
     // Calculate the Offset to the Surface State
+    MHW_RENDERHAL_CHK_NULL(pRenderHal->pRenderHalPltInterface);
     dwOffset = pStateHeap->iSurfaceStateOffset +
-               (pStateHeap->iCurrentSurfaceState * 
+               (pStateHeap->iCurrentSurfaceState *
                 pRenderHal->pRenderHalPltInterface->GetSurfaceStateCmdSize()); // Moves the pointer to a Currently assigned Surface State
 
     // Obtain new surface entry and initialize
@@ -2617,11 +2669,17 @@ finish:
 //!
 void RenderHal_Get_DI_UVOffSet(
     PRENDERHAL_SURFACE pRenderHalSurface,
-    uint16_t           *pUXOffset, 
+    uint16_t           *pUXOffset,
     uint16_t           *pUYOffset,
-    uint16_t           *pVXOffset, 
+    uint16_t           *pVXOffset,
     uint16_t           *pVYOffset)
 {
+    MHW_RENDERHAL_CHK_NULL_NO_STATUS_RETURN(pRenderHalSurface);
+    MHW_RENDERHAL_CHK_NULL_NO_STATUS_RETURN(pUXOffset);
+    MHW_RENDERHAL_CHK_NULL_NO_STATUS_RETURN(pUYOffset);
+    MHW_RENDERHAL_CHK_NULL_NO_STATUS_RETURN(pVXOffset);
+    MHW_RENDERHAL_CHK_NULL_NO_STATUS_RETURN(pVXOffset);
+
     PMOS_SURFACE pSurface = &pRenderHalSurface->OsSurface;
     MOS_FORMAT fmt = pSurface->Format;
     uint32_t dwNumRowsFromTopV = 0;
@@ -2630,7 +2688,7 @@ void RenderHal_Get_DI_UVOffSet(
     uint32_t dwNumColsFromLeftU = 0;
     uint32_t dwHeight = pSurface->dwHeight;
     uint32_t dwPitch  = pSurface->dwPitch;
-    
+
     switch (fmt)
     {
         //  YY
@@ -2747,6 +2805,7 @@ void RenderHal_SetSliceShutdownMode(
     PRENDERHAL_INTERFACE     pRenderHal,
     bool                     bMode)
 {
+    MHW_RENDERHAL_CHK_NULL_NO_STATUS_RETURN(pRenderHal);
     pRenderHal->bRequestSingleSlice = bMode;
 }
 
@@ -2763,6 +2822,8 @@ void RenderHal_SetPowerOptionMode(
     PRENDERHAL_INTERFACE     pRenderHal,
     PRENDERHAL_POWEROPTION   pMode )
 {
+    MHW_RENDERHAL_CHK_NULL_NO_STATUS_RETURN(pRenderHal);
+    MHW_RENDERHAL_CHK_NULL_NO_STATUS_RETURN(pMode);
     pRenderHal->PowerOption = *pMode;
 }
 
@@ -2776,6 +2837,7 @@ void RenderHal_SetPowerOptionMode(
 void RenderHal_EnableGpgpuMiddleBatchBufferPreemption(
     PRENDERHAL_INTERFACE     pRenderHal)
 {
+    MHW_RENDERHAL_CHK_NULL_NO_STATUS_RETURN(pRenderHal);
     pRenderHal->bEnableGpgpuMidBatchPreEmption = MEDIA_IS_SKU(pRenderHal->pSkuTable, FtrGpGpuMidBatchPreempt) ? true : false;
 }
 
@@ -2789,6 +2851,7 @@ void RenderHal_EnableGpgpuMiddleBatchBufferPreemption(
 void RenderHal_EnableGpgpuMiddleThreadPreemption(
     PRENDERHAL_INTERFACE     pRenderHal)
 {
+    MHW_RENDERHAL_CHK_NULL_NO_STATUS_RETURN(pRenderHal);
     pRenderHal->bEnableGpgpuMidThreadPreEmption = MEDIA_IS_SKU(pRenderHal->pSkuTable, FtrGpGpuMidThreadLevelPreempt) ? true : false;
 }
 
@@ -2834,11 +2897,11 @@ MOS_STATUS RenderHal_GetSurfaceStateEntries(
     bool                            bIsChromaSitEnabled;
 
     //------------------------------------------------
-    MHW_RENDERHAL_ASSERT(pRenderHal);
-    MHW_RENDERHAL_ASSERT(pRenderHalSurface);
-    MHW_RENDERHAL_ASSERT(pParams);
-    MHW_RENDERHAL_ASSERT(piNumEntries);
-    MHW_RENDERHAL_ASSERT(ppSurfaceEntries);
+    MHW_RENDERHAL_CHK_NULL(pRenderHal);
+    MHW_RENDERHAL_CHK_NULL(pRenderHalSurface);
+    MHW_RENDERHAL_CHK_NULL(pParams);
+    MHW_RENDERHAL_CHK_NULL(piNumEntries);
+    MHW_RENDERHAL_CHK_NULL(ppSurfaceEntries);
     //------------------------------------------------
 
     eStatus             = MOS_STATUS_UNKNOWN;
@@ -2854,6 +2917,8 @@ MOS_STATUS RenderHal_GetSurfaceStateEntries(
     *piNumEntries       = -1;
     PlaneDefinition     = RENDERHAL_PLANES_DEFINITION_COUNT;
     bIsChromaSitEnabled = 0;
+
+    pRenderHal->bIsAVS  = pParams->bAVS;
 
     // Check palette allocations
     if (IS_PAL_FORMAT(pSurface->Format))
@@ -2887,10 +2952,10 @@ MOS_STATUS RenderHal_GetSurfaceStateEntries(
         switch (pSurface->Format)
         {
             case Format_NV12:
-                // On G8, NV12 format needs the width and Height to be a multiple 
+                // On G8, NV12 format needs the width and Height to be a multiple
                 // of 4 for both 3D sampler and 8x8 sampler; G75 needs the width
                 // of NV12 input surface to be a multiple of 4 for 3D sampler;
-                // G9+ does not has such restriction; to simplify the implementation, 
+                // G9+ does not has such restriction; to simplify the implementation,
                 // we enable 2 plane NV12 for all of the platform when the width
                 // or Height is not a multiple of 4
                 if (pRenderHal->pfnIs2PlaneNV12Needed(pRenderHal,
@@ -2902,7 +2967,7 @@ MOS_STATUS RenderHal_GetSurfaceStateEntries(
                 else
                 {
                     PlaneDefinition = RENDERHAL_PLANES_NV12_ADV;
-                    wUYOffset       = RenderHal_CalculateYOffset(pRenderHal->pOsInterface, pSurface);
+                    wUYOffset       = RenderHal_CalculateYOffset(pRenderHal->pOsInterface, &pSurface->OsResource);
                 }
 
                 bHalfPitchForChroma = false;
@@ -2921,6 +2986,10 @@ MOS_STATUS RenderHal_GetSurfaceStateEntries(
                 {
                     PlaneDefinition = RENDERHAL_PLANES_P016_2PLANES_ADV;
                 }
+                break;
+
+            case Format_P208:
+                PlaneDefinition = RENDERHAL_PLANES_P208_1PLANE_ADV;
                 break;
 
             case Format_IMC1:
@@ -2993,16 +3062,33 @@ MOS_STATUS RenderHal_GetSurfaceStateEntries(
                 PlaneDefinition     = RENDERHAL_PLANES_BGRP_ADV;
                 break;
 
-			case Format_AYUV:
-				PlaneDefinition = RENDERHAL_PLANES_AYUV_ADV;
-				break;
+            case Format_AYUV:
+                PlaneDefinition = RENDERHAL_PLANES_AYUV_ADV;
+                break;
 
             case Format_YUYV:
             case Format_YUY2:
-                PlaneDefinition     = RENDERHAL_PLANES_YUY2_ADV;
+                if (pParams->bVmeUse)
+                {
+                    //Since 422 planar is not supported on application side. 
+                    //App is using 422 packed as WA with w=w/2 and h=h*2
+                    pSurface->dwWidth = pSurface->dwWidth * 2;
+                    pSurface->dwHeight = pSurface->dwHeight / 2;
+                    pRenderHalSurface->rcSrc.right = pSurface->dwWidth;
+                    pRenderHalSurface->rcSrc.bottom = pSurface->dwHeight;
+                    pRenderHalSurface->rcDst = pRenderHalSurface->rcSrc;
+                    PlaneDefinition = RENDERHAL_PLANES_YUY2_ADV;
 
-                // Set up chroma direction
-                Direction = pRenderHal->pfnSetChromaDirection(pRenderHal, pRenderHalSurface);
+                    // Set up chroma direction
+                    Direction = pRenderHal->pfnSetChromaDirection(pRenderHal, pRenderHalSurface);
+                }
+                else
+                {
+                    PlaneDefinition = RENDERHAL_PLANES_YUY2_ADV;
+
+                    // Set up chroma direction
+                    Direction = pRenderHal->pfnSetChromaDirection(pRenderHal, pRenderHalSurface);
+                }
                 break;
 
             case Format_UYVY:
@@ -3085,9 +3171,10 @@ MOS_STATUS RenderHal_GetSurfaceStateEntries(
                 break;
 
             case Format_A16B16G16R16:
+            case Format_Y416:
                 PlaneDefinition        = RENDERHAL_PLANES_A16B16G16R16_ADV;
                 break;
-            
+
             case Format_R10G10B10A2:
             case Format_Y410:
                 PlaneDefinition        = RENDERHAL_PLANES_R10G10B10A2_ADV;
@@ -3100,7 +3187,7 @@ MOS_STATUS RenderHal_GetSurfaceStateEntries(
                     PlaneDefinition = RENDERHAL_PLANES_Y16S;
                 }
                 break;
-            
+
             case Format_D16:
             case Format_R16U:
                 if (pParams->bVASurface)
@@ -3120,7 +3207,7 @@ MOS_STATUS RenderHal_GetSurfaceStateEntries(
                     PlaneDefinition     = RENDERHAL_PLANES_P010_1PLANE_ADV;
                     bHalfPitchForChroma = false;
                     bInterleaveChroma   = true;
-                    wUYOffset           = RenderHal_CalculateYOffset(pRenderHal->pOsInterface, pSurface);
+                    wUYOffset           = RenderHal_CalculateYOffset(pRenderHal->pOsInterface, &pSurface->OsResource);
 
                     // Set up chroma direction
                     Direction = pRenderHal->pfnSetChromaDirection(pRenderHal, pRenderHalSurface);
@@ -3154,8 +3241,16 @@ MOS_STATUS RenderHal_GetSurfaceStateEntries(
                 }
                 break;
             case Format_Y210:
+            case Format_Y216:
                 if (pParams->bVmeUse)
                 {
+                    //Since 422 planar is not supported on application side. 
+                    //App is using 422 packed as WA with w=w/2 and h=h*2
+                    pSurface->dwWidth = pSurface->dwWidth * 2;
+                    pSurface->dwHeight = pSurface->dwHeight / 2;
+                    pRenderHalSurface->rcSrc.right = pSurface->dwWidth;
+                    pRenderHalSurface->rcSrc.bottom = pSurface->dwHeight;
+                    pRenderHalSurface->rcDst = pRenderHalSurface->rcSrc;
                     PlaneDefinition = RENDERHAL_PLANES_Y210_1PLANE_ADV;
                 }
                 else
@@ -3219,7 +3314,8 @@ MOS_STATUS RenderHal_GetSurfaceStateEntries(
                 // The max value is 16383. So use PL3 kernel to avoid out of range when Y_Uoffset is larger than 16383.
                 // Use PL3 plane to avoid YV12 bleeding issue with DI enabled
                 PlaneDefinition = (pRenderHal->bEnableYV12SinglePass                              &&
-                                   (!pRenderHalSurface->pDeinterlaceParams)                       &&
+                                   !pRenderHalSurface->pDeinterlaceParams                         &&
+                                   !pRenderHalSurface->bInterlacedScaling                         &&
                                    pRenderHalSurface->SurfType != RENDERHAL_SURF_OUT_RENDERTARGET &&
                                    (pSurface->dwHeight * 2 + pSurface->dwHeight / 2) < RENDERHAL_MAX_YV12_PLANE_Y_U_OFFSET_G9)?
                                    RENDERHAL_PLANES_YV12 : RENDERHAL_PLANES_PL3;
@@ -3235,6 +3331,10 @@ MOS_STATUS RenderHal_GetSurfaceStateEntries(
 
             case Format_P016:
                 PlaneDefinition = RENDERHAL_PLANES_P016;
+                break;
+
+            case Format_P208:
+                PlaneDefinition = RENDERHAL_PLANES_P208;
                 break;
 
             case Format_P010:
@@ -3280,20 +3380,22 @@ MOS_STATUS RenderHal_GetSurfaceStateEntries(
             case Format_NV12:
                 // On Gen7.5 (Haswell) NV12 format needs a single plane instead
                 // of two (listed in renderhal_g75.c for RENDERHAL_PLANES_NV12),  and
-                // is also expected by the Sampler or Media Kernels. Yet, the 
+                // is also expected by the Sampler or Media Kernels. Yet, the
                 // Data Port works with two planes instead. Besides, the Sampler
                 // uses it for input only (as there is no output) while the Data
                 // Port uses it for input as well as output or both for the same
-                // surface. Hence the check added for bWidthInDword_Y && 
+                // surface. Hence the check added for bWidthInDword_Y &&
                 // bWidthInDword_UV, which are set in vphal_render_3P.c for the
                 // above reason. Two plane NV12 can also be explicitly spcified.
 
-                // On G8, NV12 format needs the width and Height to be a multiple 
-                // of 4 for both 3D sampler and 8x8 sampler; G75 needs the width 
-                // of NV12 input surface to be a multiple of 4 for 3D sampler; 
-                // G9+ does not has such restriction; to simplify the implementation,
-                // we enable 2 plane NV12 for all of the platform when the width
-                // or Height is not a multiple of 4
+                // On G8, NV12 format needs the width and Height to be a multiple
+                // of 4 for both 3D sampler and 8x8 sampler; G75 needs the width
+                // of NV12 input surface to be a multiple of 4 for 3D sampler;
+                // On G9+, width need to be a multiple of 2, while height still need
+                // be a multiple of 4; since G9 already post PV, just keep the old logic
+                // to enable 2 plane NV12 when the width or Height is not a multiple of 4.
+                // For G10+, enable 2 plane NV12 when width is not multiple of 2 or height
+                // is not multiple of 4.
                 if ( pRenderHalSurface->SurfType == RENDERHAL_SURF_OUT_RENDERTARGET   ||
                      (pParams->bWidthInDword_Y && pParams->bWidthInDword_UV)          ||
                      pParams->b2PlaneNV12NeededByKernel                               ||
@@ -3348,6 +3450,8 @@ MOS_STATUS RenderHal_GetSurfaceStateEntries(
                 break;
 
             case Format_R32F:
+            case Format_D32F:
+            case Format_R32:
                 PlaneDefinition = RENDERHAL_PLANES_R32F;
                 break;
 
@@ -3386,7 +3490,7 @@ MOS_STATUS RenderHal_GetSurfaceStateEntries(
 
             case Format_X8R8G8B8:
                 // h/w doesn't support XRGB render target
-                PlaneDefinition = 
+                PlaneDefinition =
                     (pParams->bRenderTarget) ? RENDERHAL_PLANES_ARGB : RENDERHAL_PLANES_XRGB;
                 break;
 
@@ -3396,7 +3500,7 @@ MOS_STATUS RenderHal_GetSurfaceStateEntries(
 
             case Format_X8B8G8R8:
                 // h/w doesn't support XBGR render target
-                PlaneDefinition = 
+                PlaneDefinition =
                     (pParams->bRenderTarget) ? RENDERHAL_PLANES_ABGR : RENDERHAL_PLANES_XBGR;
                 break;
 
@@ -3450,27 +3554,43 @@ MOS_STATUS RenderHal_GetSurfaceStateEntries(
                 break;
 
             case Format_R8U:
+            case Format_R8UN:
                 PlaneDefinition = RENDERHAL_PLANES_R8;
                 break;
+
             case Format_R16UN:
+            case Format_D16:
+            case Format_R16:
                 PlaneDefinition = RENDERHAL_PLANES_R16_UNORM;
                 break;
 
             case Format_A16B16G16R16:
-            case Format_Y416:
                 PlaneDefinition = RENDERHAL_PLANES_A16B16G16R16;
                 break;
+            case Format_Y416:
+                if (pRenderHalSurface->SurfType == RENDERHAL_SURF_OUT_RENDERTARGET)
+                {
+                    PlaneDefinition = RENDERHAL_PLANES_Y416_RT;
+                }
+                else
+                {
+                    PlaneDefinition = RENDERHAL_PLANES_A16B16G16R16;
+                }
+                break;
             case Format_A16B16G16R16F:
-                PlaneDefinition = RENDERHAL_PLANES_A16B16G16R16F;   
+                PlaneDefinition = RENDERHAL_PLANES_A16B16G16R16F;
                 break;
             case Format_A16R16G16B16F:
                 PlaneDefinition = RENDERHAL_PLANES_A16R16G16B16F;
                 break;
+            case Format_R32G32B32A32F:
+                PlaneDefinition = RENDERHAL_PLANES_R32G32B32A32F;
+                break;
+
             case Format_NV21:
                 PlaneDefinition = RENDERHAL_PLANES_NV21;
                 break;
             case Format_L16:
-            case Format_D16:
                 PlaneDefinition = RENDERHAL_PLANES_L16;
                 break;
 
@@ -3481,10 +3601,10 @@ MOS_STATUS RenderHal_GetSurfaceStateEntries(
 
             case Format_Y210:
             case Format_Y216:
-                pRenderHal->pRenderHalPltInterface->GetPlaneDefForFormatY216(
+                MHW_RENDERHAL_CHK_STATUS(pRenderHal->pRenderHalPltInterface->GetPlaneDefForFormatY216(
                     (pRenderHalSurface->SurfType == RENDERHAL_SURF_OUT_RENDERTARGET),
-                    pRenderHal, 
-                    PlaneDefinition);
+                    pRenderHal,
+                    PlaneDefinition));
                 break;
 
             case Format_B10G10R10A2:
@@ -3508,11 +3628,25 @@ MOS_STATUS RenderHal_GetSurfaceStateEntries(
                 break;
 
             case Format_R16G16UN:
-                PlaneDefinition = RENDERHAL_PLANES_R16G16_UNORM;  
+                PlaneDefinition = RENDERHAL_PLANES_R16G16_UNORM;
                 break;
-            
+
+            case Format_R16G16S:
+                PlaneDefinition = RENDERHAL_PLANES_R16G16_SINT;
+                break;
+
             case Format_R16F:
-                PlaneDefinition = RENDERHAL_PLANES_R16_FLOAT; 
+                PlaneDefinition = RENDERHAL_PLANES_R16_FLOAT;
+                break;
+
+            case Format_R24G8:
+            case Format_D24S8UN:
+                PlaneDefinition = RENDERHAL_PLANES_R24_UNORM_X8_TYPELESS;
+                break;
+
+            case Format_R32G8X24:
+            case Format_D32S8X24_FLOAT:
+                PlaneDefinition = RENDERHAL_PLANES_R32_FLOAT_X8X24_TYPELESS;
                 break;
 
             default:
@@ -3542,9 +3676,9 @@ MOS_STATUS RenderHal_GetSurfaceStateEntries(
 
         // Adjust the surface height and width
         pRenderHal->pfnAdjustBoundary(pRenderHal,
-                                        pRenderHalSurface, 
-                                        pParams->Boundary, 
-                                        &dwSurfaceWidth, 
+                                        pRenderHalSurface,
+                                        pParams->Boundary,
+                                        &dwSurfaceWidth,
                                         &dwSurfaceHeight);
 
         //set dwSurfaceHeight = roundup(dwSurfaceHeight / pPlane->ui8ScaleHeight) to support NV12 format with odd height
@@ -3565,17 +3699,23 @@ MOS_STATUS RenderHal_GetSurfaceStateEntries(
         // Adjust the width
         if (bWidthInDword)
         {
-            if (PlaneDefinition == RENDERHAL_PLANES_A16B16G16R16     || 
+            if (PlaneDefinition == RENDERHAL_PLANES_R32G32B32A32F)
+            {
+                dwSurfaceWidth = dwSurfaceWidth << 2;
+            }
+            else if (PlaneDefinition == RENDERHAL_PLANES_A16B16G16R16     ||
                 PlaneDefinition == RENDERHAL_PLANES_A16B16G16R16_ADV ||
                 PlaneDefinition == RENDERHAL_PLANES_A16B16G16R16F    ||
                 PlaneDefinition == RENDERHAL_PLANES_A16R16G16B16F    ||
-                PlaneDefinition == RENDERHAL_PLANES_Y210_RT)
+                PlaneDefinition == RENDERHAL_PLANES_Y210_RT          ||
+                PlaneDefinition == RENDERHAL_PLANES_Y416_RT          ||
+                PlaneDefinition == RENDERHAL_PLANES_R32_FLOAT_X8X24_TYPELESS)
             {
                 dwSurfaceWidth = dwSurfaceWidth << 1;
             }
             else
             {
-                dwSurfaceWidth = (dwSurfaceWidth + pPlane->ui8PixelsPerDword - 1) / 
+                dwSurfaceWidth = (dwSurfaceWidth + pPlane->ui8PixelsPerDword - 1) /
                                                         pPlane->ui8PixelsPerDword;
             }
         }
@@ -3614,10 +3754,10 @@ MOS_STATUS RenderHal_GetSurfaceStateEntries(
         pSurfaceEntry->bVertStride       = pParams->bVertStride;
         pSurfaceEntry->bVertStrideOffs   = pParams->bVertStrideOffs;
         pSurfaceEntry->bTiledSurface     = (pSurface->TileType != MOS_TILE_LINEAR)
-                                                ? true 
+                                                ? true
                                                 : false;
         pSurfaceEntry->bTileWalk         = IS_Y_MAJOR_TILE_FORMAT(pSurface->TileType)
-                                                ? GFX3DSTATE_TILEWALK_YMAJOR 
+                                                ? GFX3DSTATE_TILEWALK_YMAJOR
                                                 : GFX3DSTATE_TILEWALK_XMAJOR;
         // AVS/ADI parameters
         pSurfaceEntry->bHalfPitchChroma  = bHalfPitchForChroma;
@@ -3657,7 +3797,7 @@ MOS_STATUS RenderHal_EnablePalette(
     PMHW_PALETTE_PARAMS      pPalette;
 
     //-------------------------------------
-    MHW_RENDERHAL_ASSERT(pRenderHal);
+    MHW_RENDERHAL_CHK_NULL_RETURN(pRenderHal);
     MHW_RENDERHAL_ASSERT(iPaletteID >= 0);
     MHW_RENDERHAL_ASSERT(iPaletteID < pRenderHal->iMaxPalettes);
     //-------------------------------------
@@ -3910,7 +4050,6 @@ PRENDERHAL_MEDIA_STATE RenderHal_AssignMediaState(
     pCurMediaState = nullptr;
     pCurrentPtr    = nullptr;
 
-
     if (pRenderHal)
     {
         pOsInterface = pRenderHal->pOsInterface;
@@ -3921,6 +4060,7 @@ PRENDERHAL_MEDIA_STATE RenderHal_AssignMediaState(
     if (pRenderHal   == nullptr ||             // invalid Hw state
         pOsInterface == nullptr ||             // invalid OS interface
         pStateHeap   == nullptr ||             // invalid State Heap
+        pStateHeap->pMediaStates == nullptr || // invalid Media State Array
         pStateHeap->bGshLocked == false ||  // State Heap not locked
         pRenderHal->StateHeapSettings.iMediaStateHeaps == 0)
     {
@@ -3964,7 +4104,7 @@ PRENDERHAL_MEDIA_STATE RenderHal_AssignMediaState(
     pStateHeap->iCurMediaState    = pStateHeap->iNextMediaState;
 
     // Point to the next media state
-    pStateHeap->iNextMediaState   = (pStateHeap->iNextMediaState + 1) % 
+    pStateHeap->iNextMediaState   = (pStateHeap->iNextMediaState + 1) %
                               (pRenderHal->StateHeapSettings.iMediaStateHeaps);
 
     // Reset media state
@@ -3984,7 +4124,7 @@ PRENDERHAL_MEDIA_STATE RenderHal_AssignMediaState(
 
     // Zero Memory start time and end time
     pCurrentPtr = pStateHeap->pGshBuffer +           // GSH base
-                  pStateHeap->pCurMediaState->dwOffset + 
+                  pStateHeap->pCurMediaState->dwOffset +
                   pStateHeap->dwOffsetStartTime;
 
     if(pCurrentPtr)
@@ -3996,11 +4136,11 @@ PRENDERHAL_MEDIA_STATE RenderHal_AssignMediaState(
     // End time
     pCurrentPtr += pStateHeap->dwStartTimeSize;
     *((uint64_t*)pCurrentPtr) = 0;
-   
+
     // Component ID
     pCurrentPtr += pStateHeap->dwEndTimeSize;
-    *((RENDERHAL_COMPONENT *)pCurrentPtr) = componentID; 
-   
+    *((RENDERHAL_COMPONENT *)pCurrentPtr) = componentID;
+
 finish:
     return pCurMediaState;
 }
@@ -4013,11 +4153,11 @@ finish:
 //!
 MOS_STATUS RenderHal_Destroy(PRENDERHAL_INTERFACE pRenderHal)
 {
-    PMOS_INTERFACE        pOsInterface;
     MOS_STATUS            eStatus;
 
     //------------------------------------------------
-    MHW_RENDERHAL_ASSERT(pRenderHal);
+    MHW_RENDERHAL_CHK_NULL(pRenderHal);
+    MHW_RENDERHAL_CHK_NULL(pRenderHal->pOsInterface);
     //------------------------------------------------
     eStatus      = MOS_STATUS_UNKNOWN;
 
@@ -4038,11 +4178,19 @@ MOS_STATUS RenderHal_Destroy(PRENDERHAL_INTERFACE pRenderHal)
         pRenderHal->pMhwMiInterface = nullptr;
     }
 
-    //Release pBatchBufferMemPool
-    if(pRenderHal->pBatchBufferMemPool)
+    // Release pBatchBufferMemPool
+    if (pRenderHal->pBatchBufferMemPool)
     {
-        MOS_Delete(pRenderHal->pBatchBufferMemPool); 
+        MOS_Delete(pRenderHal->pBatchBufferMemPool);
         pRenderHal->pBatchBufferMemPool = nullptr;
+    }
+
+    // Release PredicationBuffer
+    if (!Mos_ResourceIsNull(&pRenderHal->PredicationBuffer))
+    {
+        pRenderHal->pOsInterface->pfnFreeResource(
+            pRenderHal->pOsInterface,
+            &pRenderHal->PredicationBuffer);
     }
 
     // Destruct Platform Interface
@@ -4050,6 +4198,12 @@ MOS_STATUS RenderHal_Destroy(PRENDERHAL_INTERFACE pRenderHal)
     {
         MOS_Delete(pRenderHal->pRenderHalPltInterface);
         pRenderHal->pRenderHalPltInterface = nullptr;
+    }
+
+    if (pRenderHal->pPerfProfiler)
+    {
+       MediaPerfProfiler::Destroy(pRenderHal->pPerfProfiler, (void*)pRenderHal, pRenderHal->pOsInterface);
+       pRenderHal->pPerfProfiler = nullptr;
     }
 
     // Free Debug Surface
@@ -4245,7 +4399,6 @@ MOS_STATUS RenderHal_SendPalette(
 {
     MhwRenderInterface           *pMhwRender;
     PMHW_PALETTE_PARAMS          pPaletteLoadParams;
-    int32_t                      iCmdSize;
     int32_t                      i;
     MOS_STATUS                   eStatus;
 
@@ -4316,7 +4469,6 @@ finish:
     return eStatus;
 }
 
-
 //!
 //! \brief    Assign Ssh Instance
 //! \details  Get a pointer to the next available SSH Buffer Instance in SSH,
@@ -4356,6 +4508,283 @@ finish:
 }
 
 //!
+//! \brief    Adds predication attributes in command buffer
+//! \param    PRENDERHAL_INTERFACE pRenderHal
+//!           [in] Pointer to RenderHal Interface Structure
+//! \param    PMOS_COMMAND_BUFFER pcmdBuffer
+//!           [in] Pointer to Command Buffer 
+//! \return   MOS_STATUS
+//!
+MOS_STATUS RenderHal_SendPredicationCommand(
+    PRENDERHAL_INTERFACE        pRenderHal,
+    PMOS_COMMAND_BUFFER         pCmdBuffer)
+{
+    MOS_STATUS  eStatus = MOS_STATUS_SUCCESS;
+
+    //-----------------------------------------
+    MHW_RENDERHAL_CHK_NULL(pRenderHal);
+    MHW_RENDERHAL_CHK_NULL(pRenderHal->pOsInterface);
+    MHW_RENDERHAL_CHK_NULL(pRenderHal->pMhwMiInterface);
+    //-----------------------------------------
+
+    MHW_MI_CONDITIONAL_BATCH_BUFFER_END_PARAMS  condBBEndParams;
+    MOS_ZeroMemory(&condBBEndParams, sizeof(condBBEndParams));
+
+    MOS_SYNC_PARAMS syncParams;
+    MOS_ZeroMemory(&syncParams, sizeof(syncParams));
+    syncParams.uiSemaphoreCount         = 1;
+    // Currently only sync between VEBOX and 3D, also need to consider sync between Render Engine and 3D
+    // low priority since current VP Predication test case does not cover this scenario.
+    syncParams.GpuContext               = MOS_GPU_CONTEXT_VEBOX;
+    syncParams.presSyncResource         = pRenderHal->PredicationParams.pPredicationResource;
+    syncParams.bReadOnly                = true;
+    syncParams.bDisableDecodeSyncLock   = false;
+    syncParams.bDisableLockForTranscode = false;
+
+    MHW_RENDERHAL_CHK_STATUS(pRenderHal->pOsInterface->pfnPerformOverlaySync(pRenderHal->pOsInterface, &syncParams));
+    MHW_RENDERHAL_CHK_STATUS(pRenderHal->pOsInterface->pfnResourceWait(pRenderHal->pOsInterface, &syncParams));
+
+    // Keep implementation same between Render and VEBox engines - for Render it is highly inefficient
+    // Skip current frame if presPredication is not equal to zero
+    if (pRenderHal->PredicationParams.predicationNotEqualZero)
+    {
+        auto mmioRegistersRender = pRenderHal->pMhwMiInterface->GetMmioRegisters();
+        MHW_MI_FLUSH_DW_PARAMS  flushDwParams;
+        MOS_ZeroMemory(&flushDwParams, sizeof(flushDwParams));
+        MHW_RENDERHAL_CHK_STATUS(pRenderHal->pMhwMiInterface->AddMiFlushDwCmd(pCmdBuffer, &flushDwParams));
+
+        // load presPredication to general purpose register0
+        MHW_MI_STORE_REGISTER_MEM_PARAMS    loadRegisterMemParams;
+        MOS_ZeroMemory(&loadRegisterMemParams, sizeof(loadRegisterMemParams));
+        loadRegisterMemParams.presStoreBuffer   = pRenderHal->PredicationParams.pPredicationResource;
+        loadRegisterMemParams.dwOffset          = (uint32_t)pRenderHal->PredicationParams.predicationResOffset;
+        loadRegisterMemParams.dwRegister        = mmioRegistersRender->generalPurposeRegister0LoOffset;
+        MHW_RENDERHAL_CHK_STATUS(pRenderHal->pMhwMiInterface->AddMiLoadRegisterMemCmd(
+            pCmdBuffer,
+            &loadRegisterMemParams));
+
+        MHW_MI_LOAD_REGISTER_IMM_PARAMS     loadRegisterImmParams;
+        MOS_ZeroMemory(&loadRegisterImmParams, sizeof(loadRegisterImmParams));
+        loadRegisterImmParams.dwData            = 0;
+        loadRegisterImmParams.dwRegister        = mmioRegistersRender->generalPurposeRegister0HiOffset;
+        MHW_RENDERHAL_CHK_STATUS(pRenderHal->pMhwMiInterface->AddMiLoadRegisterImmCmd(
+            pCmdBuffer,
+            &loadRegisterImmParams));
+
+        // load 0 to general purpose register4
+        MOS_ZeroMemory(&loadRegisterImmParams, sizeof(loadRegisterImmParams));
+        loadRegisterImmParams.dwData            = 0;
+        loadRegisterImmParams.dwRegister        = mmioRegistersRender->generalPurposeRegister4LoOffset;
+        MHW_RENDERHAL_CHK_STATUS(pRenderHal->pMhwMiInterface->AddMiLoadRegisterImmCmd(
+            pCmdBuffer,
+            &loadRegisterImmParams));
+
+        MOS_ZeroMemory(&loadRegisterImmParams, sizeof(loadRegisterImmParams));
+        loadRegisterImmParams.dwData            = 0;
+        loadRegisterImmParams.dwRegister        = mmioRegistersRender->generalPurposeRegister4HiOffset;
+        MHW_RENDERHAL_CHK_STATUS(pRenderHal->pMhwMiInterface->AddMiLoadRegisterImmCmd(
+            pCmdBuffer,
+            &loadRegisterImmParams));
+
+        //perform the add operation
+        MHW_MI_MATH_PARAMS  miMathParams;
+        MHW_MI_ALU_PARAMS   miAluParams[4];
+        MOS_ZeroMemory(&miMathParams, sizeof(miMathParams));
+        MOS_ZeroMemory(&miAluParams, sizeof(miAluParams));
+        // load     srcA, reg0
+        miAluParams[0].AluOpcode    = MHW_MI_ALU_LOAD;
+        miAluParams[0].Operand1     = MHW_MI_ALU_SRCA;
+        miAluParams[0].Operand2     = MHW_MI_ALU_GPREG0;
+        // load     srcB, reg4
+        miAluParams[1].AluOpcode    = MHW_MI_ALU_LOAD;
+        miAluParams[1].Operand1     = MHW_MI_ALU_SRCB;
+        miAluParams[1].Operand2     = MHW_MI_ALU_GPREG4;
+        // add      srcA, srcB
+        miAluParams[2].AluOpcode    = MHW_MI_ALU_ADD;
+        miAluParams[2].Operand1     = MHW_MI_ALU_SRCB;
+        miAluParams[2].Operand2     = MHW_MI_ALU_GPREG4;
+        // store      reg0, ZF
+        miAluParams[3].AluOpcode    = MHW_MI_ALU_STORE;
+        miAluParams[3].Operand1     = MHW_MI_ALU_GPREG0;
+        miAluParams[3].Operand2     = MHW_MI_ALU_ZF;
+        miMathParams.pAluPayload    = miAluParams;
+        miMathParams.dwNumAluParams = 4; // four ALU commands needed for this substract opertaion. see following ALU commands.
+        MHW_RENDERHAL_CHK_STATUS(pRenderHal->pMhwMiInterface->AddMiMathCmd(
+            pCmdBuffer,
+            &miMathParams));
+
+        // if zero, the zero flag will be 0xFFFFFFFF, else zero flag will be 0x0.
+        MHW_MI_STORE_REGISTER_MEM_PARAMS    storeRegParams;
+        MOS_ZeroMemory(&storeRegParams, sizeof(storeRegParams));
+        storeRegParams.presStoreBuffer  = &pRenderHal->PredicationBuffer;
+        storeRegParams.dwOffset         = 0x10;
+        storeRegParams.dwRegister       = mmioRegistersRender->generalPurposeRegister0LoOffset;
+        MHW_RENDERHAL_CHK_STATUS(pRenderHal->pMhwMiInterface->AddMiStoreRegisterMemCmd(
+            pCmdBuffer,
+            &storeRegParams));
+
+        // Programming of 4 dummy MI_STORE_DATA_IMM commands prior to programming of MiConditionalBatchBufferEnd
+        MHW_MI_STORE_DATA_PARAMS dataParams;
+        MOS_ZeroMemory(&dataParams, sizeof(dataParams));
+        dataParams.pOsResource = &pRenderHal->PredicationBuffer;
+        dataParams.dwValue = 1;
+        MHW_RENDERHAL_CHK_STATUS(pRenderHal->pMhwMiInterface->AddMiStoreDataImmCmd(
+            pCmdBuffer,
+            &dataParams));
+
+        dataParams.dwValue = 2;
+        MHW_RENDERHAL_CHK_STATUS(pRenderHal->pMhwMiInterface->AddMiStoreDataImmCmd(
+            pCmdBuffer,
+            &dataParams));
+
+        dataParams.dwValue = 3;
+        MHW_RENDERHAL_CHK_STATUS(pRenderHal->pMhwMiInterface->AddMiStoreDataImmCmd(
+            pCmdBuffer,
+            &dataParams));
+
+        dataParams.dwValue = 4;
+        MHW_RENDERHAL_CHK_STATUS(pRenderHal->pMhwMiInterface->AddMiStoreDataImmCmd(
+            pCmdBuffer,
+            &dataParams));
+
+        MOS_ZeroMemory(&flushDwParams, sizeof(flushDwParams));
+        flushDwParams.postSyncOperation = 1;
+        flushDwParams.pOsResource = &pRenderHal->PredicationBuffer;
+        MHW_RENDERHAL_CHK_STATUS(pRenderHal->pMhwMiInterface->AddMiFlushDwCmd(pCmdBuffer, &flushDwParams));
+
+        condBBEndParams.presSemaphoreBuffer = &pRenderHal->PredicationBuffer;
+        condBBEndParams.dwOffset            = 0x10;
+        condBBEndParams.dwValue             = 0;
+        condBBEndParams.bDisableCompareMask = true;
+        MHW_RENDERHAL_CHK_STATUS(pRenderHal->pMhwMiInterface->AddMiConditionalBatchBufferEndCmd(
+            pCmdBuffer,
+            &condBBEndParams));
+
+        pRenderHal->PredicationParams.ptempPredicationBuffer = &pRenderHal->PredicationBuffer;
+    }
+    else
+    {
+        auto mmioRegistersRender = pRenderHal->pMhwMiInterface->GetMmioRegisters();
+
+        MHW_MI_FLUSH_DW_PARAMS  flushDwParams;
+        MOS_ZeroMemory(&flushDwParams, sizeof(flushDwParams));
+        MHW_RENDERHAL_CHK_STATUS(pRenderHal->pMhwMiInterface->AddMiFlushDwCmd(pCmdBuffer, &flushDwParams));
+
+        // load presPredication to general purpose register0
+        MHW_MI_STORE_REGISTER_MEM_PARAMS    loadRegisterMemParams;
+        MOS_ZeroMemory(&loadRegisterMemParams, sizeof(loadRegisterMemParams));
+        loadRegisterMemParams.presStoreBuffer = pRenderHal->PredicationParams.pPredicationResource;
+        loadRegisterMemParams.dwOffset        = (uint32_t)pRenderHal->PredicationParams.predicationResOffset;
+        loadRegisterMemParams.dwRegister      = mmioRegistersRender->generalPurposeRegister0LoOffset;
+        MHW_RENDERHAL_CHK_STATUS(pRenderHal->pMhwMiInterface->AddMiLoadRegisterMemCmd(
+            pCmdBuffer,
+            &loadRegisterMemParams));
+
+        // if zero, the zero flag will be 0xFFFFFFFF, else zero flag will be 0x0.
+        MHW_MI_STORE_REGISTER_MEM_PARAMS    storeRegParams;
+        MOS_ZeroMemory(&storeRegParams, sizeof(storeRegParams));
+        storeRegParams.presStoreBuffer = &pRenderHal->PredicationBuffer;
+        storeRegParams.dwOffset        = 0x10;
+        storeRegParams.dwRegister      = mmioRegistersRender->generalPurposeRegister0LoOffset;
+        MHW_RENDERHAL_CHK_STATUS(pRenderHal->pMhwMiInterface->AddMiStoreRegisterMemCmd(
+            pCmdBuffer,
+            &storeRegParams));
+
+        // Programming of 4 dummy MI_STORE_DATA_IMM commands prior to programming of MiConditionalBatchBufferEnd
+        MHW_MI_STORE_DATA_PARAMS dataParams;
+        MOS_ZeroMemory(&dataParams, sizeof(dataParams));
+        dataParams.pOsResource = &pRenderHal->PredicationBuffer;
+        dataParams.dwValue     = 1;
+        MHW_RENDERHAL_CHK_STATUS(pRenderHal->pMhwMiInterface->AddMiStoreDataImmCmd(
+            pCmdBuffer,
+            &dataParams));
+
+        dataParams.dwValue = 2;
+        MHW_RENDERHAL_CHK_STATUS(pRenderHal->pMhwMiInterface->AddMiStoreDataImmCmd(
+            pCmdBuffer,
+            &dataParams));
+
+        dataParams.dwValue = 3;
+        MHW_RENDERHAL_CHK_STATUS(pRenderHal->pMhwMiInterface->AddMiStoreDataImmCmd(
+            pCmdBuffer,
+            &dataParams));
+
+        dataParams.dwValue = 4;
+        MHW_RENDERHAL_CHK_STATUS(pRenderHal->pMhwMiInterface->AddMiStoreDataImmCmd(
+            pCmdBuffer,
+            &dataParams));
+
+        MOS_ZeroMemory(&flushDwParams, sizeof(flushDwParams));
+        flushDwParams.postSyncOperation = 1;
+        flushDwParams.pOsResource       = &pRenderHal->PredicationBuffer;
+        MHW_RENDERHAL_CHK_STATUS(pRenderHal->pMhwMiInterface->AddMiFlushDwCmd(pCmdBuffer, &flushDwParams));
+
+        // Skip current frame if presPredication is equal to zero
+        condBBEndParams.presSemaphoreBuffer = &pRenderHal->PredicationBuffer;
+        condBBEndParams.dwOffset            = 0x10;
+        condBBEndParams.bDisableCompareMask = true;
+        condBBEndParams.dwValue             = 0;
+        MHW_RENDERHAL_CHK_STATUS(pRenderHal->pMhwMiInterface->AddMiConditionalBatchBufferEndCmd(
+            pCmdBuffer,
+            &condBBEndParams));
+    }
+
+finish:
+    return eStatus;
+}
+
+//!
+//! \brief    Adds marker attributes in command buffer
+//! \param    PRENDERHAL_INTERFACE pRenderHal
+//!           [in] Pointer to RenderHal Interface Structure
+//! \param    PMOS_COMMAND_BUFFER pcmdBuffer
+//!           [in] Pointer to Command Buffer
+//! \param    bool isRender
+//!           [in] Flag of Render Engine
+//! \return   MOS_STATUS 
+//!
+MOS_STATUS RenderHal_SendMarkerCommand(
+    PRENDERHAL_INTERFACE    pRenderHal,
+    PMOS_COMMAND_BUFFER     cmdBuffer,
+    bool                    isRender)
+{
+    MOS_STATUS  eStatus = MOS_STATUS_SUCCESS;
+
+    //-----------------------------------------
+    MHW_RENDERHAL_CHK_NULL(pRenderHal);
+    MHW_RENDERHAL_CHK_NULL(pRenderHal->pMhwMiInterface);
+    //-----------------------------------------
+
+    if (isRender)
+    {
+        // Send pipe_control to get the timestamp
+        MHW_PIPE_CONTROL_PARAMS             pipeControlParams;
+        MOS_ZeroMemory(&pipeControlParams, sizeof(pipeControlParams));
+        pipeControlParams.presDest          = pRenderHal->SetMarkerParams.pSetMarkerResource;
+        pipeControlParams.dwResourceOffset  = 0;
+        pipeControlParams.dwPostSyncOp      = MHW_FLUSH_WRITE_TIMESTAMP_REG;
+        pipeControlParams.dwFlushMode       = MHW_FLUSH_WRITE_CACHE;
+
+        MHW_RENDERHAL_CHK_STATUS(pRenderHal->pMhwMiInterface->AddPipeControl(cmdBuffer, NULL, &pipeControlParams));
+    }
+    else
+    {
+        // Send flush_dw to get the timestamp 
+        MHW_MI_FLUSH_DW_PARAMS  flushDwParams;
+        MOS_ZeroMemory(&flushDwParams, sizeof(flushDwParams));
+        flushDwParams.pOsResource           = pRenderHal->SetMarkerParams.pSetMarkerResource;
+        flushDwParams.dwResourceOffset      = 0;
+        flushDwParams.postSyncOperation     = MHW_FLUSH_WRITE_TIMESTAMP_REG;
+        flushDwParams.bQWordEnable          = 1;
+
+        MHW_RENDERHAL_CHK_STATUS(pRenderHal->pMhwMiInterface->AddMiFlushDwCmd(cmdBuffer, &flushDwParams));
+    }
+
+finish:
+    return eStatus;
+}
+
+//!
 //! \brief    Initializes command buffer attributes and inserts prolog
 //! \param    PRENDERHAL_INTERFACE pRenderHal
 //!           [in] Pointer to RenderHal Interface Structure
@@ -4374,6 +4803,7 @@ MOS_STATUS RenderHal_InitCommandBuffer(
     MHW_GENERIC_PROLOG_PARAMS   genericPrologParams;
     MOS_STATUS                  eStatus;
     MEDIA_SYSTEM_INFO           *pGtSystemInfo;
+    bool                        isRender;
 
     //---------------------------------------------
     MHW_RENDERHAL_CHK_NULL(pRenderHal);
@@ -4388,7 +4818,15 @@ MOS_STATUS RenderHal_InitCommandBuffer(
     pOsInterface    = pRenderHal->pOsInterface;
     pGtSystemInfo   = pOsInterface->pfnGetGtSystemInfo(pOsInterface);
     MHW_RENDERHAL_CHK_NULL(pGtSystemInfo);
-    
+
+    // Send Start Marker command
+    isRender = MOS_RCS_ENGINE_USED(pOsInterface->pfnGetGpuContext(pOsInterface));
+    if (pRenderHal->SetMarkerParams.setMarkerEnabled)
+    {
+        MHW_RENDERHAL_CHK_STATUS(RenderHal_SendMarkerCommand(
+            pRenderHal, pCmdBuffer, isRender));
+    }
+
     // Init Cmd Buffer
 #ifdef _MMC_SUPPORTED
     MHW_RENDERHAL_CHK_STATUS(pRenderHal->pRenderHalPltInterface->SetCompositePrologCmd(pRenderHal, pCmdBuffer));
@@ -4403,7 +4841,7 @@ MOS_STATUS RenderHal_InitCommandBuffer(
     // Set power option status
     if (pRenderHal->pRenderHalPltInterface)
     {
-        pRenderHal->pRenderHalPltInterface->SetPowerOptionStatus(pRenderHal, pCmdBuffer);
+        MHW_RENDERHAL_CHK_STATUS(pRenderHal->pRenderHalPltInterface->SetPowerOptionStatus(pRenderHal, pCmdBuffer));
     }
 
     // Preemption: Need to set UsesMediaPipeline, UsesGPGPUPipeline, NeedsMidBatchPreEmptionSupport in command buffer header
@@ -4428,7 +4866,7 @@ MOS_STATUS RenderHal_InitCommandBuffer(
     // Check if Override is needed
     if (pRenderHal->pRenderHalPltInterface)
     {
-        pRenderHal->pRenderHalPltInterface->IsOvrdNeeded(pRenderHal, pCmdBuffer, pGenericPrologParams);
+        MHW_RENDERHAL_CHK_STATUS(pRenderHal->pRenderHalPltInterface->IsOvrdNeeded(pRenderHal, pCmdBuffer, pGenericPrologParams));
     }
 
     MOS_ZeroMemory(&genericPrologParams, sizeof(genericPrologParams));
@@ -4436,6 +4874,12 @@ MOS_STATUS RenderHal_InitCommandBuffer(
     genericPrologParams.pvMiInterface       = pRenderHal->pMhwMiInterface;
     genericPrologParams.bMmcEnabled         = pGenericPrologParams ? pGenericPrologParams->bMmcEnabled : false;
     MHW_RENDERHAL_CHK_STATUS(Mhw_SendGenericPrologCmd(pCmdBuffer, &genericPrologParams));
+
+    // Send predication command
+    if (pRenderHal->PredicationParams.predicationEnabled)
+    {
+        MHW_RENDERHAL_CHK_STATUS(RenderHal_SendPredicationCommand(pRenderHal, pCmdBuffer));
+    }
 
 finish:
     return eStatus;
@@ -4523,15 +4967,14 @@ finish:
     return eStatus;
 }
 
-uint32_t RenderHal_GetNextFrameId(PRENDERHAL_INTERFACE pRenderHal, MOS_GPU_CONTEXT GpuContext);
-void RenderHal_IncNextFrameId(PRENDERHAL_INTERFACE pRenderHal, MOS_GPU_CONTEXT GpuContext);
-uint32_t RenderHal_GetCurrentFrameId(PRENDERHAL_INTERFACE pRenderHal, MOS_GPU_CONTEXT GpuContext);
-bool RenderHal_WaitFrameId(PRENDERHAL_INTERFACE pRenderHal, MOS_GPU_CONTEXT GpuContext, uint32_t dwFrameId);
-uint32_t RenderHal_EnableFrameTracking(
-    PRENDERHAL_INTERFACE              pRenderHal,
-    MOS_GPU_CONTEXT                   GpuContext,
-    RENDERHAL_GENERIC_PROLOG_PARAMS  *pPrologParams,
-    PMOS_RESOURCE                     pOsResource);
+uint32_t RenderHal_GetNextTrackerId(PRENDERHAL_INTERFACE renderHal);
+void RenderHal_IncTrackerId(PRENDERHAL_INTERFACE renderHal);
+uint32_t RenderHal_GetCurrentTrackerId(PRENDERHAL_INTERFACE renderHal);
+void RenderHal_SetupPrologParams(
+    PRENDERHAL_INTERFACE              renderHal,
+    RENDERHAL_GENERIC_PROLOG_PARAMS  *prologParams,
+    PMOS_RESOURCE                     osResource,
+    uint32_t                          tag);
 
 //!
 //! \brief    Initialize
@@ -4551,6 +4994,8 @@ MOS_STATUS RenderHal_Initialize(
     MOS_STATUS          eStatus;
     PMOS_INTERFACE      pOsInterface;
     MHW_STATE_BASE_ADDR_PARAMS *pStateBaseParams;
+    MOS_ALLOC_GFXRES_PARAMS     AllocParams;
+
     //------------------------------------------------
     MHW_RENDERHAL_CHK_NULL(pRenderHal);
     MHW_RENDERHAL_CHK_NULL(pRenderHal->pOsInterface);
@@ -4565,7 +5010,7 @@ MOS_STATUS RenderHal_Initialize(
     }
 
     // Apply SSH settings for the current platform
-    pRenderHal->StateHeapSettings.iSurfaceStateHeaps = 
+    pRenderHal->StateHeapSettings.iSurfaceStateHeaps =
                                 pRenderHal->StateHeapSettings.iMediaStateHeaps;
 
     // Initialize MHW interfaces
@@ -4575,23 +5020,42 @@ MOS_STATUS RenderHal_Initialize(
     // If ASM debug is enabled, allocate debug resource
     MHW_RENDERHAL_CHK_STATUS(RenderHal_AllocateDebugSurface(pRenderHal));
 
+    // Allocate Predication buffer
+    MOS_ZeroMemory(&AllocParams, sizeof(AllocParams));
+    AllocParams.Type        = MOS_GFXRES_BUFFER;
+    AllocParams.TileType    = MOS_TILE_LINEAR;
+    AllocParams.Format      = Format_Buffer;
+    AllocParams.dwBytes     = MHW_PAGE_SIZE;
+    AllocParams.pBufName    = "PredicationBuffer";
+
+    MHW_RENDERHAL_CHK_STATUS(pOsInterface->pfnAllocateResource(
+        pOsInterface,
+        &AllocParams,
+        &pRenderHal->PredicationBuffer));
+
     // Setup State Base Address command
     pStateBaseParams   = &pRenderHal->StateBaseAddressParams;
     pStateBaseParams->presGeneralState              = &pRenderHal->pStateHeap->GshOsResource;
     pStateBaseParams->dwGeneralStateSize            = pRenderHal->pStateHeap->dwSizeGSH;
     pStateBaseParams->presDynamicState              = &pRenderHal->pStateHeap->GshOsResource;
     pStateBaseParams->dwDynamicStateSize            = pRenderHal->pStateHeap->dwSizeGSH;
-    pStateBaseParams->dwDynamicStateMemObjCtrlState = 0;
     pStateBaseParams->bDynamicStateRenderTarget     = false;
     pStateBaseParams->presIndirectObjectBuffer      = &pRenderHal->pStateHeap->GshOsResource;
     pStateBaseParams->dwIndirectObjectBufferSize    = pRenderHal->pStateHeap->dwSizeGSH;
     pStateBaseParams->presInstructionBuffer         = &pRenderHal->pStateHeap->IshOsResource;
     pStateBaseParams->dwInstructionBufferSize       = pRenderHal->pStateHeap->dwSizeISH;
 
+    if (!pRenderHal->pPerfProfiler)
+    {
+        pRenderHal->pPerfProfiler = MediaPerfProfiler::Instance();
+        MHW_RENDERHAL_CHK_NULL(pRenderHal->pPerfProfiler);
+
+        MHW_RENDERHAL_CHK_STATUS(pRenderHal->pPerfProfiler->Initialize((void*)pRenderHal, pOsInterface));
+    }
+
 finish:
     return eStatus;
 }
-
 
 //!
 //! \brief    Send Rcs Status Tag
@@ -4641,6 +5105,88 @@ MOS_STATUS RenderHal_SendRcsStatusTag(
 
     // Increment GPU Status Tag
     pOsInterface->pfnIncrementGpuStatusTag(pOsInterface, pOsInterface->CurrentGpuContextOrdinal);
+
+finish:
+    return eStatus;
+}
+
+//!
+//! \brief    Send CSC Coefficient surface
+//! \details  Adds pipe control command in Command Buffer
+//! \param    PRENDERHAL_INTERFACE pRenderHal
+//!           [in] Pointer to RenderHal Interface Structure
+//! \param    PMOS_COMMAND_BUFFER pCmdBuffer
+//!           [in] Pointer to Command Buffer
+//! \param    PMOS_RESOURCE presCscCoeff
+//!           [in] Pointer to CSC Coefficient Surface
+//! \param    Kdll_CacheEntry *pKernelEntry
+//!           [in] Pointer to Kernel Entry
+//! \return   MOS_STATUS
+//!           MOS_STATUS_SUCCESS  if succeeded
+//!           MOS_STATUS_UNKNOWN if failed to allocate/initialize HW commands
+//!
+MOS_STATUS RenderHal_SendCscCoeffSurface(
+    PRENDERHAL_INTERFACE         pRenderHal,
+    PMOS_COMMAND_BUFFER          pCmdBuffer,
+    PMOS_RESOURCE                presCscCoeff,
+    Kdll_CacheEntry              *pKernelEntry)
+{
+    MOS_STATUS                   eStatus = MOS_STATUS_SUCCESS;
+    PMOS_INTERFACE               pOsInterface;
+    PMHW_MI_INTERFACE            pMhwMiInterface;
+    MHW_PIPE_CONTROL_PARAMS      PipeCtl;
+    MOS_SURFACE                  Surface;
+    uint64_t                     *pTempCoeff;
+    uint32_t                     dwLow;
+    uint32_t                     dwHigh;
+    uint32_t                     dwOffset;
+    uint32_t                     dwCount;
+    uint8_t                      uiPatchMatrixID;
+
+    //------------------------------------
+    MHW_RENDERHAL_CHK_NULL(pRenderHal);
+    MHW_RENDERHAL_CHK_NULL(pRenderHal->pOsInterface);
+    MHW_RENDERHAL_CHK_NULL(pRenderHal->pMhwMiInterface);
+    MHW_RENDERHAL_CHK_NULL(pCmdBuffer);
+    MHW_RENDERHAL_CHK_NULL(presCscCoeff);
+    MHW_RENDERHAL_CHK_NULL(pKernelEntry);
+    MHW_RENDERHAL_CHK_NULL(pKernelEntry->pCscParams);
+    //------------------------------------
+
+    pOsInterface    = pRenderHal->pOsInterface;
+    pMhwMiInterface = pRenderHal->pMhwMiInterface;
+    dwOffset        = 0;
+    dwCount         = sizeof(pKernelEntry->pCscParams->Matrix[0].Coeff) / sizeof(uint64_t);
+    MOS_ZeroMemory(&Surface, sizeof(Surface));
+
+    // Register the buffer
+    MHW_RENDERHAL_CHK_STATUS(pOsInterface->pfnRegisterResource(pOsInterface, presCscCoeff, true, true));
+    MHW_RENDERHAL_CHK_STATUS(pOsInterface->pfnGetResourceInfo(pOsInterface, presCscCoeff, &Surface));
+
+    PipeCtl              = g_cRenderHal_InitPipeControlParams;
+    PipeCtl.presDest     = presCscCoeff;
+    PipeCtl.dwPostSyncOp = MHW_FLUSH_WRITE_IMMEDIATE_DATA;
+    PipeCtl.dwFlushMode  = MHW_FLUSH_READ_CACHE;
+
+    for (uint32_t j = 0; j < pKernelEntry->pCscParams->PatchMatrixNum; j++)
+    {
+        uiPatchMatrixID = pKernelEntry->pCscParams->PatchMatrixID[j];
+        pTempCoeff = (uint64_t *)pKernelEntry->pCscParams->Matrix[uiPatchMatrixID].Coeff;
+
+        // Issue pipe control to write CSC Coefficient Surface
+        for (uint16_t i = 0; i < dwCount; i++, pTempCoeff++)
+        {
+            dwLow = (uint32_t)((*pTempCoeff) & 0xFFFFFFFF);
+            dwHigh = (uint32_t)(((*pTempCoeff) >> 32) & 0xFFFFFFFF);
+            PipeCtl.dwResourceOffset = dwOffset + sizeof(uint64_t) * i;
+            PipeCtl.dwDataDW1 = dwLow;
+            PipeCtl.dwDataDW2 = dwHigh;
+
+            MHW_RENDERHAL_CHK_STATUS(pMhwMiInterface->AddPipeControl(pCmdBuffer, nullptr, &PipeCtl));
+        }
+
+        dwOffset += Surface.dwPitch;
+    }
 
 finish:
     return eStatus;
@@ -4736,6 +5282,11 @@ MOS_STATUS RenderHal_SendMediaStates(
     // Send State Base Address command
     MHW_RENDERHAL_CHK_STATUS(pRenderHal->pfnSendStateBaseAddress(pRenderHal, pCmdBuffer));
 
+    if (pRenderHal->bComputeContextInUse)
+    {
+        pRenderHal->pRenderHalPltInterface->SendTo3DStateBindingTablePoolAlloc(pRenderHal, pCmdBuffer);
+    }
+
     // Send Surface States
     MHW_RENDERHAL_CHK_STATUS(pRenderHal->pfnSendSurfaces(pRenderHal, pCmdBuffer));
 
@@ -4747,15 +5298,23 @@ MOS_STATUS RenderHal_SendMediaStates(
     }
 
     // Send VFE State
-    pVfeStateParams = pRenderHal->pRenderHalPltInterface->GetVfeStateParameters();
-    MHW_RENDERHAL_CHK_STATUS(pMhwRender->AddMediaVfeCmd(pCmdBuffer, pVfeStateParams));
-
+    if (!pRenderHal->bComputeContextInUse)
+    {
+        pVfeStateParams = pRenderHal->pRenderHalPltInterface->GetVfeStateParameters();
+        MHW_RENDERHAL_CHK_STATUS(pMhwRender->AddMediaVfeCmd(pCmdBuffer, pVfeStateParams));
+    }
 
     // Send CURBE Load
-    MHW_RENDERHAL_CHK_STATUS(pRenderHal->pfnSendCurbeLoad(pRenderHal, pCmdBuffer));
+    if (!pRenderHal->bComputeContextInUse)
+    {
+        MHW_RENDERHAL_CHK_STATUS(pRenderHal->pfnSendCurbeLoad(pRenderHal, pCmdBuffer));
+    }
 
     // Send Interface Descriptor Load
-    MHW_RENDERHAL_CHK_STATUS(pRenderHal->pfnSendMediaIdLoad(pRenderHal, pCmdBuffer));
+    if (!pRenderHal->bComputeContextInUse)
+    {
+        MHW_RENDERHAL_CHK_STATUS(pRenderHal->pfnSendMediaIdLoad(pRenderHal, pCmdBuffer));
+    }
 
     // Send Chroma Keys
     MHW_RENDERHAL_CHK_STATUS(pRenderHal->pfnSendChromaKey(pRenderHal, pCmdBuffer));
@@ -4770,17 +5329,23 @@ MOS_STATUS RenderHal_SendMediaStates(
             pCmdBuffer,
             pWalkerParams));
     }
-    else if (pGpGpuWalkerParams)
+    else if (pGpGpuWalkerParams && (!pRenderHal->bComputeContextInUse))
     {
         MHW_RENDERHAL_CHK_STATUS(pMhwRender->AddGpGpuWalkerStateCmd(
-            pCmdBuffer, 
+            pCmdBuffer,
+            pGpGpuWalkerParams));
+    }
+    else if (pGpGpuWalkerParams && pRenderHal->bComputeContextInUse)
+    {
+        MHW_RENDERHAL_CHK_STATUS(pRenderHal->pRenderHalPltInterface->SendComputeWalker(
+            pRenderHal,
+            pCmdBuffer,
             pGpGpuWalkerParams));
     }
 
 finish:
     return eStatus;
 }
-
 
 //!
 //! \brief    Assign binding Table
@@ -4818,10 +5383,11 @@ MOS_STATUS RenderHal_AssignBindingTable(
 
     *piBindingTable = pStateHeap->iCurrentBindingTable;
 
-    // Get Offset to Current Binding Table 
+    // Get Offset to Current Binding Table
     dwOffset    = *piBindingTable * pStateHeap->iBindingTableSize;            // Moves the pointer to a Particular Binding Table
 
     // Reset Binding Table
+    MHW_RENDERHAL_CHK_NULL(pStateHeap->pSshBuffer);
     MOS_ZeroMemory(pStateHeap->pSshBuffer + dwOffset, pStateHeap->iBindingTableSize);
 
     // Setup Debug surface state if needed
@@ -4835,7 +5401,6 @@ MOS_STATUS RenderHal_AssignBindingTable(
 finish:
     return eStatus;
 }
-
 
 //!
 //! \brief    Setup Buffer Surface State
@@ -4952,11 +5517,11 @@ MOS_STATUS RenderHal_SetSurfaceStateBuffer(
     uint32_t dwBufferSize = pSurface->dwWidth - 1;
     Params.SurfaceType3D = GFX3DSTATE_SURFACETYPE_BUFFER;
     // Width  contains bits [ 6:0] of the number of entries in the buffer
-    Params.dwWidth = (uint8_t)(dwBufferSize & MOS_MASKBITS32(0, 6)); 
+    Params.dwWidth = (uint8_t)(dwBufferSize & MOS_MASKBITS32(0, 6));
     // Height contains bits [20:7] of the number of entries in the buffer
-    Params.dwHeight = (uint16_t)((dwBufferSize & MOS_MASKBITS32(7, 20)) >> 7);   
+    Params.dwHeight = (uint16_t)((dwBufferSize & MOS_MASKBITS32(7, 20)) >> 7);
     // For SURFTYPE_BUFFER, this field indicates the size of the structure
-    Params.dwPitch = 0;         
+    Params.dwPitch = 0;
 
     uint32_t depthMaskBuffer        = pRenderHal->pRenderHalPltInterface->GetDepthBitMaskForBuffer();
     uint32_t depthMaskRawBuffer     = pRenderHal->pRenderHalPltInterface->GetDepthBitMaskForRawBuffer();
@@ -4988,8 +5553,9 @@ MOS_STATUS RenderHal_SetSurfaceStateBuffer(
     Params.dwCacheabilityControl = pParams->dwCacheabilityControl;
 
     // Setup Surface State Entry via MHW state heap interface
-    pRenderHal->pMhwStateHeap->SetSurfaceStateEntry(&Params);
+    MHW_RENDERHAL_CHK_STATUS(pRenderHal->pMhwStateHeap->SetSurfaceStateEntry(&Params));
 
+finish:
     return eStatus;
 }
 
@@ -5045,13 +5611,12 @@ MOS_STATUS RenderHal_SetupInterfaceDescriptor(
     Params.dwSharedLocalMemorySize          = pRenderHal->pfnEncodeSLMSize(pRenderHal, pInterfaceDescriptorParams->iSLMSize);
     Params.iCrsThdConDataRdLn               = pInterfaceDescriptorParams->iCrsThrdConstDataLn;
     Params.pGeneralStateHeap                = nullptr;
-    
+
     MHW_RENDERHAL_CHK_STATUS(pRenderHal->pMhwStateHeap->SetInterfaceDescriptorEntry(&Params));
 
 finish:
     return eStatus;
 }
-
 
 //!
 //! \brief      Get Media Walker Status
@@ -5063,6 +5628,14 @@ finish:
 bool RenderHal_GetMediaWalkerStatus(
     PRENDERHAL_INTERFACE pRenderHal)
 {
+    //-----------------------------------------
+    if (pRenderHal == nullptr)
+    {
+        MHW_RENDERHAL_ASSERTMESSAGE("Invalid renderhal.");
+        return false;
+    }
+    //-----------------------------------------
+    
     if (pRenderHal->MediaWalkerMode == MHW_WALKER_MODE_DISABLED)
     {
         return false;
@@ -5070,7 +5643,6 @@ bool RenderHal_GetMediaWalkerStatus(
 
     return true;
 }
-
 
 //!
 //! \brief      Get surface memory object control \
@@ -5086,9 +5658,17 @@ uint32_t RenderHal_GetSurfaceMemoryObjectControl(
     PRENDERHAL_SURFACE_STATE_PARAMS pParams)
 {
     MHW_RENDERHAL_UNUSED(pRenderHal);
+    
+    //-----------------------------------------
+    if (pParams == nullptr)
+    {
+        MHW_RENDERHAL_ASSERTMESSAGE("nullptr pointer.");
+        return 0;
+    }
+    //-----------------------------------------
+
     return pParams->MemObjCtl;
 }
-
 
 //!
 //! \brief      Get the size of Scratch Space
@@ -5108,6 +5688,14 @@ uint32_t RenderHal_GetScratchSpaceSize(
 {
     MEDIA_SYSTEM_INFO             *pGtSystemInfo;
 
+    //-----------------------------------------
+    if (pRenderHal == nullptr)
+    {
+        MHW_RENDERHAL_ASSERTMESSAGE("Invalid renderhal.");
+        return 0;
+    }
+    //-----------------------------------------
+
     pGtSystemInfo                       = pRenderHal->pOsInterface->pfnGetGtSystemInfo(pRenderHal->pOsInterface);
     uint32_t numHWThreadsPerEU          = pGtSystemInfo->ThreadCount / pGtSystemInfo->EUCount;
 
@@ -5116,7 +5704,6 @@ uint32_t RenderHal_GetScratchSpaceSize(
 
     return dwScratchSpaceSize;
 }
-
 
 //!
 //! \brief    Setup OS specific surface state parameters
@@ -5138,27 +5725,54 @@ MOS_STATUS RenderHal_SetupSurfaceStateOs(
     PRENDERHAL_SURFACE_STATE_PARAMS pParams,
     PRENDERHAL_SURFACE_STATE_ENTRY  pSurfaceEntry)
 {
-    PMOS_INTERFACE                  pOsInterface;
     PMOS_SURFACE                    pSurface;
     MOS_STATUS                      eStatus = MOS_STATUS_SUCCESS;
     MHW_SURFACE_TOKEN_PARAMS        TokenParams;
 
-    pOsInterface = pRenderHal->pOsInterface;
+    uint32_t additional_plane_offset = 0;
+    uint32_t vertical_offset_in_surface_state = 0;
+
+    //-----------------------------------------
+    MHW_RENDERHAL_CHK_NULL(pRenderHal);
+    MHW_RENDERHAL_CHK_NULL(pRenderHalSurface);
+    MHW_RENDERHAL_CHK_NULL(pParams);
+    MHW_RENDERHAL_CHK_NULL(pSurfaceEntry);
+    //-----------------------------------------
+
     pSurface     = &pRenderHalSurface->OsSurface;
 
     // Surface, plane, offset
     TokenParams.pOsSurface         = pSurface;
     TokenParams.YUVPlane           = pSurfaceEntry->YUVPlane;
+
     switch (pSurfaceEntry->YUVPlane)
     {
         case MHW_U_PLANE:
-            TokenParams.dwSurfaceOffset = pSurface->UPlaneOffset.iSurfaceOffset;
+            vertical_offset_in_surface_state = pSurface->UPlaneOffset.iYOffset;
+            vertical_offset_in_surface_state &= 0x1C;  // The offset value in surface state commands.
+            additional_plane_offset = pSurface->UPlaneOffset.iYOffset
+                    - vertical_offset_in_surface_state;
+            additional_plane_offset *= pSurface->dwPitch;
+            TokenParams.dwSurfaceOffset = pSurface->UPlaneOffset.iSurfaceOffset
+                    + additional_plane_offset;
             break;
         case MHW_V_PLANE:
-            TokenParams.dwSurfaceOffset = pSurface->VPlaneOffset.iSurfaceOffset;
+            vertical_offset_in_surface_state = pSurface->VPlaneOffset.iYOffset;
+            vertical_offset_in_surface_state &= 0x1C;
+            additional_plane_offset = pSurface->VPlaneOffset.iYOffset
+                    - vertical_offset_in_surface_state;
+            additional_plane_offset *= pSurface->dwPitch;
+            TokenParams.dwSurfaceOffset = pSurface->VPlaneOffset.iSurfaceOffset
+                    + additional_plane_offset;
             break;
         default:
-            TokenParams.dwSurfaceOffset = pSurface->dwOffset;
+            vertical_offset_in_surface_state = pSurface->YPlaneOffset.iYOffset;
+            vertical_offset_in_surface_state &= 0x1C;
+            additional_plane_offset = pSurface->YPlaneOffset.iYOffset
+                    - vertical_offset_in_surface_state;
+            additional_plane_offset *= pSurface->dwPitch;
+            TokenParams.dwSurfaceOffset
+                    = pSurface->dwOffset + additional_plane_offset;
             break;
     }
 
@@ -5174,7 +5788,6 @@ MOS_STATUS RenderHal_SetupSurfaceStateOs(
 finish:
     return eStatus;
 }
-
 
 //!
 //! \brief    Bind Surface State
@@ -5213,19 +5826,20 @@ MOS_STATUS RenderHal_BindSurfaceState(
     pStateHeap = pRenderHal->pStateHeap;
     pHwSizes   = pRenderHal->pHwSizes;
 
-    // Get Offset to Current Binding Table 
+    // Get Offset to Current Binding Table
     dwOffset    = (pStateHeap->iCurSshBufferIndex * pStateHeap->dwSshIntanceSize) + // Points to the Base of Current SSH Buffer Instance
                   (pStateHeap->iBindingTableOffset)                               + // Moves the pointer to Base of Array of Binding Tables
                   (iBindingTableIndex * pStateHeap->iBindingTableSize)            + // Moves the pointer to a Particular Binding Table
                   (iBindingTableEntry * pHwSizes->dwSizeBindingTableState);         // Move the pointer to correct entry
 
+    MHW_RENDERHAL_CHK_NULL(pStateHeap->pSshBuffer);
     Params.pBindingTableEntry   = pStateHeap->pSshBuffer + dwOffset;
     Params.dwSurfaceStateOffset = pSurfaceEntry->dwSurfStateOffset;
     Params.bSurfaceStateAvs     = (pSurfaceEntry->Type == pRenderHal->SurfaceTypeAdvanced ) ? true : false;
     Params.iBindingTableEntry   = iBindingTableEntry;
 
     // Set binding table entry in MHW
-    pRenderHal->pMhwStateHeap->SetBindingTableEntry(&Params);
+    MHW_RENDERHAL_CHK_STATUS(pRenderHal->pMhwStateHeap->SetBindingTableEntry(&Params));
 
 finish:
     return eStatus;
@@ -5295,6 +5909,7 @@ MOS_STATUS RenderHal_SetVfeStateParams(
     pStateHeap  = pRenderHal->pStateHeap;
     pHwCaps     = pRenderHal->pHwCaps;
     pVfeParams  = pRenderHal->pRenderHalPltInterface->GetVfeStateParameters();
+    MHW_RENDERHAL_CHK_NULL(pVfeParams);
     pSettings   = &(pRenderHal->StateHeapSettings);
 
     pVfeParams->pKernelState             = nullptr;
@@ -5322,6 +5937,7 @@ MOS_STATUS RenderHal_SetVfeStateParams(
     dwMaxInterfaceDescriptorEntries = pHwCaps->dwMaxInterfaceDescriptorEntries;
 
     // CURBEAllocationSize must be >= CurbeTotalDataLength in CURBE_LOAD.
+    MHW_RENDERHAL_CHK_NULL(pStateHeap->pCurMediaState);
     dwCURBEAllocationSize = MOS_MAX(dwCURBEAllocationSize, (uint32_t)pStateHeap->pCurMediaState->iCurbeOffset);
 
     // CURBEAllocationSize is in 256-bit (32-byte) units, so we round up to
@@ -5411,16 +6027,16 @@ MOS_STATUS RenderHal_SetVfeStateParams(
 
         MHW_RENDERHAL_ASSERT(!iRemain && iPerThreadScratchSize);
         MHW_RENDERHAL_ASSERT(iSize < 12);
-        // Specifies the amount of scratch space allowed to be used by each 
-        // thread.  The driver must allocate enough contiguous scratch space, 
-        // pointed to by the Scratch Space Pointer, to ensure that the Maximum 
-        // Number of Threads each get Per Thread Scratch Space size without 
+        // Specifies the amount of scratch space allowed to be used by each
+        // thread.  The driver must allocate enough contiguous scratch space,
+        // pointed to by the Scratch Space Pointer, to ensure that the Maximum
+        // Number of Threads each get Per Thread Scratch Space size without
         // exceeding the driver-allocated scratch space.
         // Range = [0,11] indicating [1k bytes, 12k bytes]
-        pVfeParams->dwPerThreadScratchSpace = (uint32_t) iSize; 
+        pVfeParams->dwPerThreadScratchSpace = (uint32_t) iSize;
 
-        // Specifies the 1k-byte aligned address offset to scratch space for 
-        // use by the kernel.  This pointer is relative to the 
+        // Specifies the 1k-byte aligned address offset to scratch space for
+        // use by the kernel.  This pointer is relative to the
         // General State Base Address (1k aligned)
         // Format = GeneralStateOffset[31:10]
         pVfeParams->dwScratchSpaceBasePointer = pStateHeap->dwScratchSpaceBase;
@@ -5434,7 +6050,6 @@ MOS_STATUS RenderHal_SetVfeStateParams(
 finish:
     return eStatus;
 }
-
 
 //!
 //! \brief      Is two Planes NV12 Needed
@@ -5453,13 +6068,24 @@ bool RenderHal_Is2PlaneNV12Needed(
     PRENDERHAL_SURFACE     pRenderHalSurface,
     RENDERHAL_SS_BOUNDARY  Boundary)
 {
+    PMOS_SURFACE pSurface;
     uint16_t wWidthAlignUnit;
     uint16_t wHeightAlignUnit;
     uint32_t dwSurfaceHeight;
     uint32_t dwSurfaceWidth;
-    PMOS_SURFACE pSurface = &pRenderHalSurface->OsSurface;
+    bool bRet = false;
+
+    //---------------------------------------------
+    if (pRenderHal == nullptr
+     || pRenderHalSurface == nullptr)
+    {
+        MHW_RENDERHAL_ASSERTMESSAGE("nullptr pointer detected.");
+        goto finish;
+    }
+    //---------------------------------------------
 
     pRenderHal->pfnGetAlignUnit(&wWidthAlignUnit, &wHeightAlignUnit, pRenderHalSurface);
+    pSurface = &pRenderHalSurface->OsSurface;
 
      switch (Boundary)
     {
@@ -5480,9 +6106,38 @@ bool RenderHal_Is2PlaneNV12Needed(
             break;
     }
 
-    return (!MOS_IS_ALIGNED(dwSurfaceHeight, 4) || !MOS_IS_ALIGNED(dwSurfaceWidth, 4));
-}
+    // On G8, NV12 format needs the width and Height to be a multiple
+    // of 4 for both 3D sampler and 8x8 sampler; G75 needs the width
+    // of NV12 input surface to be a multiple of 4 for 3D sampler.
+    // On G9+, width need to be a multiple of 2, while height still need
+    // be a multiple of 4. Since G9 already post PV, just keep the old logic
+    // to enable 2 plane NV12 when the width or Height is not a multiple of 4.
+    // For G10+, enable 2 plane NV12 when width is not multiple of 2 or height
+    // is not multiple of 4.
+    if (!GFX_IS_GEN_10_OR_LATER(pRenderHal->Platform))
+    {
+        bRet = (!MOS_IS_ALIGNED(dwSurfaceHeight, 4) || !MOS_IS_ALIGNED(dwSurfaceWidth, 4));
+    }
+    else
+    {
+        // For AVS sampler, no limitation for 4 alignment.
+        if (RENDERHAL_SCALING_AVS == pRenderHalSurface->ScalingMode)
+        {
+            bRet = (!MOS_IS_ALIGNED(dwSurfaceHeight, 2) || !MOS_IS_ALIGNED(dwSurfaceWidth, 2));
+        }
+        else
+        {
+            bRet = (!MOS_IS_ALIGNED(dwSurfaceHeight, 4) || !MOS_IS_ALIGNED(dwSurfaceWidth, 2));
+        }
+    }
 
+    // Note: Always using 2 plane NV12 as WA for the corruption of NV12 input
+    // of which the height is greater than 16352
+    bRet = bRet || (MEDIA_IS_WA(pRenderHal->pWaTable, Wa16KInputHeightNV12Planar420) && dwSurfaceHeight > 16352);
+
+finish:
+    return bRet;
+}
 
 //!
 //! \brief      Sets Sampler States for Gen8
@@ -5547,12 +6202,12 @@ MOS_STATUS RenderHal_SetSamplerStates(
     {
         if (pSamplerStateParams->bInUse)
         {
-            pRenderHal->pOsInterface->pfnSetCmdBufferDebugInfo(
+            MHW_RENDERHAL_CHK_STATUS(pRenderHal->pOsInterface->pfnSetCmdBufferDebugInfo(
                 pRenderHal->pOsInterface,
                 true,  //bSamplerState
                 false, //bSurfaceState
                 i,
-                pSamplerStateParams->SamplerType);
+                pSamplerStateParams->SamplerType));
 
             switch (pSamplerStateParams->SamplerType)
             {
@@ -5611,7 +6266,11 @@ MOS_STATUS RenderHal_SetupSurfaceState(
     PRENDERHAL_OFFSET_OVERRIDE      pOffsetOverride)
 {
     MOS_STATUS eStatus = MOS_STATUS_SUCCESS;
+    
+    //-----------------------------------------------
+    MHW_RENDERHAL_CHK_NULL(pRenderHal);
     MHW_RENDERHAL_CHK_NULL(pRenderHal->pRenderHalPltInterface);
+    //-----------------------------------------------
 
     MHW_RENDERHAL_CHK_STATUS(pRenderHal->pRenderHalPltInterface->SetupSurfaceState(
         pRenderHal, pRenderHalSurface, pParams, piNumEntries, ppSurfaceEntries, pOffsetOverride));
@@ -5663,14 +6322,14 @@ MOS_STATUS RenderHal_GetSamplerOffsetAndPtr(
     ElementType = pSamplerParams->ElementType;
     SamplerType = (pSamplerParams) ? pSamplerParams->SamplerType : MHW_SAMPLER_TYPE_3D;
 
-    if (SamplerType == MHW_SAMPLER_TYPE_VME) 
+    if (SamplerType == MHW_SAMPLER_TYPE_VME)
     {
         dwOffset = pStateHeap->pCurMediaState->dwOffset +                 // Offset to current media state base
             pStateHeap->dwOffsetSampler +                                 // Go to base of the sampler area
             iMediaID   * pStateHeap->dwSizeSampler +                      // Go to base of media ID's sampler area
             iSamplerID * pRenderHal->pHwSizes->dwSizeSamplerState;        // Goto to "samplerID" sampler state
     }
-    else 
+    else
     {
         switch (ElementType)
         {
@@ -5752,7 +6411,7 @@ finish:
 bool RenderHal_PerThreadScratchSpaceStart2K(
     PRENDERHAL_INTERFACE pRenderHal)
 {
-    if (pRenderHal->pRenderHalPltInterface == nullptr)
+    if (pRenderHal == nullptr || pRenderHal->pRenderHalPltInterface == nullptr)
     {
         MHW_RENDERHAL_ASSERTMESSAGE("Invalid (nullptr) Pointer.");
         return false;
@@ -5775,7 +6434,7 @@ uint32_t RenderHal_EncodeSLMSize(
     uint32_t             SLMSize)
 {
     MOS_STATUS eStatus = MOS_STATUS_SUCCESS;
-    if (pRenderHal->pRenderHalPltInterface == nullptr)
+    if (pRenderHal == nullptr || pRenderHal->pRenderHalPltInterface == nullptr)
     {
         MHW_RENDERHAL_ASSERTMESSAGE("Invalid (nullptr) Pointer.");
         return 0;
@@ -5797,7 +6456,7 @@ uint8_t RenderHal_SetChromaDirection(
     PRENDERHAL_INTERFACE pRenderHal,
     PRENDERHAL_SURFACE   pRenderHalSurface)
 {
-    if (pRenderHal->pRenderHalPltInterface == nullptr)
+    if (pRenderHal == nullptr || pRenderHal->pRenderHalPltInterface == nullptr)
     {
         MHW_RENDERHAL_ASSERTMESSAGE("Invalid (nullptr) Pointer.");
         return false;
@@ -5822,7 +6481,7 @@ void RenderHal_ConvertToNanoSeconds(
     uint64_t                            iTicks,
     uint64_t                            *piNs)
 {
-    if (pRenderHal->pRenderHalPltInterface == nullptr)
+    if (pRenderHal == nullptr || pRenderHal->pRenderHalPltInterface == nullptr)
     {
         MHW_RENDERHAL_ASSERTMESSAGE("Invalid (nullptr) Pointer.");
         return;
@@ -5844,6 +6503,7 @@ MOS_STATUS RenderHal_EnableL3Caching(
     PRENDERHAL_L3_CACHE_SETTINGS        pCacheSettings)
 {
     MOS_STATUS eStatus = MOS_STATUS_SUCCESS;
+    MHW_RENDERHAL_CHK_NULL(pRenderHal);
     MHW_RENDERHAL_CHK_NULL(pRenderHal->pRenderHalPltInterface);
 
     MHW_RENDERHAL_CHK_STATUS( pRenderHal->pRenderHalPltInterface->EnableL3Caching(pRenderHal, pCacheSettings));
@@ -5905,6 +6565,13 @@ MOS_STATUS RenderHal_SendSurfaceStateEntry(
     PMOS_COMMAND_BUFFER             pCmdBuffer,
     PMHW_SURFACE_STATE_SEND_PARAMS  pParams)
 {
+    //-----------------------------------------------
+    MHW_RENDERHAL_CHK_NULL_RETURN(pRenderHal);
+    MHW_RENDERHAL_CHK_NULL_RETURN(pRenderHal->pOsInterface);
+    MHW_RENDERHAL_CHK_NULL_RETURN(pCmdBuffer);
+    MHW_RENDERHAL_CHK_NULL_RETURN(pParams);
+    //-----------------------------------------------
+
     PMOS_INTERFACE     pOsInterface = pRenderHal->pOsInterface;
     uint8_t            *pSurfaceState = pParams->pSurfaceStateSource;
     int32_t            iSurfaceStateOffset = pParams->iSurfaceStateOffset;
@@ -5994,12 +6661,12 @@ MOS_STATUS RenderHal_InitInterface(
     MOS_USER_FEATURE                UserFeature;
     MOS_USER_FEATURE_VALUE          UserFeatureValue;
     MOS_STATUS                      eStatus = MOS_STATUS_SUCCESS;
-    MOS_USER_FEATURE_VALUE_DATA     UserFeatureData;
     MHW_VFE_PARAMS                  *pVfeStateParams = nullptr;
 
     //---------------------------------------
-    MHW_RENDERHAL_ASSERT(pRenderHal);
-    MHW_RENDERHAL_ASSERT(pOsInterface);
+    MHW_RENDERHAL_CHK_NULL_RETURN(pRenderHal);
+    MHW_RENDERHAL_CHK_NULL_RETURN(ppCpInterface);
+    MHW_RENDERHAL_CHK_NULL_RETURN(pOsInterface);
     //---------------------------------------
 
     // Basic initialization
@@ -6035,7 +6702,7 @@ MOS_STATUS RenderHal_InitInterface(
     // Note: there are two pStateHeapInterface in below line. First one is pointer to legacy MHW_STATE_HEAP
     // sturcture, while the last one points to the new class.
     pRenderHal->pMhwStateHeap = pRenderHal->pMhwRenderInterface->m_stateHeapInterface->pStateHeapInterface;
-    
+
     pRenderHal->pHwCaps  = pRenderHal->pMhwRenderInterface->GetHwCaps();
 
     pRenderHal->pHwSizes = pRenderHal->pMhwStateHeap->GetHwSizesPointer();
@@ -6047,6 +6714,9 @@ MOS_STATUS RenderHal_InitInterface(
 
     //set MDF load to default value false
     pRenderHal->IsMDFLoad = false;
+
+    //set AVS to default value false
+    pRenderHal->bIsAVS = false;
 
     pRenderHal->iChromaKeyCount        = 0;
     for (int i = 0; i < pRenderHal->iMaxChromaKeys; i++)
@@ -6083,7 +6753,7 @@ MOS_STATUS RenderHal_InitInterface(
         MOS_USER_FEATURE_VALUE_TYPE_UINT32);
 #endif
     pRenderHal->MediaWalkerMode = (MHW_WALKER_MODE)UserFeature.pValues[0].u32Data;
-    
+
     pRenderHal->pPlaneDefinitions             = g_cRenderHal_SurfacePlanes;
 
     // disable RenderHal kernel debugging.
@@ -6092,6 +6762,14 @@ MOS_STATUS RenderHal_InitInterface(
     pRenderHal->iMaxPalettes                  = RENDERHAL_PALETTE_COUNT;
     pRenderHal->iMaxPaletteEntries            = RENDERHAL_PALETTE_ENTRIES;
     pRenderHal->iMaxChromaKeys                = RENDERHAL_CHROMA_KEY_COUNT;
+
+    MOS_ZeroMemory(&pRenderHal->PredicationParams, sizeof(pRenderHal->PredicationParams));
+    MOS_ZeroMemory(&pRenderHal->SetMarkerParams, sizeof(pRenderHal->SetMarkerParams));
+
+    // CMFC CSC Coefficient Surface update
+    pRenderHal->bCmfcCoeffUpdate              = false;
+    pRenderHal->iKernelAllocationID           = RENDERHAL_KERNEL_LOAD_FAIL;
+    pRenderHal->pCmfcCoeffSurface             = nullptr;
 
     // Initialization/Cleanup function
     pRenderHal->pfnInitialize                 = RenderHal_Initialize;
@@ -6106,7 +6784,7 @@ MOS_STATUS RenderHal_InitInterface(
     pRenderHal->pfnSetPowerOptionMode         = RenderHal_SetPowerOptionMode;
 
     // Preemption
-    pRenderHal->pfnEnableGpgpuMiddleBatchBufferPreemption  = 
+    pRenderHal->pfnEnableGpgpuMiddleBatchBufferPreemption  =
          RenderHal_EnableGpgpuMiddleBatchBufferPreemption;
     pRenderHal->pfnEnableGpgpuMiddleThreadPreemption       =
          RenderHal_EnableGpgpuMiddleThreadPreemption;
@@ -6125,6 +6803,7 @@ MOS_STATUS RenderHal_InitInterface(
     pRenderHal->pfnSendSurfaceStateEntry      = RenderHal_SendSurfaceStateEntry;
     pRenderHal->pfnSetSurfaceStateToken       = RenderHal_SetSurfaceStateToken;
     pRenderHal->pfnSetSurfaceStateBuffer      = RenderHal_SetSurfaceStateBuffer;
+    pRenderHal->pfnCalculateYOffset           = RenderHal_CalculateYOffset;
 
     // Media states management functions
     pRenderHal->pfnAllocateBB                 = RenderHal_AllocateBB;
@@ -6169,13 +6848,13 @@ MOS_STATUS RenderHal_InitInterface(
     pRenderHal->pfnSendTimingData             = RenderHal_SendTimingData;
     pRenderHal->pfnSendRcsStatusTag           = RenderHal_SendRcsStatusTag;
     pRenderHal->pfnSendSyncTag                = RenderHal_SendSyncTag;
+    pRenderHal->pfnSendCscCoeffSurface        = RenderHal_SendCscCoeffSurface;
 
-    // Frame tracking
-    pRenderHal->pfnGetNextFrameId             = RenderHal_GetNextFrameId;
-    pRenderHal->pfnIncNextFrameId             = RenderHal_IncNextFrameId;
-    pRenderHal->pfnGetCurrentFrameId          = RenderHal_GetCurrentFrameId;
-    pRenderHal->pfnWaitFrameId                = RenderHal_WaitFrameId;
-    pRenderHal->pfnEnableFrameTracking        = RenderHal_EnableFrameTracking;
+    // Tracker tag
+    pRenderHal->pfnIncTrackerId               = RenderHal_IncTrackerId;
+    pRenderHal->pfnGetNextTrackerId           = RenderHal_GetNextTrackerId;
+    pRenderHal->pfnGetCurrentTrackerId        = RenderHal_GetCurrentTrackerId;
+    pRenderHal->pfnSetupPrologParams          = RenderHal_SetupPrologParams;
 
     // InterfaceDescriptor
     pRenderHal->pfnSetupInterfaceDescriptor   = RenderHal_SetupInterfaceDescriptor;
@@ -6194,11 +6873,11 @@ MOS_STATUS RenderHal_InitInterface(
     pRenderHal->pfnSetSamplerStates           = RenderHal_SetSamplerStates;
 
     pRenderHal->pfnIs2PlaneNV12Needed         = RenderHal_Is2PlaneNV12Needed;
-    
+
     // Initialize hardware resources for the current Os/Platform
     pRenderHal->pRenderHalPltInterface = RenderHalDevice::CreateFactory(pOsInterface);
     MHW_RENDERHAL_CHK_NULL(pRenderHal->pRenderHalPltInterface);
-    
+
     // Set the platform-specific fields in renderhal
     // Set State Heap settings
     pRenderHal->pRenderHalPltInterface->InitStateHeapSettings(pRenderHal);
@@ -6206,10 +6885,14 @@ MOS_STATUS RenderHal_InitInterface(
     // Set default / advanced surface types
     pRenderHal->pRenderHalPltInterface->InitSurfaceTypes(pRenderHal);
 
+    // Set MMC Enabled status
+    pRenderHal->pRenderHalPltInterface->IsRenderHalMMCEnabled(pRenderHal);
+
     // Set platform dependent parameters
     pRenderHal->bHasCombinedAVSSamplerState   = true;
     pRenderHal->bEnableYV12SinglePass         = pRenderHal->pRenderHalPltInterface->IsEnableYV12SinglePass(pRenderHal);
     pRenderHal->dwSamplerAvsIncrement         = pRenderHal->pRenderHalPltInterface->GetSizeSamplerStateAvs(pRenderHal);
+    pRenderHal->bComputeContextInUse          = pRenderHal->pRenderHalPltInterface->IsComputeContextInUse(pRenderHal);
 
     pRenderHal->dwMaskCrsThdConDataRdLn       = (uint32_t) -1;
     pRenderHal->dwMinNumberThreadsInGroup     = 1;
@@ -6221,10 +6904,10 @@ MOS_STATUS RenderHal_InitInterface(
     {
         pRenderHal->Palette[i].iPaletteID   = i;
         pRenderHal->Palette[i].iNumEntries  = 0;
-        pRenderHal->Palette[i].pPaletteData = 
+        pRenderHal->Palette[i].pPaletteData =
             pRenderHal->pRenderHalPltInterface->GetPaletteDataAddress(i);
     }
-    
+
     // Set default VFEState Params
     pVfeStateParams = pRenderHal->pRenderHalPltInterface->GetVfeStateParameters();
     pVfeStateParams->dwDebugCounterControl    = MEDIASTATE_DEBUG_COUNTER_FREE_RUNNING;
@@ -6282,6 +6965,11 @@ MOS_STATUS RenderHal_SetSurfaceForHwAccess(
     int32_t                         iSurfaceEntries;
     int32_t                         i;
     MOS_STATUS                      eStatus;
+
+    //---------------------------------------
+    MHW_RENDERHAL_CHK_NULL(pRenderHal);
+    MHW_RENDERHAL_CHK_NULL(pRenderHal->pOsInterface);
+    //---------------------------------------
 
     // Initialize Variables
     eStatus                 = MOS_STATUS_SUCCESS;
@@ -6341,13 +7029,18 @@ MOS_STATUS RenderHal_SetBufferSurfaceForHwAccess(
     PRENDERHAL_SURFACE              pRenderHalSurface,
     PRENDERHAL_SURFACE_STATE_PARAMS pSurfaceParams,
     int32_t                         iBindingTable,
-    int32_t                         iBTEntry, 
+    int32_t                         iBTEntry,
     bool                            bWrite)
 {
     PMOS_INTERFACE                  pOsInterface;
     RENDERHAL_SURFACE_STATE_PARAMS  SurfaceParam;
     PRENDERHAL_SURFACE_STATE_ENTRY  pSurfaceEntry;
     MOS_STATUS                      eStatus;
+
+    //---------------------------------------
+    MHW_RENDERHAL_CHK_NULL(pRenderHal);
+    MHW_RENDERHAL_CHK_NULL(pRenderHal->pOsInterface);
+    //---------------------------------------
 
     // Initialize Variables
     eStatus                         = MOS_STATUS_SUCCESS;
@@ -6369,8 +7062,8 @@ MOS_STATUS RenderHal_SetBufferSurfaceForHwAccess(
     }
 
     MHW_RENDERHAL_CHK_STATUS(pRenderHal->pfnSetupBufferSurfaceState(
-        pRenderHal, 
-        pRenderHalSurface, 
+        pRenderHal,
+        pRenderHalSurface,
         pSurfaceParams,
         &pSurfaceEntry));
 

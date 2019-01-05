@@ -29,19 +29,6 @@
 
 #include "codechal_encode_vp8.h"
 
-struct CodechalEncodeVp8InitKernelStateParams
-{
-    PMHW_KERNEL_STATE               pKernelState;
-    MhwRenderInterface             *pRenderEngineInterface;
-    uint8_t*                        pui8Binary;
-    EncOperation                    Operation;
-    uint32_t                        dwKrnStateIdx;
-    uint32_t                        dwCombinedKernelSize;
-    int32_t                         iBtCount;
-    int32_t                         iCurbeCount;
-};
-
-
 class CodechalEncodeVp8G10 : public CodechalEncodeVp8
 {
 public:
@@ -59,10 +46,10 @@ public:
     ~CodechalEncodeVp8G10() {};
 
 protected:
-    MOS_STATUS Initialize(PCODECHAL_SETTINGS codecHalSettings);
+    MOS_STATUS Initialize(CodechalSetting * codecHalSettings);
 
     MOS_STATUS InitKernelStateHelper(struct CodechalEncodeVp8InitKernelStateParams* params);
-    
+
     MOS_STATUS InitKernelState() override;
 
     //!

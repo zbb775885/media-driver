@@ -77,13 +77,20 @@ distinct bands). */
 #define CODEC_VP9_NUM_CONTEXTS                4
 #define CODEC_VP9_MAX_REF_LF_DELTAS           4
 #define CODEC_VP9_MAX_MODE_LF_DELTAS          2
-#define CODEC_VP9_MAX_SEGMENTS                8
 #define CODECHAL_VP9_SEG_TREE_PROBS              (CODEC_VP9_MAX_SEGMENTS - 1)
 #define CODEC_VP9_PREDICTION_PROBS            3
 #define CODEC_VP9_MAX_LOOP_FILTER             63
 
 #define CODEC_VP9_MAX_QP                      255
 #define CODEC_VP9_QINDEX_RANGE                (CODEC_VP9_MAX_QP + 1)
+
+//VP9 Profile
+typedef enum {
+    CODEC_PROFILE_VP9_PROFILE0 = 0,
+    CODEC_PROFILE_VP9_PROFILE1 = 1,
+    CODEC_PROFILE_VP9_PROFILE2 = 2,
+    CODEC_PROFILE_VP9_PROFILE3 = 3
+}CODEC_VP9_PROFILE_IDC;
 
 typedef enum {
     CODEC_VP9_KEY_FRAME = 0,

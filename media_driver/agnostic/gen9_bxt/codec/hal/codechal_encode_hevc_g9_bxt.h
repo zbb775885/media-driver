@@ -74,14 +74,14 @@ private:
         uint32_t                       krnStateIdx,
         void                           *krnHeader,
         uint32_t                       *krnSize);
-   
+
     // Inherited virtual function
     bool UsePlatformControlFlag()
     {
         return false;
     }
 
-    MOS_STATUS Initialize(PCODECHAL_SETTINGS settings);
+    MOS_STATUS Initialize(CodechalSetting * settings);
 };
 
 #endif  // __CODECHAL_ENCODE_HEVC_G9_BXT_H__

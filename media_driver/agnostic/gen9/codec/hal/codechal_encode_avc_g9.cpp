@@ -38,6 +38,7 @@
 #define CODECHAL_VDENC_AVC_P_SLICE_SIZE_MINUS_G9                            500
 
 #define CODECHAL_ENCODE_AVC_SEI_BUFFER_SIZE                                 10240   // 10K is just estimation
+#define CODECHAL_ENCODE_AVC_BRC_HISTORY_BUFFER_OFFSET_SCENE_CHANGED         0x2F8   // (368 + 12)*2 = 760
 
 typedef enum _CODECHAL_BINDING_TABLE_OFFSET_2xSCALING_CM_G9
 {
@@ -49,7 +50,6 @@ typedef enum _CODECHAL_BINDING_TABLE_OFFSET_2xSCALING_CM_G9
     CODECHAL_2xSCALING_FIELD_BOT_DST_Y_CM_G9 = 3,
     CODECHAL_2xSCALING_NUM_SURFACES_CM_G9 = 4
 }CODECHAL_BINDING_TABLE_OFFSET_2xSCALING_CM_G9;
-
 
 typedef enum _CODECHAL_ENCODE_AVC_BINDING_TABLE_OFFSET_BRC_UPDATE_G9
 {
@@ -73,7 +73,6 @@ const CODECHAL_ENCODE_AVC_IPCM_THRESHOLD CodechalEncodeAvcEncG9::IPCM_Threshold_
     { 10, 7500 },
     { 18, 9000 },
 };
-
 
 typedef struct _CODECHAL_ENCODE_AVC_BRC_BLOCK_COPY_CURBE_CM_G9
 {
@@ -878,7 +877,6 @@ const uint32_t CodechalEncodeAvcEncG9::IntraModeCostForHighTextureMB[CODEC_AVC_N
     0x00006d0b, 0x00006e0d, 0x0000780e, 0x00007918
 };
 
-
 static const CODECHAL_ENCODE_AVC_FRAME_BRC_UPDATE_CURBE_G9 g_cInit_CODECHAL_ENCODE_AVC_FRAME_BRC_UPDATE_CURBE_G9 =
 {
     // uint32_t 0
@@ -1576,7 +1574,7 @@ MOS_STATUS CodechalEncodeAvcEncG9::SetCurbeAvcFrameBrcUpdate(PCODECHAL_ENCODE_AV
 
     cmd.DW6.MinimumQP               = params->ucMinQP;
     cmd.DW6.MaximumQP               = params->ucMaxQP;
-    cmd.DW6.EnableForceToSkip       = bForceToSkipEnable;
+    cmd.DW6.EnableForceToSkip       = (bForceToSkipEnable && !m_avcPicParam->bDisableFrameSkip);
     cmd.DW6.EnableSlidingWindow     = (seqParams->FrameSizeTolerance == EFRAMESIZETOL_LOW);
     cmd.DW6.EnableExtremLowDelay    = (seqParams->FrameSizeTolerance == EFRAMESIZETOL_EXTREMELY_LOW);
 
@@ -1662,7 +1660,7 @@ MOS_STATUS CodechalEncodeAvcEncG9::SetCurbeAvcMbBrcUpdate(PCODECHAL_ENCODE_AVC_B
                 roisize += (CODECHAL_MACROBLOCK_HEIGHT * MOS_ABS(m_avcPicParam->ROI[i].Top - m_avcPicParam->ROI[i].Bottom)) *
                                 (CODECHAL_MACROBLOCK_WIDTH * MOS_ABS(m_avcPicParam->ROI[i].Right - m_avcPicParam->ROI[i].Left));
             }
-            
+
             if (roisize)
             {
                 uint32_t numMBs = m_picWidthInMb * m_picHeightInMb;
@@ -1688,7 +1686,7 @@ MOS_STATUS CodechalEncodeAvcEncG9::SetCurbeAvcMbBrcUpdate(PCODECHAL_ENCODE_AVC_B
 
 MOS_STATUS CodechalEncodeAvcEncG9::SetCurbeAvcBrcBlockCopy(PCODECHAL_ENCODE_AVC_BRC_BLOCK_COPY_CURBE_PARAMS params)
 {
-    MOS_STATUS								        eStatus = MOS_STATUS_SUCCESS;
+    MOS_STATUS                                        eStatus = MOS_STATUS_SUCCESS;
 
     CODECHAL_ENCODE_CHK_NULL_RETURN(params);
     CODECHAL_ENCODE_CHK_NULL_RETURN(params->pKernelState);
@@ -2198,7 +2196,7 @@ MOS_STATUS CodechalEncodeAvcEncG9::SendAvcMbEncSurfaces(PMOS_COMMAND_BUFFER cmdB
     if (params->dwMbEncBRCBufferSize > 0)
     {
         //Started from GEN95, separated Mbenc curbe from BRC update kernel. BRC update kernel will generate a 128 bytes surface for mbenc.
-        //The new surface contains the updated data for mbenc. MBenc kernel has been changed to use the new BRC update output surface 
+        //The new surface contains the updated data for mbenc. MBenc kernel has been changed to use the new BRC update output surface
         //to update its curbe internally.
         // MbEnc BRC buffer - write only
         MOS_ZeroMemory(&surfaceCodecParams, sizeof(CODECHAL_SURFACE_CODEC_PARAMS));
@@ -2424,7 +2422,7 @@ MOS_STATUS CodechalEncodeAvcEncG9::SendAvcBrcFrameUpdateSurfaces(PMOS_COMMAND_BU
     if (params->dwMbEncBRCBufferSize > 0)
     {
         //Started from GEN95, separated Mbenc curbe from BRC update kernel. BRC update kernel will generate a 128 bytes surface for mbenc.
-        //The new surface contains the updated data for mbenc. MBenc kernel has been changed to use the new BRC update output surface 
+        //The new surface contains the updated data for mbenc. MBenc kernel has been changed to use the new BRC update output surface
         //to update its curbe internally.
         // MbEnc BRC buffer - write only
         MOS_ZeroMemory(&surfaceCodecParams, sizeof(CODECHAL_SURFACE_CODEC_PARAMS));
@@ -2539,23 +2537,23 @@ MOS_STATUS CodechalEncodeAvcEncG9::SendAvcBrcFrameUpdateSurfaces(PMOS_COMMAND_BU
         &surfaceCodecParams,
         kernelState));
 
-	// MV data buffer
-	if (params->psMvDataBuffer)
-	{
-		memset(&surfaceCodecParams, 0, sizeof(CODECHAL_SURFACE_CODEC_PARAMS));
-		surfaceCodecParams.bIs2DSurface = true;
-		surfaceCodecParams.bMediaBlockRW = true;
-		surfaceCodecParams.psSurface = params->psMvDataBuffer;
-		surfaceCodecParams.dwOffset = params->dwMvBottomFieldOffset;
-		surfaceCodecParams.dwCacheabilityControl = m_hwInterface->GetCacheabilitySettings()[MOS_CODEC_RESOURCE_USAGE_SURFACE_MV_DATA_ENCODE].Value;
-		surfaceCodecParams.dwBindingTableOffset = avcBrcUpdateBindingTable->dwFrameBrcMvDataBuffer;
-		CODECHAL_ENCODE_CHK_STATUS_RETURN(CodecHalSetRcsSurfaceState(
-			m_hwInterface,
-			cmdBuffer,
-			&surfaceCodecParams,
-			kernelState));
-	}
-	
+    // MV data buffer
+    if (params->psMvDataBuffer)
+    {
+        memset(&surfaceCodecParams, 0, sizeof(CODECHAL_SURFACE_CODEC_PARAMS));
+        surfaceCodecParams.bIs2DSurface = true;
+        surfaceCodecParams.bMediaBlockRW = true;
+        surfaceCodecParams.psSurface = params->psMvDataBuffer;
+        surfaceCodecParams.dwOffset = params->dwMvBottomFieldOffset;
+        surfaceCodecParams.dwCacheabilityControl = m_hwInterface->GetCacheabilitySettings()[MOS_CODEC_RESOURCE_USAGE_SURFACE_MV_DATA_ENCODE].Value;
+        surfaceCodecParams.dwBindingTableOffset = avcBrcUpdateBindingTable->dwFrameBrcMvDataBuffer;
+        CODECHAL_ENCODE_CHK_STATUS_RETURN(CodecHalSetRcsSurfaceState(
+            m_hwInterface,
+            cmdBuffer,
+            &surfaceCodecParams,
+            kernelState));
+    }
+
     return eStatus;
 }
 
@@ -2738,27 +2736,46 @@ MOS_STATUS CodechalEncodeAvcEncG9::GetStatusReport(
 #endif
         )
     {
-        if (pCmEvent[nCmEventCheckIdx] != nullptr)
+        if (m_cmEvent[m_cmEventCheckIdx] != nullptr)
         {
-            pCmEvent[nCmEventCheckIdx]->WaitForTaskFinished();
             if (!m_mfeEnabled)
             {
-                pCmQueue->DestroyEvent(pCmEvent[nCmEventCheckIdx]);
+                m_cmEvent[m_cmEventCheckIdx]->WaitForTaskFinished();
+                m_cmQueue->DestroyEvent(m_cmEvent[m_cmEventCheckIdx]);
             }
-            pCmEvent[nCmEventCheckIdx] = nullptr;
-            nCmEventCheckIdx = (nCmEventCheckIdx + 1 ) % CM_EVENT_NUM;
+            m_cmEvent[m_cmEventCheckIdx] = nullptr;
+            m_cmEventCheckIdx            = (m_cmEventCheckIdx + 1) % CM_EVENT_NUM;
             codecStatus[0].CodecStatus = CODECHAL_STATUS_SUCCESSFUL;
 
-            return MOS_STATUS_SUCCESS;                    
+            return MOS_STATUS_SUCCESS;
         }
         else
         {
             codecStatus[0].CodecStatus = CODECHAL_STATUS_UNAVAILABLE;
-            return MOS_STATUS_SUCCESS;                    
+            return MOS_STATUS_SUCCESS;
         }
     }
     else
         return CodechalEncoderState::GetStatusReport(status, numStatus);
+}
+
+MOS_STATUS CodechalEncodeAvcEncG9::SceneChangeReport(PMOS_COMMAND_BUFFER    cmdBuffer, PCODECHAL_ENCODE_AVC_GENERIC_PICTURE_LEVEL_PARAMS params)
+{
+
+    MHW_MI_COPY_MEM_MEM_PARAMS                      copyMemMemParams;
+    uint32_t offset = (m_encodeStatusBuf.wCurrIndex * m_encodeStatusBuf.dwReportSize)
+        + (sizeof(uint32_t) * 2) + m_encodeStatusBuf.dwSceneChangedOffset;
+
+    MOS_ZeroMemory(&copyMemMemParams, sizeof(copyMemMemParams));
+    copyMemMemParams.presSrc = params->presBrcHistoryBuffer;
+    copyMemMemParams.dwSrcOffset = CODECHAL_ENCODE_AVC_BRC_HISTORY_BUFFER_OFFSET_SCENE_CHANGED;
+    copyMemMemParams.presDst = &m_encodeStatusBuf.resStatusBuffer;
+    copyMemMemParams.dwDstOffset = offset;
+    CODECHAL_ENCODE_CHK_STATUS_RETURN(m_miInterface->AddMiCopyMemMemCmd(
+        cmdBuffer,
+        &copyMemMemParams));
+
+    return MOS_STATUS_SUCCESS;
 }
 
 #if USE_CODECHAL_DEBUG_TOOL
@@ -2778,15 +2795,15 @@ MOS_STATUS CodechalEncodeAvcEncG9::PopulateBrcInitParam(
 
     if (m_pictureCodingType == I_TYPE)
     {
-        avcPar->MBBRCEnable          = bMbBrcEnabled;
-        avcPar->MBRC                 = bMbBrcEnabled;
-        avcPar->BitRate              = curbe->DW3.AverageBitRate;
-        avcPar->InitVbvFullnessInBit = curbe->DW1.InitBufFullInBits;
-        avcPar->MaxBitRate           = curbe->DW4.MaxBitRate;
-        avcPar->VbvSzInBit           = curbe->DW2.BufSizeInBits;
-        avcPar->AvbrAccuracy         = curbe->DW10.AVBRAccuracy;
-        avcPar->AvbrConvergence      = curbe->DW11.AVBRConvergence;
-        avcPar->SlidingWindowSize    = curbe->DW22.SlidingWindowSize;
+        m_avcPar->MBBRCEnable          = bMbBrcEnabled;
+        m_avcPar->MBRC                 = bMbBrcEnabled;
+        m_avcPar->BitRate              = curbe->DW3.AverageBitRate;
+        m_avcPar->InitVbvFullnessInBit = curbe->DW1.InitBufFullInBits;
+        m_avcPar->MaxBitRate           = curbe->DW4.MaxBitRate;
+        m_avcPar->VbvSzInBit           = curbe->DW2.BufSizeInBits;
+        m_avcPar->AvbrAccuracy         = curbe->DW10.AVBRAccuracy;
+        m_avcPar->AvbrConvergence      = curbe->DW11.AVBRConvergence;
+        m_avcPar->SlidingWindowSize    = curbe->DW22.SlidingWindowSize;
     }
 
     return MOS_STATUS_SUCCESS;
@@ -2808,15 +2825,15 @@ MOS_STATUS CodechalEncodeAvcEncG9::PopulateBrcUpdateParam(
 
     if (m_pictureCodingType == I_TYPE)
     {
-        avcPar->EnableMultipass     = (curbe->DW5.MaxNumPAKs > 0) ? 1 : 0;
-        avcPar->MaxNumPakPasses     = curbe->DW5.MaxNumPAKs;
-        avcPar->SlidingWindowEnable = curbe->DW6.EnableSlidingWindow;
-        avcPar->FrameSkipEnable     = curbe->DW6.EnableForceToSkip;
-        avcPar->UserMaxFrame        = curbe->DW19.UserMaxFrame;
+        m_avcPar->EnableMultipass     = (curbe->DW5.MaxNumPAKs > 0) ? 1 : 0;
+        m_avcPar->MaxNumPakPasses     = curbe->DW5.MaxNumPAKs;
+        m_avcPar->SlidingWindowEnable = curbe->DW6.EnableSlidingWindow;
+        m_avcPar->FrameSkipEnable     = curbe->DW6.EnableForceToSkip;
+        m_avcPar->UserMaxFrame        = curbe->DW19.UserMaxFrame;
     }
     else
     {
-        avcPar->UserMaxFrameP       = curbe->DW19.UserMaxFrame;
+        m_avcPar->UserMaxFrameP = curbe->DW19.UserMaxFrame;
     }
 
     return MOS_STATUS_SUCCESS;
@@ -2839,55 +2856,55 @@ MOS_STATUS CodechalEncodeAvcEncG9::PopulateEncParam(
 
     if (m_pictureCodingType == I_TYPE)
     {
-        avcPar->MRDisableQPCheck                    = MRDisableQPCheck[m_targetUsage];
-        avcPar->AllFractional = 
+        m_avcPar->MRDisableQPCheck = MRDisableQPCheck[m_targetUsage];
+        m_avcPar->AllFractional =
             CODECHAL_ENCODE_AVC_AllFractional_Common[m_targetUsage & 0x7];
-        avcPar->DisableAllFractionalCheckForHighRes = 
+        m_avcPar->DisableAllFractionalCheckForHighRes =
             CODECHAL_ENCODE_AVC_DisableAllFractionalCheckForHighRes_Common[m_targetUsage & 0x7];
-        avcPar->EnableAdaptiveSearch                = curbe->common.DW37.AdaptiveEn;
-        avcPar->EnableFBRBypass                     = curbe->common.DW4.EnableFBRBypass;
-        avcPar->BlockBasedSkip                      = curbe->common.DW3.BlockBasedSkipEnable;
-        avcPar->MADEnableFlag                       = curbe->common.DW34.MADEnableFlag;
-        avcPar->MBTextureThreshold                  = curbe->common.DW58.MBTextureThreshold;
-        avcPar->EnableMBFlatnessCheckOptimization   = curbe->common.DW34.EnableMBFlatnessChkOptimization;
-        avcPar->EnableArbitrarySliceSize            = curbe->common.DW34.ArbitraryNumMbsPerSlice;
-        avcPar->RefThresh                           = curbe->common.DW38.RefThreshold;
-        avcPar->EnableWavefrontOptimization         = curbe->common.DW4.EnableWavefrontOptimization;
-        avcPar->MaxLenSP                            = curbe->common.DW2.LenSP;
+        m_avcPar->EnableAdaptiveSearch              = curbe->common.DW37.AdaptiveEn;
+        m_avcPar->EnableFBRBypass                   = curbe->common.DW4.EnableFBRBypass;
+        m_avcPar->BlockBasedSkip                    = curbe->common.DW3.BlockBasedSkipEnable;
+        m_avcPar->MADEnableFlag                     = curbe->common.DW34.MADEnableFlag;
+        m_avcPar->MBTextureThreshold                = curbe->common.DW58.MBTextureThreshold;
+        m_avcPar->EnableMBFlatnessCheckOptimization = curbe->common.DW34.EnableMBFlatnessChkOptimization;
+        m_avcPar->EnableArbitrarySliceSize          = curbe->common.DW34.ArbitraryNumMbsPerSlice;
+        m_avcPar->RefThresh                         = curbe->common.DW38.RefThreshold;
+        m_avcPar->EnableWavefrontOptimization       = curbe->common.DW4.EnableWavefrontOptimization;
+        m_avcPar->MaxLenSP                          = curbe->common.DW2.LenSP;
     }
     else if (m_pictureCodingType == P_TYPE)
     {
-        avcPar->MEMethod                            = meMethod;
-        avcPar->HMECombineLen                       = HMECombineLen[m_targetUsage];
-        avcPar->FTQBasedSkip                        = FTQBasedSkip[m_targetUsage];
-        avcPar->MultiplePred                        = MultiPred[m_targetUsage];
-        avcPar->EnableAdaptiveIntraScaling          = bAdaptiveIntraScalingEnable;
-        avcPar->StaticFrameIntraCostScalingRatioP   = 240;
-        avcPar->SubPelMode                          = curbe->common.DW3.SubPelMode;
-        avcPar->HMECombineOverlap                   = curbe->common.DW36.HMECombineOverlap;
-        avcPar->SearchX                             = curbe->common.DW5.RefWidth;
-        avcPar->SearchY                             = curbe->common.DW5.RefHeight;
-        avcPar->SearchControl                       = curbe->common.DW3.SearchCtrl;
-        avcPar->EnableAdaptiveTxDecision            = curbe->common.DW34.EnableAdaptiveTxDecision;
-        avcPar->TxDecisionThr                       = curbe->common.DW58.TxDecisonThreshold;
-        avcPar->EnablePerMBStaticCheck              = curbe->common.DW34.EnablePerMBStaticCheck;
-        avcPar->EnableAdaptiveSearchWindowSize      = curbe->common.DW34.EnableAdaptiveSearchWindowSize;
-        avcPar->EnableIntraCostScalingForStaticFrame = curbe->common.DW4.EnableIntraCostScalingForStaticFrame;
-        avcPar->BiMixDisable                        = curbe->common.DW0.BiMixDis;
-        avcPar->SurvivedSkipCost                    = (curbe->common.DW7.NonSkipZMvAdded << 1) + curbe->common.DW7.NonSkipModeAdded;
-        avcPar->UniMixDisable                       = curbe->common.DW1.UniMixDisable;
+        m_avcPar->MEMethod                             = meMethod;
+        m_avcPar->HMECombineLen                        = HMECombineLen[m_targetUsage];
+        m_avcPar->FTQBasedSkip                         = FTQBasedSkip[m_targetUsage];
+        m_avcPar->MultiplePred                         = MultiPred[m_targetUsage];
+        m_avcPar->EnableAdaptiveIntraScaling           = bAdaptiveIntraScalingEnable;
+        m_avcPar->StaticFrameIntraCostScalingRatioP    = 240;
+        m_avcPar->SubPelMode                           = curbe->common.DW3.SubPelMode;
+        m_avcPar->HMECombineOverlap                    = curbe->common.DW36.HMECombineOverlap;
+        m_avcPar->SearchX                              = curbe->common.DW5.RefWidth;
+        m_avcPar->SearchY                              = curbe->common.DW5.RefHeight;
+        m_avcPar->SearchControl                        = curbe->common.DW3.SearchCtrl;
+        m_avcPar->EnableAdaptiveTxDecision             = curbe->common.DW34.EnableAdaptiveTxDecision;
+        m_avcPar->TxDecisionThr                        = curbe->common.DW58.TxDecisonThreshold;
+        m_avcPar->EnablePerMBStaticCheck               = curbe->common.DW34.EnablePerMBStaticCheck;
+        m_avcPar->EnableAdaptiveSearchWindowSize       = curbe->common.DW34.EnableAdaptiveSearchWindowSize;
+        m_avcPar->EnableIntraCostScalingForStaticFrame = curbe->common.DW4.EnableIntraCostScalingForStaticFrame;
+        m_avcPar->BiMixDisable                         = curbe->common.DW0.BiMixDis;
+        m_avcPar->SurvivedSkipCost                     = (curbe->common.DW7.NonSkipZMvAdded << 1) + curbe->common.DW7.NonSkipModeAdded;
+        m_avcPar->UniMixDisable                        = curbe->common.DW1.UniMixDisable;
     }
     else if (m_pictureCodingType == B_TYPE)
     {
-        avcPar->BMEMethod                           = meMethod;
-        avcPar->HMEBCombineLen                      = HMEBCombineLen[m_targetUsage];
-        avcPar->StaticFrameIntraCostScalingRatioB   = 200;
-        avcPar->BSearchX                            = curbe->common.DW5.RefWidth;
-        avcPar->BSearchY                            = curbe->common.DW5.RefHeight;
-        avcPar->BSearchControl                      = curbe->common.DW3.SearchCtrl;
-        avcPar->BSkipType                           = curbe->common.DW3.SkipType;
-        avcPar->DirectMode                          = curbe->common.DW34.bDirectMode;
-        avcPar->BiWeight                            = curbe->common.DW1.BiWeight;
+        m_avcPar->BMEMethod                         = meMethod;
+        m_avcPar->HMEBCombineLen                    = HMEBCombineLen[m_targetUsage];
+        m_avcPar->StaticFrameIntraCostScalingRatioB = 200;
+        m_avcPar->BSearchX                          = curbe->common.DW5.RefWidth;
+        m_avcPar->BSearchY                          = curbe->common.DW5.RefHeight;
+        m_avcPar->BSearchControl                    = curbe->common.DW3.SearchCtrl;
+        m_avcPar->BSkipType                         = curbe->common.DW3.SkipType;
+        m_avcPar->DirectMode                        = curbe->common.DW34.bDirectMode;
+        m_avcPar->BiWeight                          = curbe->common.DW1.BiWeight;
     }
 
     return MOS_STATUS_SUCCESS;

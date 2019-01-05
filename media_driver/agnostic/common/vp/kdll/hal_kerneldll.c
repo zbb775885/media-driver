@@ -20,8 +20,8 @@
 * OTHER DEALINGS IN THE SOFTWARE.
 */
 //!
-//! \file      hal_kerneldll.c  
-//! \brief         Kernel Dynamic Linking / Loading routines  
+//! \file      hal_kerneldll.c 
+//! \brief         Kernel Dynamic Linking / Loading routines 
 //!
 #ifndef VPHAL_LIB
 
@@ -181,7 +181,7 @@ const float g_cCSC_GrayIdentity[12] =
 };
 
 // Generic RGB to YUV conversion matrix from BT.601 standard
-const float g_cCSC_BT601_RGB_YUV[9] = 
+const float g_cCSC_BT601_RGB_YUV[9] =
 {
     0.299000f,  0.587000f,  0.114000f,
    -0.168736f, -0.331264f,  0.500000f,
@@ -189,7 +189,7 @@ const float g_cCSC_BT601_RGB_YUV[9] =
 };
 
 // Generic RGB to YUV conversion matrix from BT.709 standard
-const float g_cCSC_BT709_RGB_YUV[9] = 
+const float g_cCSC_BT709_RGB_YUV[9] =
 {
     0.212600f,  0.715200f,  0.072200f,
    -0.114572f, -0.385428f,  0.500000f,
@@ -197,7 +197,7 @@ const float g_cCSC_BT709_RGB_YUV[9] =
 };
 
 // Generic YUV to RGB conversion matrix from BT.601 standard
-const float g_cCSC_BT601_YUV_RGB[9] = 
+const float g_cCSC_BT601_YUV_RGB[9] =
 {
     1.000000f,  0.000000f,  1.402000f,
     1.000000f, -0.344136f, -0.714136f,
@@ -205,7 +205,7 @@ const float g_cCSC_BT601_YUV_RGB[9] =
 };
 
 // Generic YUV to RGB conversion matrix from BT.709 standard
-const float g_cCSC_BT709_YUV_RGB[9] = 
+const float g_cCSC_BT709_YUV_RGB[9] =
 {
     1.000000f,  0.000000f,  1.574800f,
     1.000000f, -0.187324f, -0.468124f,
@@ -228,7 +228,7 @@ const float g_cCSC_BT2020_YUV_RGB[9] =
     1.000000f, 1.881400f,  0.000000f      //B
 };
 
-// BT2020 YUV Limited Range to BT2020 RGB full range conversion matrix 
+// BT2020 YUV Limited Range to BT2020 RGB full range conversion matrix
 const float g_cCSC_BT2020_LimitedYUV_RGB[9] =
 {
     1.164383f,  0.000000f,  1.678680f,    // R
@@ -420,7 +420,7 @@ const char    *KernelDll_GetSamplingString(Kdll_Sampling sampling)
         case Sample_Scaling_034x     : return _T("0.34x");
         case Sample_Scaling_AVS      : return _T("AVS");
         case Sample_iScaling         : return _T("iScale");
-        case Sample_iScaling_034x    : return _T("0.34x iScaling"); 
+        case Sample_iScaling_034x    : return _T("0.34x iScaling");
         case Sample_iScaling_AVS     : return _T("iAVS");
     }
 
@@ -506,7 +506,7 @@ const char    *KernelDll_GetParserStateString(Kdll_ParserState state)
         case Parser_SampleLayer1            : return _T("SampleLayer1");
         case Parser_SampleLayer1Done        : return _T("SampleLayer1Done");
         case Parser_ShuffleLayer1           : return _T("ShuffleLayer1");
-        case Parser_SampleLayer0SelectCSC   : return _T("SampleLayer0SelectCSC"); 
+        case Parser_SampleLayer0SelectCSC   : return _T("SampleLayer0SelectCSC");
         case Parser_SetupCSC0               : return _T("SetupCSC0");
         case Parser_ExecuteCSC0             : return _T("ExecuteCSC0");
         case Parser_ExecuteCSC0Done         : return _T("ExecuteCSC0Done");
@@ -552,6 +552,7 @@ const char    *KernelDll_GetRuleIDString(Kdll_RuleID RID)
         case RID_IsSrc1Format       : return _T("IsSrc1Format");
         case RID_IsSrc1Sampling     : return _T("IsSrc1Sampling");
         case RID_IsSrc1LumaKey      : return _T("IsSrc1LumaKey");
+        case RID_IsSrc1SamplerLumaKey: return _T("IsSrc1SamplerLumaKey");
         case RID_IsSrc1Internal     : return _T("IsSrc1Internal");
         case RID_IsSrc1Coeff        : return _T("IsSrc1Coeff");
         case RID_IsSrc1Processing   : return _T("IsSrc1Processing");
@@ -578,6 +579,7 @@ const char    *KernelDll_GetRuleIDString(Kdll_RuleID RID)
         case RID_SetSrc1Sampling    : return _T("SetSrc1Sampling");
         case RID_SetSrc1Rotation    : return _T("SetSrc1Rotation");
         case RID_SetSrc1LumaKey     : return _T("SetSrc1LumaKey");
+        case RID_SetSrc1SamplerLumaKey: return _T("SetSrc1SamplerLumaKey");
         case RID_SetSrc1Procamp     : return _T("SetSrc1Procamp");
         case RID_SetSrc1Internal    : return _T("SetSrc1Internal");
         case RID_SetSrc1Coeff       : return _T("SetSrc1Coeff");
@@ -645,21 +647,21 @@ int32_t KernelDll_PrintRule(
 
     switch (pEntry->id)
     {
-        case RID_IsParserState     : 
-        case RID_SetParserState    : 
+        case RID_IsParserState     :
+        case RID_SetParserState    :
             szValue = KernelDll_GetParserStateString((Kdll_ParserState) pEntry->value);
             break;
 
-        case RID_IsLayerID         : 
+        case RID_IsLayerID         :
             szValue = KernelDll_GetLayerString((Kdll_Layer) pEntry->value);
             break;
 
         case RID_Op_NewEntry       :
         case RID_Op_EOF            :
         case RID_IsLayerNumber     :
-        case RID_IsQuadrant        : 
-        case RID_SetQuadrant       : 
-        case RID_SetPatchData      : 
+        case RID_IsQuadrant        :
+        case RID_SetQuadrant       :
+        case RID_SetPatchData      :
             _stprintf(data, _T("%d"), pEntry->value);
             szValue = data;
             break;
@@ -680,10 +682,12 @@ int32_t KernelDll_PrintRule(
             }
             break;
 
-        case RID_IsSrc0LumaKey    :
-        case RID_IsSrc1LumaKey    :
-        case RID_SetSrc0LumaKey   :
-        case RID_SetSrc1LumaKey   :
+        case RID_IsSrc0LumaKey          :
+        case RID_IsSrc1LumaKey          :
+        case RID_SetSrc0LumaKey         :
+        case RID_SetSrc1LumaKey         :
+        case RID_IsSrc1SamplerLumaKey   :
+        case RID_SetSrc1SamplerLumaKey  :
             if (pEntry->value == LumaKey_Source)
             {
                 szValue = _T("Current Layer");
@@ -728,7 +732,7 @@ int32_t KernelDll_PrintRule(
             }
             break;
 
-        case RID_SetKernel: 
+        case RID_SetKernel:
             if (pCache && (pEntry->value < pCache->iCacheEntries))
             {
                 szValue = pCache->pCacheEntries[pEntry->value].szName;
@@ -740,7 +744,7 @@ int32_t KernelDll_PrintRule(
             }
             break;
 
-        case RID_SetNextLayer: 
+        case RID_SetNextLayer:
             if (pEntry->value == 0)
             {
                 szValue = _T("Next Layer");
@@ -763,37 +767,37 @@ int32_t KernelDll_PrintRule(
             _stprintf(data, _T("%d patch entries"), pEntry->value);
             increment += pEntry->value;
             szValue = data;
-            break; 
+            break;
 
-        case RID_IsLayerFormat     : 
-        case RID_IsSrc0Format      : 
-        case RID_IsSrc1Format      : 
-        case RID_SetSrc0Format     : 
-        case RID_SetSrc1Format     : 
+        case RID_IsLayerFormat     :
+        case RID_IsSrc0Format      :
+        case RID_IsSrc1Format      :
+        case RID_SetSrc0Format     :
+        case RID_SetSrc1Format     :
         case RID_IsTargetFormat    :
             szValue = KernelDll_GetFormatString((MOS_FORMAT  ) pEntry->value);
             break;
 
         case RID_IsTargetCspace    :
-        case RID_SetTargetCspace   : 
+        case RID_SetTargetCspace   :
             szValue = KernelDll_GetCSpaceString((VPHAL_CSPACE) pEntry->value);
             break;
 
-        case RID_IsSrc0Sampling    : 
-        case RID_IsSrc1Sampling    : 
-        case RID_SetSrc0Sampling   : 
-        case RID_SetSrc1Sampling   : 
+        case RID_IsSrc0Sampling    :
+        case RID_IsSrc1Sampling    :
+        case RID_SetSrc0Sampling   :
+        case RID_SetSrc1Sampling   :
             szValue = KernelDll_GetSamplingString((Kdll_Sampling) pEntry->value);
             break;
 
-        case RID_IsSrc0Rotation   : 
+        case RID_IsSrc0Rotation   :
             szValue = KernelDll_GetRotationString((VPHAL_ROTATION) pEntry->value);
             break;
 
-        case RID_IsSrc0Internal    : 
-        case RID_IsSrc1Internal    : 
-        case RID_SetSrc0Internal   : 
-        case RID_SetSrc1Internal   : 
+        case RID_IsSrc0Internal    :
+        case RID_IsSrc1Internal    :
+        case RID_SetSrc0Internal   :
+        case RID_SetSrc1Internal   :
             szValue = KernelDll_GetInternalString((Kdll_IntFormat) pEntry->value);
             break;
 
@@ -801,14 +805,14 @@ int32_t KernelDll_PrintRule(
             szValue = KernelDll_GetShuffleString((Kdll_Shuffling) pEntry->value);
             break;
 
-        case RID_IsSrc0Coeff       : 
-        case RID_IsSrc1Coeff       : 
-        case RID_SetSrc0Coeff      : 
-        case RID_SetSrc1Coeff      : 
+        case RID_IsSrc0Coeff       :
+        case RID_IsSrc1Coeff       :
+        case RID_SetSrc0Coeff      :
+        case RID_SetSrc1Coeff      :
             szValue = KernelDll_GetCoeffIDString((Kdll_CoeffID) pEntry->value);
             break;
 
-        case RID_IsSrc1Processing  : 
+        case RID_IsSrc1Processing  :
         case RID_SetSrc1Processing :
             szValue = KernelDll_GetProcessString((Kdll_Processing) pEntry->value);
             break;
@@ -1077,7 +1081,7 @@ VPHAL_CSPACE KernelDll_TranslateCspace(VPHAL_CSPACE cspace)
 
         case CSpace_BT601Gray_FullRange:
             return CSpace_BT601Gray_FullRange;
-        
+
         case CSpace_BT2020:
             return CSpace_BT2020;
 
@@ -1177,7 +1181,7 @@ bool KernelDll_GetRgbRangeAndOffset(
 
 /*----------------------------------------------------------------------------
 | Name      : KernelDll_CalcYuvToRgbMatrix
-| Purpose   : Given the YUV->RGB transfer matrix, get the final matrix after 
+| Purpose   : Given the YUV->RGB transfer matrix, get the final matrix after
 |             applying offsets and excursions.
 |
 | [R']     [R_o]                                 [R_e/Y_e    0       0   ]  [Y'  - Y_o]
@@ -1185,13 +1189,13 @@ bool KernelDll_GetRgbRangeAndOffset(
 | [B']     [R_o]                                 [   0       0    R_e/C_e]. [Cr' - C_z]
 |
 | [R']  = [C0  C1   C2] [Y' ]   [C3]      {Out pMatrix}
-| [G']  = [C4  C5   C6].[Cb'] + [C7] 
+| [G']  = [C4  C5   C6].[Cb'] + [C7]
 | [B']  = [C8  C9  C10] [Cr'] + [C11]
-| 
+|
 | Return    : true if success else false
 \---------------------------------------------------------------------------*/
 bool KernelDll_CalcYuvToRgbMatrix(
-    Kdll_CSpace     src,                        // [in] YUV Color space 
+    Kdll_CSpace     src,                        // [in] YUV Color space
     Kdll_CSpace     dst,                        // [in] RGB Color space
     float           *pTransferMatrix,             // [in] Transfer matrix (3x3)
     float           *pOutMatrix)                  // [out] Conversion matrix (3x4)
@@ -1203,13 +1207,13 @@ bool KernelDll_CalcYuvToRgbMatrix(
     res = true;
 
     res = KernelDll_GetRgbRangeAndOffset(dst, &R_o, &R_e);
-    if (res == false) 
+    if (res == false)
     {
         goto finish;
     }
 
     res = KernelDll_GetYuvRangeAndOffset(src, &Y_o, &Y_e, &C_z, &C_e);
-    if (res == false) 
+    if (res == false)
     {
         goto finish;
     }
@@ -1236,7 +1240,7 @@ finish:
 
 /*----------------------------------------------------------------------------
 | Name      : KernelDll_CalcRgbToYuvMatrix
-| Purpose   : Given the RGB->YUV transfer matrix, get the final matrix after 
+| Purpose   : Given the RGB->YUV transfer matrix, get the final matrix after
 |             applying offsets and excursions.
 |
 | [Y' ]     [Y_o - Y_e.R_o/R_e]   [Y_e/R_e    0       0   ]  [   RGB to YUV  ]  [R']
@@ -1244,13 +1248,13 @@ finish:
 | [Cr']     [C_z]                 [   0       0    C_e/R_e]  [   3x3 matrix  ]  [B']
 |
 | [Y' ]  = [C0  C1   C2] [R']   [C3]      {Out pMatrix}
-| [Cb']  = [C4  C5   C6].[G'] + [C7] 
+| [Cb']  = [C4  C5   C6].[G'] + [C7]
 | [Cr']  = [C8  C9  C10] [B'] + [C11]
-| 
+|
 | Return    : true if success else false
 \---------------------------------------------------------------------------*/
 bool KernelDll_CalcRgbToYuvMatrix(
-    Kdll_CSpace     src,                        // [in] RGB Color space 
+    Kdll_CSpace     src,                        // [in] RGB Color space
     Kdll_CSpace     dst,                        // [in] YUV Color space
     float           *pTransferMatrix,             // [in] Transfer matrix (3x3)
     float           *pOutMatrix)                  // [out] Conversion matrix (3x4)
@@ -1262,13 +1266,13 @@ bool KernelDll_CalcRgbToYuvMatrix(
     res = true;
 
     res = KernelDll_GetRgbRangeAndOffset(src, &R_o, &R_e);
-    if (res == false) 
+    if (res == false)
     {
         goto finish;
     }
 
     res = KernelDll_GetYuvRangeAndOffset(dst, &Y_o, &Y_e, &C_z, &C_e);
-    if (res == false) 
+    if (res == false)
     {
         goto finish;
     }
@@ -1296,11 +1300,11 @@ finish:
 /*----------------------------------------------------------------------------
 | Name      : KernelDll_CalcGrayCoeffs
 | Purpose   : Given CSC matrix, calculate the new matrix making Chroma zero.
-|             Chroma will be read from the surface, but we need to factor in C_z 
+|             Chroma will be read from the surface, but we need to factor in C_z
 |             by adjusting this in the constant.
 |
 | [R']  = [C0  C1   C2] [Y' ]   [C3]      {Out pMatrix}
-| [G']  = [C4  C5   C6].[C_z] + [C7] 
+| [G']  = [C4  C5   C6].[C_z] + [C7]
 | [B']  = [C8  C9  C10] [C_z]   [C11]
 |
 | New C3 = C1 * C_z + C2 * C_z + C3
@@ -1308,7 +1312,7 @@ finish:
 | Return    : true if success else false
 \---------------------------------------------------------------------------*/
 bool KernelDll_CalcGrayCoeffs(
-    Kdll_CSpace     src,                       // [in] YUV source Color space 
+    Kdll_CSpace     src,                       // [in] YUV source Color space
     float           *pMatrix)                   // [in/out] Conversion matrix (3x4)
 {
     float   Y_o, Y_e, C_z, C_e;
@@ -1317,7 +1321,7 @@ bool KernelDll_CalcGrayCoeffs(
     res = true;
 
     res = KernelDll_GetYuvRangeAndOffset(src, &Y_o, &Y_e, &C_z, &C_e);
-    if (res == false) 
+    if (res == false)
     {
         goto finish;
     }
@@ -1368,18 +1372,18 @@ void KernelDll_3x3MatrixProduct(
 |             3. Apply the transformation below to get the final matrix
 |
 | [Y'dst]  = [C0  C1   C2] [C0  C1   C2][Y'src] [C0  C1   C2] [C3]    [C3]
-| [U']     = [C4  C5   C6].[C4  C5   C6][C_z] + [C4  C5   C6].[C7]  + [C7] 
+| [U']     = [C4  C5   C6].[C4  C5   C6][C_z] + [C4  C5   C6].[C7]  + [C7]
 | [V']     = [C8  C9  C10] [C8  C9  C10][C_z]   [C8  C9  C10] [C11]   [C11]
 |             dst matrix    src matrix           dst matrix    src     dst
 |
 | [Y'dst]  = [C0  C1   C2] [Y'src]   [C3]      {Out pMatrix}
-| [U']     = [C4  C5   C6].[C_z] +   [C7] 
+| [U']     = [C4  C5   C6].[C_z] +   [C7]
 | [V']     = [C8  C9  C10] [C_z]     [C11]
 |
 | Return    : true if success else false
 \---------------------------------------------------------------------------*/
 bool KernelDll_CalcYuvToYuvMatrix(
-    Kdll_CSpace     src,                        // [in] RGB Color space 
+    Kdll_CSpace     src,                        // [in] RGB Color space
     Kdll_CSpace     dst,                        // [in] YUV Color space
     float           *pOutMatrix)                 // [out] Conversion matrix (3x4)
 {
@@ -1421,9 +1425,9 @@ bool KernelDll_CalcYuvToYuvMatrix(
     KernelDll_3x3MatrixProduct(pOutMatrix, fRgbToYuv, fYuvToRgb);
 
     // Perform [3x3][3x1] matrix multiply + [3x1] matrix
-    pOutMatrix[3]  = fRgbToYuv[0] * fYuvToRgb[3]  + fRgbToYuv[1] * fYuvToRgb[7] + 
+    pOutMatrix[3]  = fRgbToYuv[0] * fYuvToRgb[3]  + fRgbToYuv[1] * fYuvToRgb[7] +
                      fRgbToYuv[2] * fYuvToRgb[11] +                fRgbToYuv[3];
-    pOutMatrix[7]  = fRgbToYuv[4] * fYuvToRgb[3]  + fRgbToYuv[5] * fYuvToRgb[7] + 
+    pOutMatrix[7]  = fRgbToYuv[4] * fYuvToRgb[3]  + fRgbToYuv[5] * fYuvToRgb[7] +
                      fRgbToYuv[6] * fYuvToRgb[11] +                fRgbToYuv[7];
     pOutMatrix[11] = fRgbToYuv[8] * fYuvToRgb[3]  + fRgbToYuv[9] * fYuvToRgb[7] +
                      fRgbToYuv[10]* fYuvToRgb[11] +                fRgbToYuv[11];
@@ -1435,7 +1439,7 @@ finish:
 /*----------------------------------------------------------------------------
 | Name      : KernelDll_GetCSCMatrix
 | Purpose   : Get the required matrix for the given CSC conversion
-| Return    : 
+| Return    :
 \---------------------------------------------------------------------------*/
 void KernelDll_GetCSCMatrix(
     Kdll_CSpace     src,                        // [in] Source Color space
@@ -1479,7 +1483,7 @@ void KernelDll_GetCSCMatrix(
                 KernelDll_CalcYuvToRgbMatrix(temp, dst, (float *) g_cCSC_BT709_YUV_RGB, pCSC_Matrix);
                 bMatrix = true;
             }
-        }     
+        }
     }
     // sRGB/stRGB to BT601/709 YUV conversion
     else if (KernelDll_IsCspace(temp, CSpace_RGB))
@@ -1496,7 +1500,7 @@ void KernelDll_GetCSCMatrix(
                 KernelDll_CalcRgbToYuvMatrix(temp, dst, (float *) g_cCSC_BT709_RGB_YUV, pCSC_Matrix);
                 bMatrix = true;
             }
-        }        
+        }
     }
     // BT2020 YUV to RGB conversion
     else if (KernelDll_IsCspace(temp, CSpace_BT2020))
@@ -1538,7 +1542,7 @@ void KernelDll_GetCSCMatrix(
         else if (KernelDll_IsCspace(temp, CSpace_YUV)) // 601 to 709 inter-conversions
         {
             KernelDll_CalcYuvToYuvMatrix(temp, dst, pCSC_Matrix);
-        }        
+        }
         else
         {
             VPHAL_RENDER_ASSERTMESSAGE("Not supported color space conversion(from %d to %d)", src, dst);
@@ -1653,7 +1657,7 @@ bool KernelDll_MapCSCMatrix(
             coeff[ 3] = FLOAT_TO_SHORT(matrix[11]);      // M11  --> C3
             break;
 
-        default: 
+        default:
             //CSC_RGB_RGB
             coeff[ 2] = FLOAT_TO_SHORT(matrix[0] );      // M0   --> C2
             coeff[ 0] = FLOAT_TO_SHORT(matrix[1] );      // M1   --> C0
@@ -1672,7 +1676,6 @@ bool KernelDll_MapCSCMatrix(
 
     return true;
 }
-
 
 void KernelDll_UpdateCscCoefficients(Kdll_State      *pState,
                                      Kdll_CSC_Matrix *pMatrix)
@@ -1830,7 +1833,6 @@ void KernelDll_UpdateCscCoefficients(Kdll_State      *pState,
     pState->pfnMapCSCMatrix(csctype, matrix, pMatrix->Coeff);
 }
 
-
 /*----------------------------------------------------------------------------
 | Name      : KernelDll_FindRule
 | Purpose   : Find a rule that matches the current search/input state
@@ -1838,7 +1840,7 @@ void KernelDll_UpdateCscCoefficients(Kdll_State      *pState,
 | Input     : pState       - Kernel Dll state
 |             pSearchState - current DL search state
 |
-| Return    : 
+| Return    :
 \---------------------------------------------------------------------------*/
 bool KernelDll_FindRule(
     Kdll_State       *pState,
@@ -2027,7 +2029,7 @@ bool KernelDll_FindRule(
                         }
                     }
 
-                // Match Src0 sampling mode 
+                // Match Src0 sampling mode
                 case RID_IsSrc0Sampling:
                     // Check if the layer format matches the rule
                     if (pSearchState->src0_sampling == (Kdll_Sampling) pRuleEntry->value)
@@ -2120,7 +2122,7 @@ bool KernelDll_FindRule(
                     {
                         continue;
                     }
-                    else 
+                    else
                     {
                         break;
                     }
@@ -2131,7 +2133,7 @@ bool KernelDll_FindRule(
                     {
                         continue;
                     }
-                    else 
+                    else
                     {
                         break;
                     }
@@ -2218,6 +2220,17 @@ bool KernelDll_FindRule(
                     {
                         break;
                     }
+                    
+                // Match Src1 Sampler LumaKey
+                case RID_IsSrc1SamplerLumaKey:
+                    if (pSearchState->src1_samplerlumakey == (int32_t)pRuleEntry->value)
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        break;
+                    }
 
                 // Match Src1 Procamp
                 case RID_IsSrc1Procamp:
@@ -2265,7 +2278,7 @@ bool KernelDll_FindRule(
                     {
                         continue;
                     }
-                    else 
+                    else
                     {
                         break;
                     }
@@ -2288,7 +2301,7 @@ bool KernelDll_FindRule(
 
                 // Match Src1 chromasiting mode
                 case RID_IsSrc1Chromasiting:
-                    //pSearchState->pFilter is pointed to the real sub layer 
+                    //pSearchState->pFilter is pointed to the real sub layer
                     if (pSearchState->pFilter->chromasiting == (int32_t)pRuleEntry->value)
                     {
                         continue;
@@ -2401,7 +2414,7 @@ bool KernelDll_FindRule(
                         break;
                     }
 
-				case RID_IsConstOutAlpha:
+                case RID_IsConstOutAlpha:
                     if (pSearchState->pFilter->bFillOutputAlphaWithConstant == (pRuleEntry->value ? true : false))
                     {
                         continue;
@@ -2437,7 +2450,6 @@ bool KernelDll_FindRule(
     return false;
 }
 
-
 /*----------------------------------------------------------------------------
 | Name      : KernelDll_GetPatchData
 | Purpose   : Get binary data block to be used for kernel patching
@@ -2464,7 +2476,7 @@ static uint8_t *KernelDll_GetPatchData(
         iPatchKind == PatchKind_CSC_Coeff_Src1)
     {
         Kdll_CoeffID  coeffID  = CoeffID_None;
-        int32_t       matrixID = DL_CSC_DISABLED;
+        uint8_t       matrixID = DL_CSC_DISABLED;
 
         // Get matrix id
         if (iPatchKind == PatchKind_CSC_Coeff_Src0)
@@ -2483,11 +2495,25 @@ static uint8_t *KernelDll_GetPatchData(
         }
 
         // Found matrix
-        if (matrixID != DL_CSC_DISABLED)
+        if (matrixID < DL_CSC_MAX)
         {
             Kdll_CSC_Matrix *pMatrix = &(pSearchState->CscParams.Matrix[matrixID]);
 
             *pSize = 12 * sizeof(uint16_t);
+
+            if (pState->bEnableCMFC)
+            {
+                if (pSearchState->CscParams.PatchMatrixNum < DL_CSC_MAX)
+                {
+                    pSearchState->CscParams.PatchMatrixID[pSearchState->CscParams.PatchMatrixNum] = matrixID;
+                    pSearchState->CscParams.PatchMatrixNum ++;
+                }
+                else
+                {
+                    VPHAL_RENDER_NORMALMESSAGE("Patch CSC coefficient exceed limitation");
+                }
+            }
+
             return ((uint8_t *)pMatrix->Coeff);
         }
     }
@@ -2506,7 +2532,7 @@ static uint8_t *KernelDll_GetPatchData(
 | Input     : pState       - Kernel Dll state
 |             pSearchState - current DL search state
 |
-| Return    : 
+| Return    :
 \---------------------------------------------------------------------------*/
 bool KernelDll_UpdateState(
     Kdll_State       *pState,
@@ -2583,12 +2609,12 @@ bool KernelDll_UpdateState(
                 }
                 else if (pRuleEntry->value == 2) // jump to target layer
                 {
-                    while (pSearchState->pFilter->layer < Layer_RenderTarget ) 
+                    while (pSearchState->pFilter->layer < Layer_RenderTarget )
                     {
                         pSearchState->layer_number++;
                         pSearchState->pFilter++;
                     }
-                } 
+                }
                 else
                 {
                     pSearchState->layer_number++;
@@ -2855,6 +2881,18 @@ bool KernelDll_UpdateState(
                 }
                 break;
 
+            // Set Src1 Sampler LumaKey
+            case RID_SetSrc1SamplerLumaKey:
+                if (pRuleEntry->value == LumaKey_Source)
+                {
+                    pSearchState->src1_samplerlumakey = pSearchState->pFilter->samplerlumakey;
+                }
+                else
+                {
+                    pSearchState->src1_samplerlumakey = (int32_t)pRuleEntry->value;
+                }
+                break;
+
             // Set Src1 Procamp
             case RID_SetSrc1Procamp:
                 if (pRuleEntry->value == Procamp_Source)
@@ -2930,7 +2968,7 @@ bool KernelDll_UpdateState(
 }
 
 //-----------------------------------------------------------------------------------------
-// KernelDll_SortRuleTable - Sort master dynamic linking rule table 
+// KernelDll_SortRuleTable - Sort master dynamic linking rule table
 //
 // Parameters:
 //    char  *pState    - [in] Kernel Dll state
@@ -3106,7 +3144,7 @@ bool KernelDll_SortRuleTable(Kdll_State *pState)
                 state = Parser_Custom;
             }
             else
-            {   // Skip state check - already handled by acceleration table 
+            {   // Skip state check - already handled by acceleration table
                 pRule++;
             }
 
@@ -3358,7 +3396,7 @@ Kdll_State *KernelDll_AllocateStates(
     }
     pHashEntries[i - 1].next = 0;  // last entry
 
-    //------------------------------------  
+    //------------------------------------
     // Setup dynamic linking import/export array
     //------------------------------------
     pCacheEntry = pState->ComponentKernelCache.pCacheEntries;
@@ -3435,7 +3473,7 @@ Kdll_State *KernelDll_AllocateStates(
         pLinkSort[j] = *pLinkData;
 
         // Add to export table
-        if (pLinkData->bExport && 
+        if (pLinkData->bExport &&
             pLinkData->iLabelID < DL_MAX_EXPORT_COUNT)
         {
             pExports[pLinkData->iLabelID] = *pLinkData;
@@ -3561,6 +3599,7 @@ bool KernelDll_SearchKernel(Kdll_State       *pState,
     pSearchState->src1_format   = Format_None;
     pSearchState->src1_sampling = Sample_None;
     pSearchState->src1_lumakey   = LumaKey_False;
+    pSearchState->src1_samplerlumakey = LumaKey_False;
     pSearchState->src1_coeff    = CoeffID_None;
     pSearchState->src1_internal = Internal_None;
     pSearchState->src1_process  = Process_None;
@@ -3659,7 +3698,7 @@ bool Kdll_AppendKernel(Kdll_KernelCache *pKernelCache,
     pSymbols = &pSearchState->KernelLink;
     base     = (*size) >> 2;
 
-    // Find selected kernel and kernel size; check if there is enough space 
+    // Find selected kernel and kernel size; check if there is enough space
     kernels  = &pKernelCache->pCacheEntries[iKUID];
     dwSize = kernels->iSize;
     if (*left < dwSize)
@@ -3801,7 +3840,7 @@ bool Kdll_ResolveKernelDependencies(
             // load dependencies
             if (!pLink->bExport && !dwResolveOffset[pLink->iLabelID])
             {
-                // set flag for another pass as newly loaded 
+                // set flag for another pass as newly loaded
                 // kernels may contain dependencies of their own
                 bResolveDone = false;
 
@@ -3974,7 +4013,7 @@ void KernelDll_ReleaseHashEntry(Kdll_KernelHashTable *pHashTable, uint16_t entry
     {
         uint16_t prev = pHashTable->wHashTable[folded_hash];
 
-        while (prev != 0 && 
+        while (prev != 0 &&
                pHashEntry[prev].next != entry)
         {
             prev = pHashEntry[prev].next;
@@ -4042,7 +4081,7 @@ bool KernelDll_GarbageCollection(Kdll_State *pState, int32_t size)
     }
 
     // No need to deallocate old entries
-    if (pCache->iCacheEntries < DL_MAX_COMBINED_KERNELS) 
+    if (pCache->iCacheEntries < DL_MAX_COMBINED_KERNELS)
     {
         return true;
     }
@@ -4064,7 +4103,7 @@ bool KernelDll_GarbageCollection(Kdll_State *pState, int32_t size)
 
     // No entry to release, sanity checks
     pHashEntry += wEntry;
-    if (!pOldest || 
+    if (!pOldest ||
         wEntry == 0 ||
         pHashEntry->pCacheEntry != pOldest)
     {
@@ -4104,7 +4143,7 @@ KernelDll_AllocateAdditionalCacheEntries(Kdll_KernelCache *pCache)
     if (!pNewEntry)
     {
         VPHAL_RENDER_ASSERTMESSAGE("KernelDll_AllocateAdditionalCacheEntries: Failed to allocate kernel cache entries\n");
-        return nullptr;  
+        return nullptr;
     }
 
     // Update the cache entires
@@ -4128,7 +4167,7 @@ KernelDll_AllocateAdditionalCacheEntries(Kdll_KernelCache *pCache)
             pNewEntry->pNextEntry = nullptr;
         }
     }
-    
+
     pCache->iCacheMaxEntries += DL_NEW_COMBINED_KERNELS;
     pCache->iCacheSize       += DL_NEW_COMBINED_KERNELS * DL_CACHE_BLOCK_SIZE;
     pCache->iCacheFree       += DL_NEW_COMBINED_KERNELS * DL_CACHE_BLOCK_SIZE;
@@ -4162,7 +4201,7 @@ KernelDll_AllocateCacheEntry(Kdll_KernelCache *pCache, int32_t iSize)
 {
     Kdll_CacheEntry *pEntry          = pCache->pCacheEntries;
     uint8_t *pCacheBinary               = nullptr;
-	Kdll_CacheEntry *pCacheNextEntry = nullptr;
+    Kdll_CacheEntry *pCacheNextEntry = nullptr;
     int32_t i, j;
 
     VPHAL_RENDER_FUNCTION_ENTER;
@@ -4205,7 +4244,6 @@ KernelDll_AllocateCacheEntry(Kdll_KernelCache *pCache, int32_t iSize)
     pCache->iCacheEntries++;
     return pEntry;
 }
-
 
 //--------------------------------------------------------------
 // Kerneldll_GetComponentKernel - Get component/static kernel
@@ -4276,7 +4314,7 @@ KernelDll_AddKernel(Kdll_State       *pState,           // Kernel Dll state
         return nullptr;
     }
 
-    // Get hash entry 
+    // Get hash entry
     entry = KernelDll_AllocateHashEntry(pHashTable, dwHash);
     if (!entry)
     {
@@ -4322,7 +4360,6 @@ KernelDll_AddKernel(Kdll_State       *pState,           // Kernel Dll state
     return pCacheEntry;
 }
 
-
 //--------------------------------------------------------------
 // KernelDll_BuildKernel - build kernel
 //--------------------------------------------------------------
@@ -4344,7 +4381,7 @@ bool KernelDll_BuildKernel(Kdll_State *pState, Kdll_SearchState *pSearchState)
     pSearchState->KernelLeft         = sizeof(pSearchState->Kernel);
     pSearchState->KernelLink.dwCount = 0;
 
-#if EMUL || VPHAL_LIB || _DEBUG
+#if EMUL || VPHAL_LIB || _DEBUG || _RELEASE_INTERNAL
     VPHAL_RENDER_NORMALMESSAGE("Component Kernels:");
 #endif // EMUL || VPHAL_LIB || _DEBUG
 
@@ -4372,6 +4409,11 @@ bool KernelDll_BuildKernel(Kdll_State *pState, Kdll_SearchState *pSearchState)
         {
             VPHAL_RENDER_ASSERTMESSAGE("Failed to build kernel ID %d.", pSearchState->KernelID[offset]);
             return false;
+        }
+        else
+        {
+            Kdll_CacheEntry *kernels = (*pGroupID == GROUP_CUSTOM) ? &pCustomCache->pCacheEntries[*pKernelID] : &pKernelCache->pCacheEntries[*pKernelID];
+            VPHAL_RENDER_NORMALMESSAGE("Component kernels [%d]: %s", *pKernelID, kernels->szName);
         }
     }
 
@@ -4448,6 +4490,28 @@ void KernelDll_StartKernelSearch(
                 }
             }
         }
+        else
+        {
+            //For Gen9+, kernel don't support sublayer DScale+rotation
+            for (nLayer = 0; nLayer < iFilterSize; nLayer++)
+            {
+                if (pFilter[nLayer].layer == Layer_SubVideo && pFilter[nLayer].rotation != VPHAL_ROTATION_IDENTITY)
+                {
+                    if (pFilter[nLayer].sampler == Sample_Scaling_034x)
+                    {
+                        pSearchState->pFilter[nLayer].sampler = Sample_Scaling;
+                    }
+                    else if (pFilter[nLayer].sampler == Sample_iScaling_034x)
+                    {
+                        pSearchState->pFilter[nLayer].sampler = Sample_iScaling;
+                    }
+                    else if (pFilter[nLayer].sampler == Sample_iScaling_AVS)
+                    {
+                        pSearchState->pFilter[nLayer].sampler = Sample_iScaling_AVS;
+                    }
+                }
+            }
+        }
 
         // Copy the render target format
         pSearchState->target_format = pSearchState->pFilter[iFilterSize - 1].format;
@@ -4463,22 +4527,6 @@ void KernelDll_StartKernelSearch(
             pSearchState->b64BSaveEnabled = true;
         }
     }
-}
-
-/*----------------------------------------------------------------------------
-| Name      : KernelDll_UpdatePatchedCSC
-| Purpose   : Update Patched CSC Coeff when necessary a given kernel cache
-|
-| Input     : pState       - Kernel Dll state
-|             pKernelEntry - current cache entry
-|
-| Return    :
-\---------------------------------------------------------------------------*/
-bool KernelDll_UpdatePatchedCSC(
-    Kdll_State       *pState,
-    Kdll_CacheEntry  *pKernelEntry)
-{
-    return true;
 }
 
 //---------------------------------------------------------------------------------------
@@ -4498,7 +4546,6 @@ static bool KernelDll_SetupFunctionPointers(
     VPHAL_RENDER_FUNCTION_ENTER;
 
     pState->pfnSetupCSC          = KernelDll_SetupCSC;
-    pState->pfnUpdatePatchedCSC  = KernelDll_UpdatePatchedCSC;
     pState->pfnMapCSCMatrix      = KernelDll_MapCSCMatrix;
     pState->pfnFindRule          = KernelDll_FindRule;
     pState->pfnUpdateState       = KernelDll_UpdateState;
@@ -4528,7 +4575,7 @@ static bool KernelDll_SetupFunctionPointers(
 | Input     : pState       - Kernel Dll state
 |             pSearchState - current DL search state
 |
-| Return    : 
+| Return    :
 \---------------------------------------------------------------------------*/
 bool KernelDll_SetupCSC(
     Kdll_State       *pState,
@@ -4561,6 +4608,8 @@ bool KernelDll_SetupCSC(
     // Clear all CSC matrices
     MOS_ZeroMemory(matrix, sizeof(pCSC->Matrix));
     memset(matrixID, DL_CSC_DISABLED, sizeof(pCSC->MatrixID));
+    memset(pCSC->PatchMatrixID, DL_CSC_DISABLED, sizeof(pCSC->PatchMatrixID));
+    pCSC->PatchMatrixNum = 0;
 
     // Clear array of color spaces in use
     MOS_ZeroMemory(cspace_in_use, sizeof(cspace_in_use));

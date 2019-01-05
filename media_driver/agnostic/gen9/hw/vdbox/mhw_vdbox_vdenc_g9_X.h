@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, Intel Corporation
+* Copyright (c) 2017-2018, Intel Corporation
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -99,7 +99,7 @@ protected:
     {
         MHW_FUNCTION_ENTER;
 
-        MHW_ASSERT(rowstoreParams);
+        MHW_CHK_NULL_RETURN(rowstoreParams);
 
         if (this->m_vdencRowStoreCache.bSupported && rowstoreParams->Mode == CODECHAL_ENCODE_MODE_AVC)
         {
@@ -222,10 +222,10 @@ protected:
             MHW_MI_CHK_STATUS(this->m_osInterface->pfnGetMemoryCompressionMode(this->m_osInterface, &params->psRawSurface->OsResource, &mmcMode));
 
             cmd.OriginalUncompressedPicture.PictureFields.DW0.MemoryCompressionEnable =
-                mmcMode != MOS_MEMCOMP_DISABLED ? TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_ENABLE_ENABLE 
+                mmcMode != MOS_MEMCOMP_DISABLED ? TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_ENABLE_ENABLE
                 : TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_ENABLE_DISABLE;
             cmd.OriginalUncompressedPicture.PictureFields.DW0.MemoryCompressionMode =
-                mmcMode == MOS_MEMCOMP_HORIZONTAL ? TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_MODE_HORIZONTALCOMPRESSIONMODE 
+                mmcMode == MOS_MEMCOMP_HORIZONTAL ? TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_MODE_HORIZONTALCOMPRESSIONMODE
                 : TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_MODE_VERTICALCOMPRESSIONMODE;
             cmd.OriginalUncompressedPicture.PictureFields.DW0.MemoryObjectControlState =
                 this->m_cacheabilitySettings[MOS_CODEC_RESOURCE_USAGE_ORIGINAL_UNCOMPRESSED_PICTURE_ENCODE].Value;
@@ -300,7 +300,6 @@ protected:
                 &resourceParams));
         }
 
-
         for (refIdx = 0; refIdx <= params->dwNumRefIdxL0ActiveMinus1; refIdx++)
         {
             if (params->presVdencReferences[refIdx])
@@ -335,10 +334,10 @@ protected:
                 {
                 case 0:
                     cmd.FwdRef0.PictureFields.DW0.MemoryCompressionEnable =
-                        mmcMode != MOS_MEMCOMP_DISABLED ? TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_ENABLE_ENABLE 
+                        mmcMode != MOS_MEMCOMP_DISABLED ? TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_ENABLE_ENABLE
                         : TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_ENABLE_DISABLE;
                     cmd.FwdRef0.PictureFields.DW0.MemoryCompressionMode =
-                        mmcMode == MOS_MEMCOMP_HORIZONTAL ? TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_MODE_HORIZONTALCOMPRESSIONMODE 
+                        mmcMode == MOS_MEMCOMP_HORIZONTAL ? TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_MODE_HORIZONTALCOMPRESSIONMODE
                         : TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_MODE_VERTICALCOMPRESSIONMODE;
                     cmd.FwdRef0.PictureFields.DW0.MemoryObjectControlState =
                         this->m_cacheabilitySettings[MOS_CODEC_RESOURCE_USAGE_REFERENCE_PICTURE_CODEC].Value;
@@ -346,10 +345,10 @@ protected:
                     break;
                 case 1:
                     cmd.FwdRef1.PictureFields.DW0.MemoryCompressionEnable =
-                        mmcMode != MOS_MEMCOMP_DISABLED ? TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_ENABLE_ENABLE 
+                        mmcMode != MOS_MEMCOMP_DISABLED ? TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_ENABLE_ENABLE
                         : TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_ENABLE_DISABLE;
                     cmd.FwdRef1.PictureFields.DW0.MemoryCompressionMode =
-                        mmcMode == MOS_MEMCOMP_HORIZONTAL ? TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_MODE_HORIZONTALCOMPRESSIONMODE 
+                        mmcMode == MOS_MEMCOMP_HORIZONTAL ? TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_MODE_HORIZONTALCOMPRESSIONMODE
                         : TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_MODE_VERTICALCOMPRESSIONMODE;
                     cmd.FwdRef1.PictureFields.DW0.MemoryObjectControlState =
                         this->m_cacheabilitySettings[MOS_CODEC_RESOURCE_USAGE_REFERENCE_PICTURE_CODEC].Value;
@@ -357,10 +356,10 @@ protected:
                     break;
                 case 2:
                     cmd.FwdRef2.PictureFields.DW0.MemoryCompressionEnable =
-                        mmcMode != MOS_MEMCOMP_DISABLED ? TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_ENABLE_ENABLE 
+                        mmcMode != MOS_MEMCOMP_DISABLED ? TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_ENABLE_ENABLE
                         : TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_ENABLE_DISABLE;
                     cmd.FwdRef2.PictureFields.DW0.MemoryCompressionMode =
-                        mmcMode == MOS_MEMCOMP_HORIZONTAL ? TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_MODE_HORIZONTALCOMPRESSIONMODE 
+                        mmcMode == MOS_MEMCOMP_HORIZONTAL ? TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_MODE_HORIZONTALCOMPRESSIONMODE
                         : TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_MODE_VERTICALCOMPRESSIONMODE;
                     cmd.FwdRef2.PictureFields.DW0.MemoryObjectControlState =
                         this->m_cacheabilitySettings[MOS_CODEC_RESOURCE_USAGE_REFERENCE_PICTURE_CODEC].Value;
@@ -406,19 +405,19 @@ protected:
                 {
                 case 0:
                     cmd.DsFwdRef0.PictureFields.DW0.MemoryCompressionEnable =
-                        mmcMode != MOS_MEMCOMP_DISABLED ? TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_ENABLE_ENABLE 
+                        mmcMode != MOS_MEMCOMP_DISABLED ? TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_ENABLE_ENABLE
                         : TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_ENABLE_DISABLE;
                     cmd.DsFwdRef0.PictureFields.DW0.MemoryCompressionMode =
-                        mmcMode == MOS_MEMCOMP_HORIZONTAL ? TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_MODE_HORIZONTALCOMPRESSIONMODE 
+                        mmcMode == MOS_MEMCOMP_HORIZONTAL ? TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_MODE_HORIZONTALCOMPRESSIONMODE
                         : TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_MODE_VERTICALCOMPRESSIONMODE;
                     cmd.DsFwdRef0.PictureFields.DW0.TiledResourceMode = Mhw_ConvertToTRMode(details.TileType);
                     break;
                 case 1:
                     cmd.DsFwdRef1.PictureFields.DW0.MemoryCompressionEnable =
-                        mmcMode != MOS_MEMCOMP_DISABLED ? TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_ENABLE_ENABLE 
+                        mmcMode != MOS_MEMCOMP_DISABLED ? TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_ENABLE_ENABLE
                         : TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_ENABLE_DISABLE;
                     cmd.DsFwdRef1.PictureFields.DW0.MemoryCompressionMode =
-                        mmcMode == MOS_MEMCOMP_HORIZONTAL ? TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_MODE_HORIZONTALCOMPRESSIONMODE 
+                        mmcMode == MOS_MEMCOMP_HORIZONTAL ? TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_MODE_HORIZONTALCOMPRESSIONMODE
                         : TVdencCmds::VDENC_Surface_Control_Bits_CMD::MEMORY_COMPRESSION_MODE_VERTICALCOMPRESSIONMODE;
                     cmd.DsFwdRef1.PictureFields.DW0.TiledResourceMode = Mhw_ConvertToTRMode(details.TileType);
                     break;
@@ -450,11 +449,6 @@ protected:
 
         typename TVdencCmds::VDENC_REF_SURFACE_STATE_CMD cmd;
 
-        if (!params->dwUVPlaneAlignment)
-        {
-            params->dwUVPlaneAlignment = MHW_VDBOX_MFX_RECON_UV_PLANE_ALIGNMENT;   // by default use 16x alignment
-        }
-
         cmd.Dwords25.DW0.Width                       = params->psSurface->dwWidth - 1;
         cmd.Dwords25.DW0.Height                      = params->psSurface->dwHeight - 1;
         cmd.Dwords25.DW0.CrVCbUPixelOffsetVDirection = params->ucVDirection;
@@ -469,8 +463,7 @@ protected:
         cmd.Dwords25.DW1.SurfaceFormat    = this->MosToMediaStateFormat(params->psSurface->Format); //dwSurfaceFormat;  should be 4
         cmd.Dwords25.DW1.InterleaveChroma = 1;
         cmd.Dwords25.DW1.SurfacePitch     = params->psSurface->dwPitch - 1;
-        cmd.Dwords25.DW2.YOffsetForUCb    = cmd.Dwords25.DW3.YOffsetForVCr =
-            MOS_ALIGN_CEIL(params->psSurface->UPlaneOffset.iYOffset, params->dwUVPlaneAlignment);
+        cmd.Dwords25.DW2.YOffsetForUCb    = cmd.Dwords25.DW3.YOffsetForVCr = params->psSurface->UPlaneOffset.iYOffset;
 
         MHW_MI_CHK_STATUS(Mos_AddCommand(cmdBuffer, &cmd, sizeof(cmd)));
 
@@ -492,11 +485,6 @@ protected:
 
         typename TVdencCmds::VDENC_DS_REF_SURFACE_STATE_CMD cmd;
 
-        if (!params->dwUVPlaneAlignment)
-        {
-            params->dwUVPlaneAlignment = MHW_VDBOX_MFX_RECON_UV_PLANE_ALIGNMENT;   // by default use 16x alignment
-        }
-
         cmd.Dwords25.DW0.Width                       = params->psSurface->dwWidth - 1;
         cmd.Dwords25.DW0.Height                      = params->psSurface->dwHeight - 1;
         cmd.Dwords25.DW0.CrVCbUPixelOffsetVDirection = params->ucVDirection;
@@ -510,8 +498,7 @@ protected:
         cmd.Dwords25.DW1.SurfaceFormat    = this->MosToMediaStateFormat(params->psSurface->Format); //dwSurfaceFormat;  should be 4
         cmd.Dwords25.DW1.InterleaveChroma = 1;
         cmd.Dwords25.DW1.SurfacePitch     = params->psSurface->dwPitch - 1;
-        cmd.Dwords25.DW2.YOffsetForUCb    = cmd.Dwords25.DW3.YOffsetForVCr =
-            MOS_ALIGN_CEIL(params->psSurface->UPlaneOffset.iYOffset, params->dwUVPlaneAlignment);
+        cmd.Dwords25.DW2.YOffsetForUCb    = cmd.Dwords25.DW3.YOffsetForVCr = params->psSurface->UPlaneOffset.iYOffset;
 
         MHW_MI_CHK_STATUS(Mos_AddCommand(cmdBuffer, &cmd, sizeof(cmd)));
 

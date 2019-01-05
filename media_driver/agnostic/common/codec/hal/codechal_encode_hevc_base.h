@@ -28,15 +28,14 @@
 #define __CODECHAL_ENCODE_HEVC_BASE_H__
 
 #include "codechal_encoder_base.h"
-
+#if USE_CODECHAL_DEBUG_TOOL
+#include "codechal_debug_encode_par.h"
+#endif
 //*------------------------------------------------------------------------------
 //* Codec Definitions
 //*------------------------------------------------------------------------------
 #define CODECHAL_HEVC_MAX_SPS_NUM       16
 #define CODECHAL_HEVC_MAX_PPS_NUM       64
-#define CODECHAL_HEVC_MAX_SLICE_NUM         201
-#define CODECHAL_HEVC_MAX_SLICE_NUM_G11     601
-#define CODECHAL_HEVC_MAX_SLICE_NUM_G12     601
 #define CODECHAL_VDENC_HEVC_MAX_SLICE_NUM   70
 
 #define CODECHAL_HEVC_MAX_LCU_SIZE_G9          32
@@ -44,6 +43,8 @@
 #define CODECHAL_HEVC_MIN_LCU_SIZE             16
 #define CODECHAL_HEVC_MIN_CU_SIZE              8
 #define CODECHAL_HEVC_MIN_TILE_SIZE            128
+#define CODECHAL_HEVC_VDENC_MIN_TILE_WIDTH_SIZE      256
+#define CODECHAL_HEVC_VDENC_MIN_TILE_HEIGHT_SIZE     128
 #define CODECHAL_HEVC_FRAME_BRC_BLOCK_SIZE     32
 #define CODECHAL_HEVC_LCU_BRC_BLOCK_SIZE       128
 
@@ -59,18 +60,26 @@
 #define CODECHAL_HEVC_MAX_NUM_HCP_PIPE      8
 #define CODECHAL_HEVC_MAX_NUM_BRC_PASSES    4
 
+#define CODECHAL_HEVC_SAO_STRMOUT_SIZE_PERLCU   16
+
 #define ENCODE_HEVC_4K_PIC_WIDTH     3840
 #define ENCODE_HEVC_4K_PIC_HEIGHT    2160
+
+#define ENCODE_HEVC_5K_PIC_WIDTH     5210
+#define ENCODE_HEVC_5K_PIC_HEIGHT    2880
+
+#define ENCODE_HEVC_8K_PIC_WIDTH     7680
+#define ENCODE_HEVC_8K_PIC_HEIGHT    4320
 
 // Max supported resolution for HEVC encode is 4K X 2K
 #define ENCODE_HEVC_MAX_4K_PIC_WIDTH     4096
 #define ENCODE_HEVC_MAX_4K_PIC_HEIGHT    2176
 
-#define ENCODE_HEVC_8K_PIC_WIDTH     8192
-#define ENCODE_HEVC_8K_PIC_HEIGHT    8192
+#define ENCODE_HEVC_MAX_8K_PIC_WIDTH     8192
+#define ENCODE_HEVC_MAX_8K_PIC_HEIGHT    8192
 
-#define ENCODE_HEVC_16K_PIC_WIDTH     16384
-#define ENCODE_HEVC_16K_PIC_HEIGHT    16384
+#define ENCODE_HEVC_MAX_16K_PIC_WIDTH    16384
+#define ENCODE_HEVC_MAX_16K_PIC_HEIGHT   16384
 
 // HEVC has only 3 target usage modes
 #define CODECHAL_ENCODE_HEVC_TARGET_USAGE_MODE_PERFORMANCE  0
@@ -81,6 +90,7 @@
 #define HEVC_BRC_CONSTANT_SURFACE_HEIGHT_G9         (53)
 #define HEVC_BRC_HISTORY_BUFFER_SIZE_G9             (576)
 #define HEVC_BRC_HISTORY_BUFFER_SIZE_G10            (832)
+#define HEVC_BRC_HISTORY_BUFFER_SIZE_G12            (1088)
 #define HEVC_BRC_CONSTANT_SURFACE_HEIGHT_G10        (35)
 
 #define CODECHAL_HEVC_NUM_PAK_SLICE_BATCH_BUFFERS   (3)
@@ -130,7 +140,501 @@
 #define CODECHAL_HEVC_P_SLICE          1
 #define CODECHAL_HEVC_B_SLICE          0
 #define CODECHAL_HEVC_NUM_SLICE_TYPES  3
-#define CODECHAL_ENCODE_HEVC_MIN_SCALED_SURFACE_SIZE       64
+
+#define CODECHAL_HEVC_NUM_MODE_MV_COSTS             171
+#define CODECHAL_HEVC_MAX_BSTRUCTRUE_GOP_SIZE       16
+#define CODECHAL_HEVC_MAX_BSTRUCTRUE_REF_NUM        8
+#define CODECHAL_HEVC_BRC_MAX_QUALITY_LAYER         16
+#define CODECHAL_HEVC_BRC_MAX_TEMPORAL_LAYER        3
+
+struct MultiPassConfig
+{
+    uint32_t SliceMaxQPOffset0;
+    uint32_t SliceMaxQPOffset1;
+    uint32_t SliceMaxQPOffset2;
+    uint32_t SliceMaxQPOffset3;
+
+    int32_t SliceMinQPOffset0;
+    int32_t SliceMinQPOffset1;
+    int32_t SliceMinQPOffset2;
+    int32_t SliceMinQPOffset3;
+    uint32_t MaxIntraConformanceLimit;
+    uint32_t MaxInterConformanceLimit;
+    uint32_t FrameRateCtrlFlag;
+    uint32_t InterMbMaxBitFlag;
+    uint32_t IntraMbMaxBitFlag;
+    uint32_t FrameMaxBitRate;
+    uint32_t FrameMinBitRate;
+    uint32_t MinFrameRateDelta;
+    uint32_t MaxFrameRateDelta;
+    int16_t NumberofPasses;
+    uint32_t MbRateCtrlFlag;
+    uint8_t FrameSzOverFlag;
+    uint8_t FrameSzUnderFlag;
+    uint8_t FrameMinBitRateUnit;
+    uint8_t FrameMaxBitRateUnit;
+    uint8_t StreamOutEnable;
+
+
+    MultiPassConfig() :
+        SliceMaxQPOffset0(0),
+        SliceMaxQPOffset1(0),
+        SliceMaxQPOffset2(0), // Set this to Default Max Limit as per Spec.,
+        SliceMaxQPOffset3(0),
+        SliceMinQPOffset0(0),
+        SliceMinQPOffset1(0),
+        SliceMinQPOffset2(0), // Set this to Default Max Limit as per Spec.,
+        SliceMinQPOffset3(0),
+        FrameRateCtrlFlag(0),
+        MbRateCtrlFlag(0),
+        MaxIntraConformanceLimit(3180),
+        MaxInterConformanceLimit(3180),
+        FrameSzOverFlag(0),
+        FrameSzUnderFlag(0),
+        InterMbMaxBitFlag(0),
+        IntraMbMaxBitFlag(0),
+        FrameMaxBitRateUnit(0),
+        FrameMinBitRateUnit(0),
+        MinFrameRateDelta(0),
+        MaxFrameRateDelta(0),
+        StreamOutEnable(0)
+    {}
+};
+
+struct EncodeHevcPar
+{
+    uint32_t NumFrames;
+    uint32_t Width;
+    uint32_t Height;
+    uint32_t NumP;
+    uint32_t NumB;
+    uint32_t NumSlices;
+    uint32_t SliceStartLCU;
+    uint32_t InputChromaFormatIDC;
+    uint32_t ChromaFormatIDC;
+    uint32_t InputBitDepthLuma;
+    uint32_t InputBitDepthChroma;
+    uint32_t OutputBitDepthLuma;
+    uint32_t OutputBitDepthChroma;
+    uint32_t InternalBitDepthLuma;
+    uint32_t InternalBitDepthChroma;
+    uint32_t ISliceQP;
+    uint32_t PSliceQP;
+    uint32_t BSliceQP;
+    uint32_t BoxFilter;
+    uint32_t WeightedPred;
+    uint32_t WeightedBiPred;
+    uint32_t MaxRefIdxL0;
+    uint32_t MaxRefIdxL1;
+    uint32_t MaxBRefIdxL0;
+    uint32_t EnableBAsRefs;
+    uint32_t LowDelay;
+    uint32_t ChangePtoRefB;
+    uint32_t InputRgbToGbr;
+
+    uint32_t StartFrameNum;
+    uint32_t FrameRateCode;
+    uint32_t FrameRateM;    //frame rate multipier (nominator)
+    uint32_t FrameRateD;    //frame rate divider (denominator)
+    uint8_t  numTemporalLayers;
+
+    /* BRC parameters */
+    uint32_t BRCMethod;
+    uint32_t BRCType;
+    uint32_t CuRC;
+    uint32_t LookAheadFrames;
+    uint32_t VideoTestData;
+    uint32_t AvbrAccuracy;  //for AVBR 
+    uint32_t AvbrConvergence;  //for AVBR 
+    uint32_t usePrevQP;  //for fast mode 
+    uint32_t RateControl; //obsolete
+
+    uint32_t BitRate;
+    uint32_t MaxBitRate; // for VBR support  
+    uint32_t VbvSzInBit;
+    uint32_t InitVbvFullnessInBit;
+    uint32_t UserMaxIFrame; //user defined frame rate
+    uint32_t UserMaxPBFrame; //user defined frame rate
+    uint32_t EnableMultipass;
+    uint32_t MaxNumPakPassesI;
+    uint32_t MaxNumPakPassesPB;
+
+    uint32_t QPMax; // user defined QP max (default=51)
+    uint32_t QPMin; // user defined QP min (default=1)
+    uint32_t BitRateQT[CODECHAL_HEVC_BRC_MAX_QUALITY_LAYER][CODECHAL_HEVC_BRC_MAX_TEMPORAL_LAYER];
+    uint32_t MaxBitRateQT[CODECHAL_HEVC_BRC_MAX_QUALITY_LAYER][CODECHAL_HEVC_BRC_MAX_TEMPORAL_LAYER]; // for VBR support
+    uint32_t VbvSzInBitQT[CODECHAL_HEVC_BRC_MAX_QUALITY_LAYER][CODECHAL_HEVC_BRC_MAX_TEMPORAL_LAYER];
+    uint32_t InitVbvFullnessInBitQT[CODECHAL_HEVC_BRC_MAX_QUALITY_LAYER][CODECHAL_HEVC_BRC_MAX_TEMPORAL_LAYER];
+    uint32_t UserMaxFrameQT[CODECHAL_HEVC_BRC_MAX_QUALITY_LAYER][CODECHAL_HEVC_BRC_MAX_TEMPORAL_LAYER]; //user defined frame rate
+
+    uint32_t CRFQualityFactor;
+
+    uint32_t SlidingWindowRCEnable;
+    uint32_t SlidingWindowSize;
+    uint32_t SlidingWindowMaxRateRatio;
+
+    //reset test, for base layer
+    int32_t reset_frame_num;
+    int32_t new_br;
+    int32_t new_maxbr;
+    int16_t new_gopp;
+    int16_t new_gopi;
+    uint32_t new_frM; //frame rate multipier (nominator)
+    uint32_t new_frD; //frame rate divider (denominator)
+    uint32_t new_userMaxFrame; //user defined frame rate 
+                          //end reset test
+
+    MultiPassConfig MultiPassParam;
+
+    /* HEVC parameters */
+    uint32_t ProfileIDC;
+    uint32_t LevelIDC;
+    uint32_t Log2MaxCUSize;
+    uint32_t Log2MinCUSize;
+    uint32_t Log2MaxTUSize;
+    uint32_t Log2MinTUSize;
+    uint32_t Log2TUMaxDepthInter;
+    uint32_t Log2TUMaxDepthIntra;
+    uint32_t Log2ParallelMergeLevel;
+    uint32_t TransquantBypassEnableFlag;
+    uint32_t TransformSkipEnabledFlag;
+    uint32_t PCMEnabledFlag;
+    uint32_t Log2MaxPCMSize;
+    uint32_t Log2MinPCMSize;
+    uint32_t TemporalMvpEnableFlag;
+    uint32_t CollocatedFromL0Flag;
+    uint32_t CollocatedRefIdx;
+    uint32_t MaxNumMergeCand;
+    uint32_t MvdL1ZeroFlag;
+    uint32_t ConstrainedIntraPred;
+    uint32_t StrongIntraSmoothingEnableFlag;
+    int32_t ChromaCbQpOffset;
+    int32_t ChromaCrQpOffset;
+    uint8_t  ScalingList[3 * 6 + 2][64]; /* 0-5: 4x4; 6-11: 8x8; 12-17: 16x16; 18-19: 32x32 */
+    uint8_t  ScalingListDCCoef[2][6];
+
+    // 1st index L0/L1, 2nd index weight/offset, 3rd index: Luma, cb, cr
+    int32_t WeightOffset[2][2][3][16];
+    uint32_t Log2LumaDenom;
+    uint32_t Log2ChromaDenom;
+    int32_t EnableSEI;
+    uint32_t DeblockingIDC;
+    uint32_t LoopFilterAcrossSlicesEnabledFlag;
+    uint32_t LoopFilterAcrossTilesEnabledFlag;
+    int32_t DeblockingTc;
+    int32_t DeblockingBeta;
+    uint32_t PCMLoopFilterDisableFlag;
+    uint32_t AmpEnabledFlag;
+    uint32_t SignDataHidingFlag;
+    uint32_t SAOEnabledFlag;
+    uint32_t SAOLumaEnabledFlag;
+    uint32_t SAOChromaEnabledFlag;
+    uint32_t ForceSAOToZero;
+    uint32_t AdaptiveSAOMethod; /*0: always two passes, 1: if BRC has two pass, sao will be single pass, 2: Periodically enabling sao*/
+    uint32_t CuQpDeltaEnabledFlag;
+    uint32_t DiffCuQpDeltaDepth;
+    uint32_t ScalingListDataPresentFlag;
+    uint32_t CabacInitFlag;
+    uint32_t RoundingInter;
+    uint32_t RoundingIntra;
+    uint32_t UseLongTermPic;
+    uint32_t LogTermPicInterval;
+    uint32_t Seed;
+
+    uint32_t Log2MaxTUSkipBlockSize;
+    uint32_t ExplicitRdpcmEnabledFlag;
+    uint32_t ImplicitRdpcmEnabledFlag;
+    uint32_t TransformSkipRotationEnabledFlag;
+    uint32_t TransformSkipContextEnabledFlag;
+    uint32_t CrossComponentPredictionEnabledFlag;
+    uint32_t ExtendedPrecisionProcessingFlag;
+    uint32_t IntraSmoothingDisabledFlag;
+    uint32_t HighPrecisionOffsetsEnabledFlag;
+    uint32_t PersistentRiceAdaptationEnabledFlag;
+    uint32_t CabacBypassAlignmentEnabledFlag;
+    uint32_t SAOOffsetScaleLuma;
+    uint32_t SAOOffsetScaleChroma;
+
+    uint32_t TilesEnabledFlag;
+    uint32_t UniformSpacingFlag;
+    uint32_t NumTileColumns;
+    uint32_t NumTileRows;
+    uint32_t TileColumnsWidth[HEVC_NUM_MAX_TILE_COLUMN];
+    uint32_t TileRowsHeight[HEVC_NUM_MAX_TILE_ROW];
+
+    uint32_t SetLongTermAsRef0;
+
+    uint32_t TSDecisionEnabledFlag;
+    uint32_t IntraFrameRDOQEnabledFlag;
+    uint32_t InterFrameRDOQEnabledFlag;
+    uint32_t IntraRDOQEnableFlag;
+    uint32_t InterRDOQEnableFlag;
+    uint32_t AdaptiveRDOQFlag;
+    uint32_t AdaptiveRDOQIntraPctThreshold;
+    uint32_t AdaptiveRDOQIntraDistThreshold;
+    uint32_t IntraTuCountBasedRDOQDisable;
+    uint32_t RDOQIntraTUThreshold[4];
+    int32_t RDOQIntraTUThresholdInPercents;
+    uint32_t ScalabilityMode;
+    uint32_t RhoDomainEnabledFlag;
+
+    uint32_t SseStatsEnable;
+    uint32_t PAKStatsEnable;
+
+    uint32_t AddEoStreamNAL;
+    uint32_t AddEoSequenceNAL;
+
+    //VME HW control
+    uint32_t IntraPrediction;
+    uint32_t IntraSADMeasure;
+    uint32_t InterSADMeasure;
+    uint32_t BmeDisable;
+    uint32_t BilinearEnable;
+    uint32_t SubPelMode;
+    uint32_t ImeRefWindowSize;
+    uint32_t MaxNumSU;
+    uint32_t LenSP;
+    uint32_t EarlyImeSuccessEn;
+    uint32_t EarlyImeStopThres;
+    uint32_t AdaptiveEn;
+    uint32_t RefIDCostMode;
+    uint32_t DisablePIntra;
+    uint32_t  InterShapeMask;
+    uint32_t IntraChromaModeMask;
+    uint32_t Intra32x32ModeMask;
+    uint32_t Intra16x16ModeMask;
+    uint32_t Intra8x8ModeMask;
+
+    int32_t HmeGlobalOffsetX[2][2];
+    int32_t HmeGlobalOffsetY[2][2];
+    uint32_t HmeMvCostingQP;
+    uint32_t HMECoarseRefPic;
+    uint32_t HMEStage1Disable;
+    uint32_t HMEStage2Disable;
+    uint32_t HMEDualWinner;
+    uint32_t HMERef1Disable;
+
+    uint32_t Ime16x16MvCostShift;
+    uint32_t Ime32x32AddMvCostShift;
+
+    uint32_t ImeStage3MvThreshold;
+    uint32_t MaxNumImePredictor;
+    uint32_t ImePredictorPriority[24];
+
+    //ENC SW control
+    uint32_t Enable64x64Skip;
+    uint32_t HevcMaxCuControl;
+
+    uint32_t MaxIntra8x8TuSize;
+    uint32_t MaxIntra16x16TuSize;
+    uint32_t MaxIntra32x32TuSize;
+    uint32_t MaxIntra64x64TuSize;
+    uint32_t MaxInter8x8TuSize;
+    uint32_t MaxInter16x16TuSize;
+    uint32_t MaxInter32x32TuSize;
+    uint32_t MaxInter64x64TuSize;
+
+    uint32_t NumBetaPreditors;
+    uint32_t NumMergeCandidateCu8x8;
+    uint32_t NumMergeCandidateCu16x16;
+    uint32_t NumMergeCandidateCu32x32;
+    uint32_t NumMergeCandidateCu64x64;
+
+    uint32_t IntraChromaSadWeight;
+
+    uint32_t DisableIntraLuma4x4Tu;
+
+    uint32_t RandEncModeEnabled;
+
+    //B Frame Coding Structure
+    uint32_t BGOPSize;
+    int32_t  IntraPeriod;
+    uint32_t PerBFramePOC[CODECHAL_HEVC_MAX_BSTRUCTRUE_GOP_SIZE];
+    uint32_t PerBFrameQPOffset[CODECHAL_HEVC_MAX_BSTRUCTRUE_GOP_SIZE];
+    uint32_t PerBFrameRoundingInter[CODECHAL_HEVC_MAX_BSTRUCTRUE_GOP_SIZE];
+    uint32_t PerBFrameRoundingIntra[CODECHAL_HEVC_MAX_BSTRUCTRUE_GOP_SIZE];
+    double PerBFrameQPFactor[CODECHAL_HEVC_MAX_BSTRUCTRUE_GOP_SIZE];
+    uint32_t PerBFrameTcOffsetDiv2[CODECHAL_HEVC_MAX_BSTRUCTRUE_GOP_SIZE];
+    uint32_t PerBFrameBetaOffsetDiv2[CODECHAL_HEVC_MAX_BSTRUCTRUE_GOP_SIZE];
+    uint32_t PerBFrameTemporalID[CODECHAL_HEVC_MAX_BSTRUCTRUE_GOP_SIZE];
+    uint32_t PerBFrameNumRefPicsActiveL0[CODECHAL_HEVC_MAX_BSTRUCTRUE_GOP_SIZE];
+    uint32_t PerBFrameNumRefPicsActiveL1[CODECHAL_HEVC_MAX_BSTRUCTRUE_GOP_SIZE];
+    uint32_t PerBFrameNumRefPics[CODECHAL_HEVC_MAX_BSTRUCTRUE_GOP_SIZE];
+    int32_t PerBFrameRefPics[CODECHAL_HEVC_MAX_BSTRUCTRUE_GOP_SIZE*CODECHAL_HEVC_MAX_BSTRUCTRUE_REF_NUM];
+    uint32_t PerBFramePredict[CODECHAL_HEVC_MAX_BSTRUCTRUE_GOP_SIZE];
+    uint32_t PerBFrameDeltaRPS[CODECHAL_HEVC_MAX_BSTRUCTRUE_GOP_SIZE];
+    uint32_t PerBFrameNumRefIdcs[CODECHAL_HEVC_MAX_BSTRUCTRUE_GOP_SIZE];
+    uint32_t PefBFrameRefIdcs[CODECHAL_HEVC_MAX_BSTRUCTRUE_GOP_SIZE*CODECHAL_HEVC_MAX_BSTRUCTRUE_REF_NUM];
+
+    //CU QP Adjustment
+    uint32_t DisableCuQpAdj;
+    uint32_t MaxDeltaQP;
+    uint32_t SadMidPointThreshold;
+    uint32_t Zone01SadThreshold;
+    uint32_t Zone12SadThreshold;
+    uint32_t Zone23SadThreshold;
+    int32_t DeltaQPForSadZone0;
+    int32_t DeltaQPForSadZone1;
+    int32_t DeltaQPForSadZone2;
+    int32_t DeltaQPForSadZone3;
+    uint32_t Zone01MvThreshold;
+    uint32_t Zone12MvThreshold;
+    int32_t DeltaQPForMvZone0;
+    int32_t DeltaQPForMvZone1;
+    int32_t DeltaQPForMvZone2;
+    int32_t DeltaQPForMvZero;
+    int32_t DeltaQPForAngIntra;
+    int32_t DeltaQPForNonAngIntra;
+    int32_t DeltaQPForTU32x32;
+    int32_t DeltaQPForTU16x16;
+    int32_t DeltaQPForTU8x8;
+    int32_t DeltaQPForTU4x4;
+    int32_t DeltaQPForROIZone0;
+    int32_t DeltaQPForROIZone1;
+    int32_t DeltaQPForROIZone2;
+    int32_t DeltaQPForROIZone3;
+    int32_t DeltaQPForROIZone4;
+    int32_t DeltaQPForROIZone5;
+    int32_t DeltaQPForROIZone6;
+    int32_t DeltaQPForROIZone7;
+
+    uint32_t RfcThresIntraLow;
+    uint32_t RfcThresIntraHigh;
+    uint32_t RfcThresIntraChromaLow;
+    uint32_t RfcThresIntraChromaHigh;
+    uint32_t RfcThresInterLow;
+    uint32_t RfcThresInterHigh;
+    uint32_t RfcIntra64x64Depth;
+    uint32_t RfcIntra32x32Depth;
+    uint32_t RfcIntra16x16Depth;
+    uint32_t RfcIntra8x8Depth;
+    uint32_t RfcInter64x64Depth;
+    uint32_t RfcInter32x32Depth;
+    uint32_t RfcInter16x16Depth;
+    uint32_t RfcInter8x8Depth;
+
+    uint32_t InterTBSThresHigh;
+    uint32_t InterTBSThresLow;
+    uint32_t IntraLumaTBSThresHigh;
+    uint32_t IntraLumaTBSThresLow;
+    uint32_t IntraChromaTBSThresHigh;
+    uint32_t IntraChromaTBSThresLow;
+
+    uint32_t SseWeightStrength;
+    uint32_t SseWeightForZCOnly;
+
+    uint32_t VDEncMode;
+
+    uint32_t OutputQualityType;
+
+    //VDEnc BRC
+    uint32_t ReEncodePositiveQPDeltaThr;
+    uint32_t ReEncodeNegativeQPDeltaThr;
+    uint32_t PrevIntraPctThresh;
+    uint32_t CurIntraPctThresh;
+    uint32_t TopQPDeltaThrforAdaptive2Pass;
+    uint32_t BotQPDeltaThrforAdaptive2Pass;
+    uint32_t TopFrmSzPctThrforAdaptive2Pass;
+    uint32_t BotFrmSzPctThrforAdaptive2Pass;
+    uint32_t QPSelectMethodforFirstPass;
+    uint32_t MBHeaderCompensation;
+    uint32_t OverShootCarryFlag;
+    uint32_t OverShootSkipFramePct;
+
+    //mode/mv costs
+    uint32_t  UseExtModeMvCosts;
+    double CostTable[CODECHAL_HEVC_NUM_MODE_MV_COSTS];
+    //end mode/mv costs
+
+    //StreamIn
+    uint32_t StreamInEn;
+    uint32_t StreamInPanicEn;
+    uint32_t StreamInROIEn;
+    uint32_t StreamInROIviaForceQPEn;
+    uint32_t StreamInDirtyRectEn;
+    uint32_t StreamInMvPredictorRef;
+    uint32_t StaticFrameZMVPercent;
+    uint32_t HMEStreamInRefCost;
+
+
+    //rolling I parameters
+    uint32_t IntraRefreshEnable; //0: disable 1: enable
+    uint32_t IntraRefreshMode; //0:row based 1: col based
+    uint32_t IntraRefreshSizeIn32x32; //refresh region
+    int32_t IntraRefreshDeltaQP;//delta QP for refresh region
+
+                             //slice size control
+    uint32_t SliceSizeCtrl;
+    uint32_t EncLcuLag;
+    uint32_t SliceSizeThreshold;
+    uint32_t MaxSliceSize;
+    uint32_t CoeffBitsWeight;
+    uint32_t LCUBitSizeAdjustment;
+    uint32_t MaxNumSlicesCheckEnable;
+
+    //Left Recon Support
+    uint32_t LeftLCUReconEnable;
+    uint32_t LeftLCUReconEnableforRollingI;
+
+    // validate for RTL coverage
+    uint32_t NoOutputPriorPicsEnable;
+
+    //fade detection
+    uint32_t FadeDetectionEnable;
+    uint32_t RefListModforWeightPred;
+
+    //VJ : for supporting Chroma formats
+    uint32_t InputColorFormat;
+    uint32_t ChromaDownSamplingFilterType;
+
+    //Adaptive Rounding
+    uint32_t RoundThreshold[3][3]; //Dim0: CUSize (8x8, 16x16, 32x32 Dim1:CU Type (Intra, Inter, Merge/SKip), note 64x64 CUSize will use 32x32 threshold <<2;
+    uint32_t RoundValues[3][3][2]; //Dim0: CUSize (8x8, 16x16, 32x32 Dim1:CU Type (Intra, Inter, Merge/SKip)
+
+    //BRC adaptive bitstream fallback
+    uint32_t AdaptiveBSSelection;
+
+    //Kernel HME
+    uint32_t KernelHierarchicalMEFlag;
+    uint32_t KHMECoarseShape;
+    uint32_t SuperKHME;
+    uint32_t UltraKHME;
+    uint32_t EnableKHMEMVCost;
+    uint32_t KHMEUseNeighborPredictor;
+    uint32_t KernelInterSADTransform;
+    uint32_t KernelIntraSADTransform;
+    uint32_t KHMESubPelMode;
+    int32_t KMeSearchX;
+    int32_t KMeSearchY;
+    uint32_t KHMECombineOverlap;
+    uint32_t KHMECoarseRefPic;
+    uint32_t KHMECombineLen;
+    uint32_t KHMEBCombineLen;
+    uint32_t SuperKCombineDist;
+    //Timing budget overflow check
+    uint32_t TimeBudgetEnable;
+    uint32_t TimeBudgetInitial;
+    uint32_t TimeBudgetLCU;
+    uint32_t TimeBudgetDisableLCUNum;
+
+    //Panic mode
+    uint32_t PanicEnable;
+
+    uint32_t TransformType;
+
+    uint32_t ReconforIntraPrediciton;
+
+    //Stats dump
+    uint32_t EnableStatistics;
+
+    uint32_t NetworkTraceEnable;
+    uint32_t SceneChangeXFrameSizeEnable;
+    uint32_t SceneChangeXFrameSize;
+
+    uint32_t UseDefaultCosts;
+    uint32_t UseDefault_SAD_RDO_Lambdas;
+    uint32_t UseDefaulRDOQLambdas;
+};
 
 const char QPcTable[22] = { 29, 30, 31, 32, 32, 33, 34, 34, 35, 35, 36, 36, 37, 37, 37, 38, 38, 38, 39, 39, 39, 39 };
 
@@ -167,7 +671,6 @@ const unsigned char g_cInit_HEVC_BRC_QP_ADJUST[CODECHAL_HEVC_BRC_QP_ADJUST_SIZE]
     0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-
 
     0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x03, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x03,
     0x03, 0x04, 0xff, 0x00, 0x00, 0x00, 0x00, 0x02, 0x02, 0x03, 0x03, 0xff, 0xff, 0x00, 0x00, 0x00,
@@ -378,7 +881,6 @@ enum
     CODECHAL_HEVC_DS_COMBINED_2xDOWNSCALE = CODECHAL_HEVC_DS_COMBINED_BEGIN + 6,
     CODECHAL_HEVC_DS_COMBINED_END = CODECHAL_HEVC_DS_COMBINED_BEGIN + 7,
 
-
     //BRC Init/Reset
     CODECHAL_HEVC_BRC_INIT_RESET_BEGIN = CODECHAL_HEVC_DS_COMBINED_END,
     CODECHAL_HEVC_BRC_INIT_RESET_HISTORY = CODECHAL_HEVC_BRC_INIT_RESET_BEGIN + 0,
@@ -465,7 +967,7 @@ enum
     CODECHAL_HEVC_FEI_32x32_PU_BRC_Input = CODECHAL_HEVC_FEI_32x32_PU_BEGIN + 6,
     CODECHAL_HEVC_FEI_32x32_PU_LCU_QP = CODECHAL_HEVC_FEI_32x32_PU_BEGIN + 7,
     CODECHAL_HEVC_FEI_32x32_PU_BRC_DATA = CODECHAL_HEVC_FEI_32x32_PU_BEGIN + 8,
-    CODECHAL_HEVC_FEI_32x32_PU_STATS = CODECHAL_HEVC_FEI_32x32_PU_BEGIN + 9,
+    CODECHAL_HEVC_FEI_32x32_PU_STATS_DATA = CODECHAL_HEVC_FEI_32x32_PU_BEGIN + 9,
     CODECHAL_HEVC_FEI_32x32_PU_DEBUG = CODECHAL_HEVC_FEI_32x32_PU_BEGIN + 10,
     CODECHAL_HEVC_FEI_32x32_PU_END = CODECHAL_HEVC_FEI_32x32_PU_BEGIN + 11,
 
@@ -523,9 +1025,9 @@ enum
     CODECHAL_HEVC_FEI_8x8_PU_FMODE_Simplest_Intra = CODECHAL_HEVC_FEI_8x8_PU_FMODE_BEGIN + 7,
     CODECHAL_HEVC_FEI_8x8_PU_FMODE_LCU_QP = CODECHAL_HEVC_FEI_8x8_PU_FMODE_BEGIN + 8,
     CODECHAL_HEVC_FEI_8x8_PU_FMODE_BRC_Data = CODECHAL_HEVC_FEI_8x8_PU_FMODE_BEGIN + 9,
-    CODECHAL_HEVC_FEI_8x8_PU_FMODE_HAAR_DIST = CODECHAL_HEVC_FEI_8x8_PU_FMODE_BEGIN + 10,
-    CODECHAL_HEVC_FEI_8x8_PU_FMODE_STATS = CODECHAL_HEVC_FEI_8x8_PU_FMODE_BEGIN + 11,
-    CODECHAL_HEVC_FEI_8X8_PU_FMODE_FRAME_STATS = CODECHAL_HEVC_FEI_8x8_PU_FMODE_BEGIN + 12,
+    CODECHAL_HEVC_FEI_8x8_PU_FMODE_HAAR16x16 = CODECHAL_HEVC_FEI_8x8_PU_FMODE_BEGIN + 10,
+    CODECHAL_HEVC_FEI_8x8_PU_FMODE_STATS_DATA = CODECHAL_HEVC_FEI_8x8_PU_FMODE_BEGIN + 11,
+    CODECHAL_HEVC_FEI_8X8_PU_FMODE_FRAME_STATS_DATA = CODECHAL_HEVC_FEI_8x8_PU_FMODE_BEGIN + 12,
     CODECHAL_HEVC_FEI_8X8_PU_FMODE_CTB_DISTORTION = CODECHAL_HEVC_FEI_8x8_PU_FMODE_BEGIN + 13,
     CODECHAL_HEVC_FEI_8x8_PU_FMODE_DEBUG = CODECHAL_HEVC_FEI_8x8_PU_FMODE_BEGIN + 14,
     CODECHAL_HEVC_FEI_8x8_PU_FMODE_END = CODECHAL_HEVC_FEI_8x8_PU_FMODE_BEGIN + 15,
@@ -595,9 +1097,9 @@ enum
     CODECHAL_HEVC_FEI_B_MBENC_CONCURRENT_THD_MAP = CODECHAL_HEVC_FEI_B_MBENC_BEGIN + 42,
     CODECHAL_HEVC_FEI_B_MBENC_MV_IDX = CODECHAL_HEVC_FEI_B_MBENC_BEGIN + 43,
     CODECHAL_HEVC_FEI_B_MBENC_MVP_IDX = CODECHAL_HEVC_FEI_B_MBENC_BEGIN + 44,
-    CODECHAL_HEVC_FEI_B_MBENC_HAAR_DIST = CODECHAL_HEVC_FEI_B_MBENC_BEGIN + 45,
-    CODECHAL_HEVC_FEI_B_MBENC_STATS = CODECHAL_HEVC_FEI_B_MBENC_BEGIN + 46,
-    CODECHAL_HEVC_FEI_B_MBENC_FRAME_STATS = CODECHAL_HEVC_FEI_B_MBENC_BEGIN + 47,
+    CODECHAL_HEVC_FEI_B_MBENC_HAAR_DIST16x16 = CODECHAL_HEVC_FEI_B_MBENC_BEGIN + 45,
+    CODECHAL_HEVC_FEI_B_MBENC_STATS_DATA = CODECHAL_HEVC_FEI_B_MBENC_BEGIN + 46,
+    CODECHAL_HEVC_FEI_B_MBENC_FRAME_STATS_DATA = CODECHAL_HEVC_FEI_B_MBENC_BEGIN + 47,
     //
     CODECHAL_HEVC_FEI_B_MBENC_EXTERNAL_MVP = CODECHAL_HEVC_FEI_B_MBENC_BEGIN + 48,
     CODECHAL_HEVC_FEI_B_MBENC_PER_CTB_CTRL = CODECHAL_HEVC_FEI_B_MBENC_BEGIN + 49,
@@ -616,7 +1118,7 @@ enum
     CODECHAL_HEVC_FEI_B_PAK_BRC_DATA = CODECHAL_HEVC_FEI_B_PAK_BEGIN + 5,
     CODECHAL_HEVC_FEI_B_PAK_MB_DATA = CODECHAL_HEVC_FEI_B_PAK_BEGIN + 6,
     CODECHAL_HEVC_FEI_B_PAK_MVP_DATA = CODECHAL_HEVC_FEI_B_PAK_BEGIN + 7,
-    CODECHAL_HEVC_FEI_B_PAK_WA_CU_RECORD = CODECHAL_HEVC_FEI_B_PAK_BEGIN + 8,
+    CODECHAL_HEVC_FEI_B_PAK_WA_PAK_DATA = CODECHAL_HEVC_FEI_B_PAK_BEGIN + 8,
     CODECHAL_HEVC_FEI_B_PAK_WA_PAK_OBJ = CODECHAL_HEVC_FEI_B_PAK_BEGIN + 9,
     CODECHAL_HEVC_FEI_B_PAK_DEBUG = CODECHAL_HEVC_FEI_B_PAK_BEGIN + 10,
     CODECHAL_HEVC_FEI_B_PAK_END = CODECHAL_HEVC_FEI_B_PAK_BEGIN + 11,
@@ -875,98 +1377,104 @@ public:
     };
 
     // Parameters passed from application
-    PCODEC_HEVC_ENCODE_PICTURE_PARAMS           pHevcPicParams = nullptr;                       //!< Pointer to picture parameter
-    PCODEC_HEVC_ENCODE_SEQUENCE_PARAMS          pHevcSeqParams = nullptr;                       //!< Pointer to sequence parameter
-    PCODEC_HEVC_ENCODE_SLICE_PARAMS             pHevcSliceParams = nullptr;                     //!< Pointer to slice parameter
-    CodecEncodeHevcFeiPicParams                 *pHevcFeiPicParams = nullptr;                    //!< Pointer to FEI picture parameter
-    PCODECHAL_HEVC_IQ_MATRIX_PARAMS             pHevcIqMatrixParams = nullptr;                  //!< Pointer to IQ matrix parameter
+    PCODEC_HEVC_ENCODE_PICTURE_PARAMS  m_hevcPicParams      = nullptr;  //!< Pointer to picture parameter
+    PCODEC_HEVC_ENCODE_SEQUENCE_PARAMS m_hevcSeqParams      = nullptr;  //!< Pointer to sequence parameter
+    PCODEC_HEVC_ENCODE_SLICE_PARAMS    m_hevcSliceParams    = nullptr;  //!< Pointer to slice parameter
+    CodecEncodeHevcFeiPicParams *      m_hevcFeiPicParams   = nullptr;  //!< Pointer to FEI picture parameter
+    PCODECHAL_HEVC_IQ_MATRIX_PARAMS    m_hevcIqMatrixParams = nullptr;  //!< Pointer to IQ matrix parameter
 
-    uint32_t                                    dwWidthAlignedMaxLCU = 0;                       //!< Picture width aligned in max LCU size
-    uint32_t                                    dwHeightAlignedMaxLCU = 0;                      //!< Picture height aligned in max LCU size
+    uint32_t m_widthAlignedMaxLcu  = 0;  //!< Picture width aligned in max LCU size
+    uint32_t m_heightAlignedMaxLcu = 0;  //!< Picture height aligned in max LCU size
 
     // PAK resources
-    MOS_RESOURCE                                resDeblockingFilterRowStoreScratchBuffer;       //!< Deblocking filter row store scratch data buffer
-    MOS_RESOURCE                                resDeblockingFilterTileRowStoreScratchBuffer;   //!< Deblocking filter tile row store Scratch data buffer
-    MOS_RESOURCE                                resDeblockingFilterColumnRowStoreScratchBuffer; //!< Deblocking filter column row Store scratch data buffer
-    MOS_RESOURCE                                resMetadataLineBuffer;                          //!< Metadata line data buffer
-    MOS_RESOURCE                                resMetadataTileLineBuffer;                      //!< Metadata tile line data buffer
-    MOS_RESOURCE                                resMetadataTileColumnBuffer;                    //!< Metadata tile column data buffer
-    MOS_RESOURCE                                resSaoLineBuffer;                               //!< SAO line data buffer
-    MOS_RESOURCE                                resSaoTileLineBuffer;                           //!< SAO tile line data buffer
-    MOS_RESOURCE                                resSaoTileColumnBuffer;                         //!< SAO tile column data buffer
-    MOS_RESOURCE                                resLcuBaseAddressBuffer;                        //!< LCU base address buffer
-    MOS_RESOURCE                                resLcuILDBStreamOutBuffer;                      //!< LCU ILDB streamout buffer
-    MOS_RESOURCE                                resSaoStreamOutBuffer;                          //!< SAO streamout buffer
-    MOS_RESOURCE                                resFrameStatStreamOutBuffer;                    //!< Frame statistics streamout buffer
-    MOS_RESOURCE                                resSseSrcPixelRowStoreBuffer;                   //!< SSE src pixel row store buffer
-    MHW_BATCH_BUFFER                            BatchBufferForPakSlices[CODECHAL_HEVC_NUM_PAK_SLICE_BATCH_BUFFERS]; //!< Batch buffer for pak slice commands
-    uint32_t                                    dwCurrPakSliceIdx = 0;                          //!< Current pak slice index
-    bool                                        bUseBatchBufferForPakSlices = false;            //!< Flag to indicate if batch buffer is used for PAK slice level commands
-    uint32_t                                    BatchBufferForPakSlicesStartOffset = 0;         //!< Pak slice command start offset within batch buffer
+    MOS_RESOURCE     m_resDeblockingFilterRowStoreScratchBuffer;                            //!< Deblocking filter row store scratch data buffer
+    MOS_RESOURCE     m_resDeblockingFilterTileRowStoreScratchBuffer;                        //!< Deblocking filter tile row store Scratch data buffer
+    MOS_RESOURCE     m_resDeblockingFilterColumnRowStoreScratchBuffer;                      //!< Deblocking filter column row Store scratch data buffer
+    MOS_RESOURCE     m_resMetadataLineBuffer;                                               //!< Metadata line data buffer
+    MOS_RESOURCE     m_resMetadataTileLineBuffer;                                           //!< Metadata tile line data buffer
+    MOS_RESOURCE     m_resMetadataTileColumnBuffer;                                         //!< Metadata tile column data buffer
+    MOS_RESOURCE     m_resSaoLineBuffer;                                                    //!< SAO line data buffer
+    MOS_RESOURCE     m_resSaoTileLineBuffer;                                                //!< SAO tile line data buffer
+    MOS_RESOURCE     m_resSaoTileColumnBuffer;                                              //!< SAO tile column data buffer
+    MOS_RESOURCE     m_resLcuBaseAddressBuffer;                                             //!< LCU base address buffer
+    MOS_RESOURCE     m_resLcuIldbStreamOutBuffer;                                           //!< LCU ILDB streamout buffer
+    MOS_RESOURCE     m_resSaoStreamOutBuffer;                                               //!< SAO streamout buffer
+    MOS_RESOURCE     m_resFrameStatStreamOutBuffer;                                         //!< Frame statistics streamout buffer
+    MOS_RESOURCE     m_resSseSrcPixelRowStoreBuffer;                                        //!< SSE src pixel row store buffer
+    MHW_BATCH_BUFFER m_batchBufferForPakSlices[CODECHAL_HEVC_NUM_PAK_SLICE_BATCH_BUFFERS];  //!< Batch buffer for pak slice commands
+    uint32_t         m_currPakSliceIdx                    = 0;                              //!< Current pak slice index
+    bool             m_useBatchBufferForPakSlices         = false;                          //!< Flag to indicate if batch buffer is used for PAK slice level commands
+    uint32_t         m_batchBufferForPakSlicesStartOffset = 0;                              //!< Pak slice command start offset within batch buffer
 
-    uint32_t                                    dwDefaultPictureStatesSize = 0;                 //!< Picture state command size
-    uint32_t                                    dwDefaultPicturePatchListSize = 0;              //!< Picture state patch list size
-    uint32_t                                    dwDefaultSliceStatesSize = 0;                   //!< Slice state command size
-    uint32_t                                    dwDefaultSlicePatchListSize = 0;                //!< Slice state patch list size
+    uint32_t m_defaultPictureStatesSize    = 0;  //!< Picture state command size
+    uint32_t m_defaultPicturePatchListSize = 0;  //!< Picture state patch list size
+    uint32_t m_defaultSliceStatesSize      = 0;  //!< Slice state command size
+    uint32_t m_defaultSlicePatchListSize   = 0;  //!< Slice state patch list size
 
-    unsigned char                               uc2ndSAOPass = 0;                               //!< Second SAO pass number
-    bool                                        b2ndSAOPassNeeded = false;                      //!< Second SAO pass enable flag
+    unsigned char m_uc2NdSaoPass      = 0;      //!< Second SAO pass number
+    bool          m_b2NdSaoPassNeeded = false;  //!< Second SAO pass enable flag
 
-    CODECHAL_ENCODE_HEVC_REFFRAME_SYNC_OBJ      RefSync[CODEC_NUM_TRACKED_BUFFERS];             //!< Reference frame sync object
-    PCODECHAL_ENCODE_HEVC_REFFRAME_SYNC_OBJ     pCurrRefSync = nullptr;                         //!< Pointer to current frame sync object
-    unsigned char                               ucLastMbCodeIndex = 0 ;                         //!< Used in the non-parallel BRC to check if the previous PAK is ready
-    unsigned char                               ucCurrMinus2MbCodeIndex = 0;                    //!< Used in the parallel BRC to check if the (N-2)th PAK is ready, where N is the frame number
+    CODECHAL_ENCODE_HEVC_REFFRAME_SYNC_OBJ  m_refSync[CODEC_NUM_TRACKED_BUFFERS];  //!< Reference frame sync object
+    PCODECHAL_ENCODE_HEVC_REFFRAME_SYNC_OBJ m_currRefSync           = nullptr;     //!< Pointer to current frame sync object
+    unsigned char                           m_lastMbCodeIndex       = 0;           //!< Used in the non-parallel BRC to check if the previous PAK is ready
+    unsigned char                           m_currMinus2MbCodeIndex = 0;           //!< Used in the parallel BRC to check if the (N-2)th PAK is ready, where N is the frame number
 
-    int8_t                                      RefIdxMapping[CODEC_MAX_NUM_REF_FRAME_HEVC];    //!< Reference frame index mapping
-    bool                                        bLowDelay = false;                              //!< Low delay flag
-    bool                                        bSameRefList = false;                           //!< Flag to specify if ref list L0 and L1 are same
-    bool                                        bIsMaxLcu64 = false;                            //!< Flag to specify if max LCU size is 64
-    uint32_t                                    dwSizeOfMvTemporalBuffer = 0;                   //!< MV temporal buffer size
-    bool                                        bEncode4KSequence = false;                      //!< Flag to specify if input sequence is 4k size
-    bool                                        bHevcRdoqEnabled = false;                       //!< RDOQ enable flag
-    uint32_t                                    dwRDOQIntraTUThreshold = 0;                     //!< RDOQ intra threshold
-    bool                                        bIs10bitHEVC = false;                           //!< 10bit encoding flag
-    unsigned char                               ucChromaFormat = HCP_CHROMA_FORMAT_YUV420;      //!< Chroma format(420, 422 etc)
-    unsigned char                               ucBitDepth = 8;                                 //!< Bit depth
-    uint32_t                                    dwMaxNumSlicesSupported = CODECHAL_HEVC_MAX_SLICE_NUM;  //!< Maximal number of slices supported
-    uint32_t                                    dwSizeOfSseSrcPixelRowStoreBufferPerLCU = 0;    //!< Size of SSE row store buffer per LCU
-    uint32_t                                    sizeOfHcpPakFrameStats = 0;                     //!> Size of HEVC PAK frame statistics
-    uint8_t                                     RoundingInter   = 4;  // the value is from prototype
-    uint8_t                                     RoundingIntra   = 10; // the value is from prototype
+    int8_t        m_refIdxMapping[CODEC_MAX_NUM_REF_FRAME_HEVC];                          //!< Reference frame index mapping
+    bool          m_lowDelay                              = false;                        //!< Low delay flag
+    bool          m_sameRefList                           = false;                        //!< Flag to specify if ref list L0 and L1 are same
+    bool          m_isMaxLcu64                            = false;                        //!< Flag to specify if max LCU size is 64
+    uint32_t      m_sizeOfMvTemporalBuffer                = 0;                            //!< MV temporal buffer size
+    bool          m_encode4KSequence                      = false;                        //!< Flag to specify if input sequence is 4k size
+    bool          m_hevcRdoqEnabled                       = false;                        //!< RDOQ enable flag
+    uint32_t      m_rdoqIntraTuThreshold                  = 0;                            //!< RDOQ intra threshold
+#if (_DEBUG || _RELEASE_INTERNAL)
+    bool          m_rdoqIntraTuOverride                   = false;                        //!< Override RDOQ intra TU or not
+    bool          m_rdoqIntraTuDisableOverride            = false;                        //!< Override RDOQ intra TU disable 
+    uint16_t      m_rdoqIntraTuThresholdOverride          = 0;                            //!< Override RDOQ intra TU threshold
+#endif
+    bool          m_is10BitHevc                           = false;                        //!< 10bit encoding flag
+    unsigned char m_chromaFormat                          = HCP_CHROMA_FORMAT_YUV420;     //!< Chroma format(420, 422 etc)
+    unsigned char m_bitDepth                              = 8;                            //!< Bit depth
+    uint32_t      m_maxNumSlicesSupported                 = CODECHAL_HEVC_MAX_NUM_SLICES_LVL_5;  //!< Maximal number of slices supported
+    uint32_t      m_sizeOfSseSrcPixelRowStoreBufferPerLcu = 0;                            //!< Size of SSE row store buffer per LCU
+    uint32_t      m_sizeOfHcpPakFrameStats                = 0;                            //!> Size of HEVC PAK frame statistics
+    uint8_t       m_roundingInter                         = 4;                            // the value is from prototype
+    uint8_t       m_roundingIntra                         = 10;                           // the value is from prototype
 
-    bool                                        bCurrUsedRefPic[CODEC_MAX_NUM_REF_FRAME_HEVC];  //!< Reference picture usage array
-    CODEC_PIC_ID                                PicIdx[CODEC_MAX_NUM_REF_FRAME_HEVC];           //!< Reference picture index array
-    PCODEC_REF_LIST                             pRefList[CODECHAL_NUM_UNCOMPRESSED_SURFACE_HEVC]; //!< Pointer to reference pictures
-    PCODECHAL_NAL_UNIT_PARAMS                   *ppNALUnitParams = nullptr;                     //!< Pointer to NAL unit parameters
-    bool                                        bEnable26WalkingPattern = false;                //!< 26 walking pattern enable flag
+    bool                       m_currUsedRefPic[CODEC_MAX_NUM_REF_FRAME_HEVC];     //!< Reference picture usage array
+    CODEC_PIC_ID               m_picIdx[CODEC_MAX_NUM_REF_FRAME_HEVC];             //!< Reference picture index array
+    PCODEC_REF_LIST            m_refList[CODECHAL_NUM_UNCOMPRESSED_SURFACE_HEVC];  //!< Pointer to reference pictures
+    PCODECHAL_NAL_UNIT_PARAMS *m_nalUnitParams          = nullptr;                 //!< Pointer to NAL unit parameters
+    bool                       m_enable26WalkingPattern = false;                   //!< 26 walking pattern enable flag
 
     // ME
-    bool                                        bHmeEnabled = false;                            //!< HME enable flag
-    bool                                        b16xMeEnabled = false;                          //!< 16xME enable flag
-    bool                                        b32xMeEnabled = false;                          //!< 32xME enable flag
-    MOS_SURFACE                                 s4xMeMvDataBuffer;                              //!< 4xME mv data buffer
-    MOS_SURFACE                                 s16xMeMvDataBuffer;                             //!< 16xME mv data buffer
-    MOS_SURFACE                                 s32xMeMvDataBuffer;                             //!< 32xME mv data buffer
-    MOS_SURFACE                                 s4xMeDistortionBuffer;                          //!< 4xME distortion buffer
-    bool                                        bBrcDistortionBufferSupported = false;          //!< Brc distorion supported flag
-    bool                                        b4xMeDistortionBufferSupported = false;         //!< 4xME distorion supported flag
-    uint8_t*                                    pBMEMethodTable = nullptr;                      //!< Pointer for ME method table based on TargetUsage
-    uint8_t*                                    pMEMethodTable = nullptr;                       //!< Pointer for ME method table based on TargetUsage
+    bool        m_hmeEnabled    = false;                     //!< HME enable flag
+    bool        m_b16XMeEnabled = false;                     //!< 16xME enable flag
+    bool        m_b32XMeEnabled = false;                     //!< 32xME enable flag
+    MOS_SURFACE m_s4XMeMvDataBuffer;                         //!< 4xME mv data buffer
+    MOS_SURFACE m_s16XMeMvDataBuffer;                        //!< 16xME mv data buffer
+    MOS_SURFACE m_s32XMeMvDataBuffer;                        //!< 32xME mv data buffer
+    MOS_SURFACE m_s4XMeDistortionBuffer;                     //!< 4xME distortion buffer
+    bool        m_brcDistortionBufferSupported   = false;    //!< Brc distorion supported flag
+    bool        m_b4XMeDistortionBufferSupported = false;    //!< 4xME distorion supported flag
+    uint8_t *   m_bmeMethodTable                 = nullptr;  //!< Pointer for ME method table based on TargetUsage
+    uint8_t *   m_meMethodTable                  = nullptr;  //!< Pointer for ME method table based on TargetUsage
 
     // BRC
-    uint16_t                                    usAVBRAccuracy = 0;                             //!< AVBR accuracy
-    uint16_t                                    usAVBRConvergence = 0;                          //!< AVBR convergence
-    double                                      dBrcInitCurrentTargetBufFullInBits = 0.0;       //!< Initial value of target buffer fullness in bits
-    double                                      dBrcInitResetInputBitsPerFrame = 0.0;           //!< Input bits per frame
-    uint32_t                                    dwBrcInitResetBufSizeInBits = 0;                //!< Target buffer size in bits
-    uint32_t                                    dwHevcBrcPakStatisticsSize = 0;                 //!< BRC PAK statistics size
-    bool                                        bBrcEnabled = false;                            //!< BRC enable flag
-    bool                                        bLcuBrcEnabled = false;                         //!< LCU BRC enable flag
-    bool                                        bBrcInit = true;                                //!< BRC init flag
-    bool                                        bBrcReset = false;                              //!< BRC reset flag
-    bool                                        bROIValueInDeltaQP = true;                      //!< ROI Value in deltaQP or priority flag
+    uint16_t m_usAvbrAccuracy                     = 0;      //!< AVBR accuracy
+    uint16_t m_usAvbrConvergence                  = 0;      //!< AVBR convergence
+    double   m_dBrcInitCurrentTargetBufFullInBits = 0.0;    //!< Initial value of target buffer fullness in bits
+    double   m_dBrcInitResetInputBitsPerFrame     = 0.0;    //!< Input bits per frame
+    uint32_t m_brcInitResetBufSizeInBits          = 0;      //!< Target buffer size in bits
+    uint32_t m_hevcBrcPakStatisticsSize           = 0;      //!< BRC PAK statistics size
+    bool     m_brcEnabled                         = false;  //!< BRC enable flag
+    bool     m_lcuBrcEnabled                      = false;  //!< LCU BRC enable flag
+    bool     m_brcInit                            = true;   //!< BRC init flag
+    bool     m_brcReset                           = false;  //!< BRC reset flag
+    bool     m_brcRoiEnabled                      = false;  //!< BRC Roi flag
+    bool     m_roiValueInDeltaQp                  = true;   //!< ROI Value in deltaQP or priority flag
 
-    CODECHAL_ENCODE_BUFFER                      resPAKCULevelStreamoutData;                     //!< PAK LCU level stream out data buffer
+    CODECHAL_ENCODE_BUFFER m_resPakcuLevelStreamoutData;  //!< PAK LCU level stream out data buffer
 
 protected:
     //!
@@ -976,7 +1484,6 @@ protected:
         CodechalDebugInterface* debugInterface,
         PCODECHAL_STANDARD_INFO standardInfo);
 
-    uint8_t*                                    m_kernelBase = nullptr;                 //!< kernel binary base address
     uint8_t*                                    m_kernelBinary = nullptr;               //!< Pointer to the kernel binary
     uint32_t                                    m_combinedKernelSize = 0;               //!< Combined kernel binary size
     PMHW_VDBOX_HEVC_SLICE_STATE                 m_sliceStateParams = nullptr;           //!< Slice state parameters
@@ -1005,7 +1512,7 @@ public:
                 (rc == RATECONTROL_VCM) ||
                 (rc == RATECONTROL_ICQ) ||
                 (rc == RATECONTROL_QVBR);
-    } 
+    }
 
     //!
     //! \brief    Help function to calculate the slice QP
@@ -1014,10 +1521,10 @@ public:
     //!
     int CalSliceQp()
     {
-        CODECHAL_ENCODE_ASSERT(pHevcSliceParams);
-        CODECHAL_ENCODE_ASSERT(pHevcPicParams);
+        CODECHAL_ENCODE_ASSERT(m_hevcSliceParams);
+        CODECHAL_ENCODE_ASSERT(m_hevcPicParams);
 
-        int qp = pHevcSliceParams->slice_qp_delta + pHevcPicParams->QpY;
+        int qp = m_hevcSliceParams->slice_qp_delta + m_hevcPicParams->QpY;
         CODECHAL_ENCODE_ASSERT(qp >= 0 && qp < QP_NUM);
         return qp;
     }
@@ -1119,7 +1626,7 @@ public:
     //!           MOS_STATUS_SUCCESS if success, else fail reason
     //!
     virtual MOS_STATUS SendPrologWithFrameTracking(
-        PMOS_COMMAND_BUFFER cmdBuffer, 
+        PMOS_COMMAND_BUFFER cmdBuffer,
         bool frameTrackingRequested);
 
     //!
@@ -1147,21 +1654,9 @@ public:
     //!           MOS_STATUS_SUCCESS if success, else fail reason
     //!
     MOS_STATUS SendHWWaitCommand(
-        PMOS_RESOURCE semaphoreMem, 
+        PMOS_RESOURCE semaphoreMem,
         PMOS_COMMAND_BUFFER cmdBuffer,
         uint32_t semValue);
-
-    //!
-    //! \brief      Send watchdog timer start command
-    //!
-    //! \param    [in] cmdBuffer
-    //!           Pointer to command buffer
-    //!
-    //! \return   MOS_STATUS
-    //!           MOS_STATUS_SUCCESS if success, else fail reason
-    //!
-    virtual MOS_STATUS SendWatchdogTimerStartCmd(
-        PMOS_COMMAND_BUFFER cmdBuffer);
 
     //!
     //! \brief      Send MI atomic command
@@ -1198,8 +1693,8 @@ public:
     //!           MOS_STATUS_SUCCESS if success, else fail reason
     //!
     MOS_STATUS SetSemaphoreMem(
-        PMOS_RESOURCE semaphoreMem, 
-        PMOS_COMMAND_BUFFER cmdBuffer, 
+        PMOS_RESOURCE semaphoreMem,
+        PMOS_COMMAND_BUFFER cmdBuffer,
         uint32_t value);
 
     //!
@@ -1235,8 +1730,8 @@ public:
     //!           MOS_STATUS_SUCCESS if success, else fail reason
     //!
     MOS_STATUS AllocateBuffer(
-        PCODECHAL_ENCODE_BUFFER buffer, 
-        uint32_t size, 
+        PCODECHAL_ENCODE_BUFFER buffer,
+        uint32_t size,
         const char* name);
 
     //!
@@ -1257,9 +1752,9 @@ public:
     //!           MOS_STATUS_SUCCESS if success, else fail reason
     //!
     MOS_STATUS AllocateBuffer2D(
-        PMOS_SURFACE surface, 
-        uint32_t width, 
-        uint32_t height, 
+        PMOS_SURFACE surface,
+        uint32_t width,
+        uint32_t height,
         const char* name,
         MOS_TILE_TYPE tileType = MOS_TILE_LINEAR);
 
@@ -1279,7 +1774,7 @@ public:
     //!           MOS_STATUS_SUCCESS if success, else fail reason
     //!
     MOS_STATUS AllocateSurface(
-        PMOS_SURFACE surface, 
+        PMOS_SURFACE surface,
         uint32_t width,
         uint32_t height,
         const char* name);
@@ -1296,7 +1791,7 @@ public:
     //!           MOS_STATUS_SUCCESS if success, else fail reason
     //!
     MOS_STATUS AllocateBatchBufferForPakSlices(
-        uint32_t numSlices, 
+        uint32_t numSlices,
         unsigned char numPakPasses);
 
     //! \brief    Calculates the PSNR values for luma/ chroma 
@@ -1310,11 +1805,10 @@ public:
     //!           MOS_STATUS_SUCCESS if success, else fail reason
     //!
     MOS_STATUS CalculatePSNR(
-        EncodeStatus        *encodeStatus, 
+        EncodeStatus        *encodeStatus,
         EncodeStatusReport  *encodeStatusReport);
 
-
-    //! \brief    Copy sum square error for luma/ chroma channel from  
+    //! \brief    Copy sum square error for luma/ chroma channel from 
     //!           frame statistics report into encodeStatus buffer
     //!
     //! \param    [in, out] cmdBuffer
@@ -1356,13 +1850,6 @@ public:
     //! \return   Max frame size in bytes 
     //!
     uint32_t GetProfileLevelMaxFrameSize();
-
-    //!
-    //! \brief    Help function to calculate bit stream buffer size
-    //!
-    //! \return   Calcuated bitstream buffer size
-    //!           
-    uint32_t GetBitstreamBufferSize();
 
     //!
     //! \brief    Help function to create a flat scaling list (when scaling list is not passed in sequence parameter)
@@ -1427,9 +1914,9 @@ public:
 
     //!
     //! \brief    Initialize encoder instance with the provided settings
-    //! \details  When derived class overwrite this function to do its own initialization, 
-    //            it should call #CodechalEncodeHevcBase::Initialize() first 
-    //            to do common initializations         
+    //! \details  When derived class overwrite this function to do its own initialization,
+    //            it should call #CodechalEncodeHevcBase::Initialize() first
+    //            to do common initializations
     //!
     //! \param    [in] settings
     //!           Encoder settings
@@ -1437,7 +1924,7 @@ public:
     //! \return   MOS_STATUS
     //!           MOS_STATUS_SUCCESS if success, else fail reason
     //!
-    virtual MOS_STATUS Initialize(PCODECHAL_SETTINGS settings);
+    virtual MOS_STATUS Initialize(CodechalSetting * settings);
 
     //!
     //! \brief    Initialize surface info
@@ -1469,6 +1956,15 @@ public:
     //!           MOS_STATUS_SUCCESS if success, else fail reason
     //!
     virtual MOS_STATUS SetPictureStructs();
+
+    //!
+    //! \brief    Calculate maximum bitsize allowed for LCU
+    //! \details  Calculate LCU max coding size according to log2_max_coding_block_size_minus3
+    //!
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    virtual MOS_STATUS CalcLCUMaxCodingSize();
 
     //!
     //! \brief    Setup/configure encoder based on slice parameter set
@@ -1744,7 +2240,6 @@ public:
         PMHW_BATCH_BUFFER batchBuffer,
         PMHW_VDBOX_HEVC_SLICE_STATE params);
 
-
     //! \brief    Initialize kernel state
     //!
     //! \return   MOS_STATUS
@@ -1782,7 +2277,7 @@ public:
     //!           MOS_STATUS_SUCCESS if success, else fail reason
     //!
     virtual MOS_STATUS AllocateEncResources() = 0;
-   
+
     //!
     //! \brief    Free ENC resources
     //!
@@ -1825,7 +2320,7 @@ public:
     //!           MOS_STATUS_SUCCESS if success, else fail reason
     //!
     virtual MOS_STATUS ValidateRefFrameData(PCODEC_HEVC_ENCODE_SLICE_PARAMS slcParams) = 0;
- 
+
     //!
     //! \brief    Encode kernel functions
     //!
@@ -1929,6 +2424,8 @@ public:
     //!
     virtual void UpdateSSDSliceCount() { return; };
 
+    void MotionEstimationDisableCheck();
+
     //!
     //! \brief    Allocate 4x ME resources
     //!
@@ -1991,9 +2488,151 @@ public:
         PCODEC_HEVC_ENCODE_SLICE_PARAMS   sliceParams,
         PCODEC_HEVC_ENCODE_PICTURE_PARAMS picParams);
 
-    MOS_STATUS DumpMbEncPakOutput(PCODEC_REF_LIST currRefList);
-    
-    MOS_STATUS DumpFrameStatsBuffer();
+    MOS_STATUS DumpMbEncPakOutput(PCODEC_REF_LIST currRefList, CodechalDebugInterface* debugInterface);
+
+    MOS_STATUS DumpFrameStatsBuffer(CodechalDebugInterface* debugInterface);
+
+    //!
+    //! \brief    Create HEVC PAR
+    //!
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    MOS_STATUS CreateHevcPar();
+
+    //!
+    //! \brief    Destroy HEVC PAR
+    //!
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    MOS_STATUS DestroyHevcPar();
+
+    //!
+    //! \brief    Dump sequence PAR file
+    //!
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    virtual MOS_STATUS DumpSeqParFile() { return MOS_STATUS_SUCCESS; }
+
+    //!
+    //! \brief    Dump frame PAR file
+    //!
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    virtual MOS_STATUS DumpFrameParFile() { return MOS_STATUS_SUCCESS; }
+
+    //!
+    //! \brief    Populate const parameters
+    //!
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    virtual MOS_STATUS PopulateConstParam();
+
+    //!
+    //! \brief    Set MHW_VDBOX_AVC_IMG_STATE parameter
+    //!
+    //! \param    [in] hevcSeqParams
+    //!           pointer to HEVC encode sequence parameters
+    //! \param    [in] hevcPicParams
+    //!           pointer to HEVC encode picture parameters
+    //! \param    [in] hevcSlcParams
+    //!           pointer to HEVC encode slice parameters
+    //!
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    virtual MOS_STATUS PopulateDdiParam(
+        PCODEC_HEVC_ENCODE_SEQUENCE_PARAMS hevcSeqParams,
+        PCODEC_HEVC_ENCODE_PICTURE_PARAMS  hevcPicParams,
+        PCODEC_HEVC_ENCODE_SLICE_PARAMS    hevcSlcParams);
+
+    //!
+    //! \brief    Set PMHW_VDBOX_HEVC_SLICE_STATE parameter
+    //!
+    //! \param    [in] adaptiveRoundingInterEnable
+    //!           adaptive rounding inter enable flag
+    //! \param    [in] sliceState
+    //!           pointer to slice state
+    //!
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    virtual MOS_STATUS PopulateSliceStateParam(
+        bool                       adaptiveRoundingInterEnable,
+        PMHW_VDBOX_HEVC_SLICE_STATE sliceState)
+    {
+        return MOS_STATUS_SUCCESS;
+    };
+
+    //!
+    //! \brief    Set BRC init parameter
+    //!
+    //! \param    [in] *cmd
+    //!           pointer to command
+    //!
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    virtual MOS_STATUS PopulateBrcInitParam(void *cmd)
+    {
+        return MOS_STATUS_SUCCESS;
+    }
+
+    //!
+    //! \brief    Set BRC update parameter
+    //!
+    //! \param    [in] *cmd
+    //!           pointer to command
+    //!
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    virtual MOS_STATUS PopulateBrcUpdateParam(void *cmd) 
+    {
+        return MOS_STATUS_SUCCESS;
+    }
+
+    //!
+    //! \brief    Set encode parameter
+    //!
+    //! \param    [in] meMethod
+    //!           ME method
+    //! \param    [in] *cmd
+    //!           pointer to command
+    //!
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    virtual MOS_STATUS PopulateEncParam(
+        uint8_t meMethod,
+        void    *cmd) 
+    {
+        return MOS_STATUS_SUCCESS;
+    }
+
+    //!
+    //! \brief    Set MHW_VDBOX_AVC_IMG_STATE parameter
+    //!
+    //! \param    [in] cmdBuffer
+    //!           pointer to command buffer
+    //! \param    [in] secondLevelBatchBuffer
+    //!           pointer to second level batch buffer
+    //!
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    virtual MOS_STATUS PopulatePakParam(
+        PMOS_COMMAND_BUFFER cmdBuffer,
+        PMHW_BATCH_BUFFER   secondLevelBatchBuffer) {
+        return MOS_STATUS_SUCCESS;
+    }
+
+    EncodeHevcPar *m_hevcPar = nullptr;  //!< HEVC PAR parameters
+
 #endif
 };
 

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2009-2017, Intel Corporation
+* Copyright (c) 2009-2018, Intel Corporation
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -31,11 +31,15 @@
 #include <pthread.h>
 
 #include "xf86drm.h"
-#include "drm.h"
+#include "drm_header.h"
 #include "i915_drm.h"
 #include "mos_bufmgr.h"
+#include "mos_context.h"
+#include "mos_gpucontextmgr.h"
+#include "mos_cmdbufmgr.h"
 
 #include "mos_os.h"
+#include "mos_auxtable_mgr.h"
 
 #include <va/va.h>
 #include <va/va_backend.h>
@@ -144,6 +148,7 @@ typedef enum _DDI_MEDIA_FORMAT
     Media_Format_A8R8G8B8    ,
     Media_Format_X8B8G8R8    ,
     Media_Format_A8B8G8R8    ,
+    Media_Format_R8G8B8A8    ,
     Media_Format_R5G6B5      ,
     Media_Format_R10G10B10A2 ,
     Media_Format_B10G10R10A2 ,
@@ -164,6 +169,14 @@ typedef enum _DDI_MEDIA_FORMAT
 
     Media_Format_P010        ,
     Media_Format_R8G8B8      ,
+    Media_Format_RGBP        ,
+
+    Media_Format_P016        ,
+    Media_Format_Y210        ,
+    Media_Format_Y216        ,
+    Media_Format_AYUV        ,
+    Media_Format_Y410        ,
+    Media_Format_Y416        ,
 
     Media_Format_Count
 } DDI_MEDIA_FORMAT;
@@ -207,7 +220,7 @@ typedef union _DDI_MEDIA_SURFACE_STATUS_REPORT
     //!
     //! \struct _DDI_MEDIA_SURFACE_DECODE_STATUS
     //! \brief  Ddi media surface decode status
-    //! 
+    //!
     struct _DDI_MEDIA_SURFACE_DECODE_STATUS
     {
         uint32_t                   status;    // indicate latest decode status for current surface, refer to CODECHAL_STATUS in CodechalDecodeStatusReport.
@@ -215,9 +228,18 @@ typedef union _DDI_MEDIA_SURFACE_STATUS_REPORT
         uint32_t                   crcValue;  // indicate the CRC value of the decoded data
     } decode;
     //!
+    //! \struct _DDI_MEDIA_SURFACE_CENC_STATUS
+    //! \brief  Ddi media surface cenc status
+    //! 
+    struct _DDI_MEDIA_SURFACE_CENC_STATUS
+    {
+        uint32_t                   status;    // indicate latest cenc status for current surface, refer to CODECHAL_STATUS in CodechalDecodeStatusReport.
+        uint32_t                   reserved;  // reserved
+    } cenc;
+    //!
     //! \struct _DDI_MEDIA_SURFACE_VPP_STATUS
     //! \brief  Ddi media surface vpp status
-    //! 
+    //!
     struct _DDI_MEDIA_SURFACE_VPP_STATUS
     {
         uint32_t                   status;    // indicate latest vpp status for current surface.
@@ -239,6 +261,7 @@ typedef struct _DDI_MEDIA_SURFACE
     uint32_t                uiLockedImageID;
     int32_t                 iRefCount;
     uint8_t                *pData;
+    uint32_t                data_size;
     uint32_t                isTiled;
     uint32_t                TileType;
     uint32_t                bMapped;
@@ -259,15 +282,17 @@ typedef struct _DDI_MEDIA_SURFACE
     PDDI_MEDIA_CONTEXT      pMediaCtx; // Media driver Context
     PMEDIA_SEM_T            pCurrentFrameSemaphore;   // to sync render target for hybrid decoding multi-threading mode
     PMEDIA_SEM_T            pReferenceFrameSemaphore; // to sync reference frame surface. when this semaphore is posted, the surface is not used as reference frame, and safe to be destroied
+
+    uint8_t                 *pSystemShadow;           // Shadow surface in system memory
 } DDI_MEDIA_SURFACE, *PDDI_MEDIA_SURFACE;
 
 typedef struct _DDI_MEDIA_BUFFER
 {
     uint32_t               iSize;
-    int32_t                iWidth;
-    int32_t                iHeight;
-    int32_t                iPitch;
-    int32_t                iNumElements;
+    uint32_t               uiWidth;
+    uint32_t               uiHeight;
+    uint32_t               uiPitch;
+    uint32_t               uiNumElements;
     uint32_t               uiOffset;
     // vaBuffer type
     uint32_t               uiType;
@@ -390,6 +415,12 @@ struct DDI_MEDIA_CONTEXT
     // media context reference number
     uint32_t            uiRef;
 
+    // modulized Gpu context and cmd buffer
+    bool                modularizedGpuCtxEnabled;
+    OsContext          *m_osContext;
+    GpuContextMgr      *m_gpuContextMgr;
+    CmdBufMgr          *m_cmdBufMgr;
+
     // mutexs to protect the shared resource among multiple context
     MEDIA_MUTEX_T       SurfaceMutex;
     MEDIA_MUTEX_T       BufferMutex;
@@ -415,6 +446,17 @@ struct DDI_MEDIA_CONTEXT
     PLATFORM            platform;
 
     MediaLibvaCaps     *m_caps;
+
+    GMM_CLIENT_CONTEXT  *pGmmClientContext;
+
+    GmmExportEntries   GmmFuncs;
+
+    // Aux Table Manager
+    AuxTableMgr         *m_auxTableMgr;
+
+    bool                m_useSwSwizzling;
+    bool                m_tileYFlag;
+
 #ifndef ANDROID
     // X11 Func table, for vpgPutSurface (Linux)
     PDDI_X11_FUNC_TABLE X11FuncTable;
@@ -477,6 +519,31 @@ void* DdiMedia_GetContextFromContextID (VADriverContextP ctx, VAContextID vaCtxI
 //!
 DDI_MEDIA_SURFACE* DdiMedia_GetSurfaceFromVASurfaceID (PDDI_MEDIA_CONTEXT mediaCtx, VASurfaceID surfaceID);
 
+
+//!
+//! \brief  replace the surface with given format
+//!
+//! \param  [in] surface
+//!     Pointer to the old surface
+//! \param  [in] expectedFormat
+//!     VA surface ID
+//!
+//! \return DDI_MEDIA_SURFACE*
+//!     Pointer to new ddi media surface
+//!
+PDDI_MEDIA_SURFACE DdiMedia_ReplaceSurfaceWithNewFormat(PDDI_MEDIA_SURFACE surface, DDI_MEDIA_FORMAT expectedFormat);
+
+//!
+//! \brief  Get VA surface ID  from surface
+//!
+//! \param  [in] surface
+//!     surface
+//!
+//! \return VASurfaceID
+//!     VA Surface ID
+//!
+VASurfaceID DdiMedia_GetVASurfaceIDFromSurface(PDDI_MEDIA_SURFACE surface);
+
 //!
 //! \brief  Get buffer from VA buffer ID
 //!
@@ -489,6 +556,19 @@ DDI_MEDIA_SURFACE* DdiMedia_GetSurfaceFromVASurfaceID (PDDI_MEDIA_CONTEXT mediaC
 //!     Pointer to ddi media buffer
 //!
 DDI_MEDIA_BUFFER* DdiMedia_GetBufferFromVABufferID (PDDI_MEDIA_CONTEXT mediaCtx, VABufferID bufferID);
+
+//!
+//! \brief  Get context from VA buffer ID
+//!
+//! \param  [in] mediaCtx
+//!     Pointer to ddi media context
+//! \param  [in] bufferID
+//!     VA buffer ID
+//!
+//! \return void*
+//!     Pointer to context
+//!
+void* DdiMedia_GetContextFromVABufferID (PDDI_MEDIA_CONTEXT mediaCtx, VABufferID bufferID);
 
 //!
 //! \brief  Destroy buffer from VA buffer ID

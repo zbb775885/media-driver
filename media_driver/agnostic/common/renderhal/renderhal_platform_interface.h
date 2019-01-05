@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2009-2017, Intel Corporation
+* Copyright (c) 2009-2018, Intel Corporation
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -20,8 +20,8 @@
 * OTHER DEALINGS IN THE SOFTWARE.
 */
 //!
-//! \file      renderhal_platform_interface.h  
-//! \brief     abstract the platfrom specific APIs into one class  
+//! \file      renderhal_platform_interface.h 
+//! \brief     abstract the platfrom specific APIs into one class 
 //!
 //!
 //! \file     renderhal.h
@@ -39,7 +39,7 @@ class XRenderHal_Platform_Interface
 public:
     XRenderHal_Platform_Interface() {}
     virtual ~XRenderHal_Platform_Interface() {}
-    
+
     //!
     //! \brief    Setup Surface State
     //! \details  Setup Surface States
@@ -204,7 +204,6 @@ public:
     virtual void InitDynamicHeapSettings(
         PRENDERHAL_INTERFACE  pRenderHal) = 0;
 
-
     //!
     //! \brief      Get the depth bit mask for buffer 
     //! \details    Get the depth bit mask for buffer 
@@ -258,6 +257,21 @@ public:
     }
 
     //!
+    //! \brief    Get Render Hal MMC Enable/Disable Flag
+    //! \param    [in] pRenderHal
+    //!           Pointer to Hardware Interface
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    virtual MOS_STATUS IsRenderHalMMCEnabled(
+        PRENDERHAL_INTERFACE         pRenderHal)
+    {
+        MOS_UNUSED(pRenderHal);
+
+        return MOS_STATUS_SUCCESS;
+    }
+
+    //!
     //! \brief    Check if Override is needed or not
     //! \param    [in] pRenderHal
     //!           Pointer to Hardware Interface
@@ -294,14 +308,18 @@ public:
     //!           Pointer to Hardware Interface
     //! \param    [in,out] PlaneDefinition
     //!           Pointer to PlaneDefinition
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
     //!
-    virtual void GetPlaneDefForFormatY216(
+    virtual MOS_STATUS GetPlaneDefForFormatY216(
         bool                       isRenderTarget,
         PRENDERHAL_INTERFACE       pRenderHal,
         RENDERHAL_PLANE_DEFINITION &PlaneDefinition)
     {
-        PlaneDefinition = isRenderTarget ? RENDERHAL_PLANES_Y210_RT : RENDERHAL_PLANES_Y210;
+        PlaneDefinition = isRenderTarget ? RENDERHAL_PLANES_Y210_RT : (pRenderHal->bIsAVS ? RENDERHAL_PLANES_Y210_ADV : RENDERHAL_PLANES_Y210);
+        return MOS_STATUS_SUCCESS;
     };
+
     //! \brief      Set L3 cache override config parameters
     //! \param      [in] pRenderHal
     //!             Pointer to RenderHal Interface Structure
@@ -333,6 +351,44 @@ public:
     //! \return     size_t
     //!             the size of binding table state command
     virtual size_t GetBTStateCmdSize() = 0;
+
+    //! \brief    Check if compute context in use
+    //! \param    PRENDERHAL_INTERFACE    pRenderHal
+    //!           [in]  Pointer to RenderHal Interface
+    //! \return   true or false
+    virtual bool IsComputeContextInUse(
+        PRENDERHAL_INTERFACE    pRenderHal) = 0;
+
+    //! \brief    Send Compute Walker
+    //! \details  Send Compute Walker
+    //! \param    PRENDERHAL_INTERFACE pRenderHal
+    //!           [in] Pointer to RenderHal Interface Structure
+    //! \param    PMOS_COMMAND_BUFFER pCmdBuffer
+    //!           [in] Pointer to Command Buffer
+    //! \param    PRENDERHAL_GPGPU_WALKER_PARAMS pGpGpuWalkerParams
+    //!           [in]    Pointer to GPGPU walker parameters
+    //! \return   MOS_STATUS
+    virtual MOS_STATUS SendComputeWalker(
+        PRENDERHAL_INTERFACE        pRenderHal,
+        PMOS_COMMAND_BUFFER         pCmdBuffer,
+        PMHW_GPGPU_WALKER_PARAMS    pGpGpuWalkerParams)
+    {
+        return MOS_STATUS_SUCCESS;
+    };
+
+    //! \brief    Send To 3DState Binding Table Pool Alloc
+    //! \details  Send To 3DState Binding Table Pool Alloc
+    //! \param    PRENDERHAL_INTERFACE pRenderHal
+    //!           [in] Pointer to RenderHal Interface Structure
+    //! \param    PMOS_COMMAND_BUFFER pCmdBuffer
+    //!           [in] Pointer to Command Buffer
+    //! \return   MOS_STATUS
+    virtual MOS_STATUS SendTo3DStateBindingTablePoolAlloc(
+        PRENDERHAL_INTERFACE        pRenderHal,
+        PMOS_COMMAND_BUFFER         pCmdBuffer)
+    {
+        return MOS_STATUS_SUCCESS;
+    };
 };
 
 #endif // __RENDERHAL_PLATFORM_INTERFACE_H__

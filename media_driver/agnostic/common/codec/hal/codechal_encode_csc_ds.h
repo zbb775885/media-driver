@@ -122,6 +122,7 @@ public:
         DsStage                     stageDsConversion = dsDisabled;
         bool                        b16xScalingInUse = false;
         bool                        b32xScalingInUse = false;
+        bool                        cscOrCopyOnly = false;
         bool                        bLastTaskInPhaseCSC = false;
         bool                        bLastTaskInPhase4xDS = false;
         bool                        bLastTaskInPhase16xDS = false;
@@ -264,8 +265,11 @@ public:
     const uint8_t IsEnabled() { return m_cscDsConvEnable; }
     const uint32_t GetRawSurfWidth() { return m_cscRawSurfWidth; }
     const uint32_t GetRawSurfHeight() { return m_cscRawSurfHeight; }
-    const uint8_t RequireCsc() { return m_cscFlag; }
-    const bool UseSfc() { return m_cscUsingSfc; }
+    const bool RequireCsc() { return m_cscFlag != 0; }
+    const bool UseSfc() { return m_cscUsingSfc != 0; }
+    const bool IsSfcEnabled() { return m_cscEnableSfc != 0; }
+    const bool RenderConsumesCscSurface() { return m_cscRequireCopy || m_cscRequireColor || m_cscRequireConvTo8bPlanar; }
+    const bool VdboxConsumesCscSurface() { return m_cscRequireCopy || m_cscRequireColor || m_cscRequireMmc; }
     // 0 for native HW support; 1 for CSC kernel; 2 for VEBOX
     const uint8_t CscMethod() { return (m_cscRequireColor ? (m_cscUsingSfc ? 2 : 1) : 0); }
 
@@ -274,8 +278,19 @@ public:
     void EnableColor() { m_cscEnableColor = 1; }
     void EnableMmc() { m_cscEnableMmc = 1; }
     void EnableSfc() { m_cscEnableSfc = 1; }
+    void DisableSfc() { m_cscEnableSfc = 0; }
     void ResetCscFlag() { m_cscFlag = 0; }
     //! \endcond
+
+    //!
+    //! \brief    Copy constructor
+    //!
+    CodechalEncodeCscDs(const CodechalEncodeCscDs&) = delete;
+
+    //!
+    //! \brief    Copy assignment operator
+    //!
+    CodechalEncodeCscDs& operator=(const CodechalEncodeCscDs&) = delete;
 
     //!
     //! \brief    Destructor
@@ -290,12 +305,12 @@ public:
     virtual const uint8_t GetBTCount();
 
     //!
-    //! \brief    Release existing buffers on resolution change
+    //! \brief    Get CSC surface allocation width/height/format
     //!
     //! \return   MOS_STATUS
     //!           MOS_STATUS_SUCCESS if success, else fail reason
     //!
-    void Resize();
+    void GetCscAllocation(uint32_t &width, uint32_t &height, MOS_FORMAT &format);
 
     //!
     //! \brief    Initialize the class
@@ -312,6 +327,30 @@ public:
     //!           MOS_STATUS_SUCCESS if success, else fail reason
     //!
     MOS_STATUS CheckCondition();
+
+    //!
+    //! \brief    Check if recon surface's alignment meet HW requirement
+    //!
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    MOS_STATUS CheckReconSurfaceAlignment(PMOS_SURFACE surface);
+
+    //!
+    //! \brief    Check if raw surface's alignment meet HW requirement
+    //!
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    MOS_STATUS CheckRawSurfaceAlignment(PMOS_SURFACE surface);
+
+    //!
+    //! \brief    Set HCP recon surface alignment
+    //!
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    void SetHcpReconAlignment(uint8_t alignment);
 
     //!
     //! \brief    On-demand sync for the CSC output surface before use
@@ -343,7 +382,7 @@ public:
     //! \return   MOS_STATUS
     //!           MOS_STATUS_SUCCESS if success, else fail reason
     //!
-    MOS_STATUS CscKernel(KernelParams* params);
+    virtual MOS_STATUS CscKernel(KernelParams* params);
 
     //!
     //! \brief    DS kernel function
@@ -352,30 +391,6 @@ public:
     //!           MOS_STATUS_SUCCESS if success, else fail reason
     //!
     virtual MOS_STATUS DsKernel(KernelParams* params);
-
-    //!
-    //! \brief    Allocate DS surface or pick an existing one from the pool
-    //!
-    //! \return   MOS_STATUS
-    //!           MOS_STATUS_SUCCESS if success, else fail reason
-    //!
-    MOS_STATUS AllocateSurfaceDS();
-
-    //!
-    //! \brief    Allocate 2xDS surface or pick an existing one from the pool
-    //!
-    //! \return   MOS_STATUS
-    //!           MOS_STATUS_SUCCESS if success, else fail reason
-    //!
-    MOS_STATUS AllocateSurface2xDS();
-
-    //!
-    //! \brief    Release DS surface
-    //!
-    //! \return   MOS_STATUS
-    //!           MOS_STATUS_SUCCESS if success, else fail reason
-    //!
-    void ReleaseSurfaceDS(uint8_t index);
 
 protected:
     //!
@@ -506,6 +521,7 @@ protected:
         uint32_t                dwMBVProcStatsBottomFieldOffset = 0;
         bool                    bCurrPicIsFrame = false;
         bool                    bPreEncInUse = false;
+        bool                    bEnable8x8Statistics = false;
     };
 
     //!
@@ -530,12 +546,32 @@ protected:
     virtual MOS_STATUS InitKernelStateDS();
 
     //!
+    //! \brief    Set SurfaceParamsDS for DS kernel
+    //!
+    //! \param    params
+    //!           KernelParams pointer from caller
+    //!
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    MOS_STATUS SetSurfaceParamsDS(KernelParams* params);
+
+    //!
     //! \brief    Setup Curbe for DS kernel
     //!
     //! \return   MOS_STATUS
     //!           MOS_STATUS_SUCCESS if success, else fail reason
     //!
     virtual MOS_STATUS SetCurbeDS4x();
+
+    //!
+    //! \brief    Set-up surface sent to ENC/PAK
+    //!
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    MOS_STATUS SetSurfacesToEncPak();
+
 
     CodechalEncoderState*                   m_encoder = nullptr;                            //!< Pointer to ENCODER base class
     MOS_INTERFACE*                          m_osInterface = nullptr;                        //!< OS interface
@@ -544,6 +580,7 @@ protected:
     MhwMiInterface*                         m_miInterface = nullptr;                        //!< Common Mi Interface
     MhwRenderInterface*                     m_renderInterface = nullptr;                    //!< Render engine interface
     XMHW_STATE_HEAP_INTERFACE*              m_stateHeapInterface = nullptr;                 //!< State heap class interface
+    CodecHalEncodeSfc*                      m_sfcState = nullptr;                           //!< SFC interface
     MHW_KERNEL_STATE*                       m_cscKernelState = nullptr;                     //!< CSC kernel state
     MHW_KERNEL_STATE*                       m_dsKernelState = nullptr;                      //!< DS kernel state
 
@@ -561,8 +598,9 @@ protected:
         uint8_t                 m_cscFlag;                                                  //!< the actual CSC/Copy operation to be performed for raw surface
     };
 
-    uint8_t                     m_cscBufCurrIdx = 0;                                        //!< curr copy buffer index
-    uint32_t                    m_rawSurfAlignment = 4;                                     //!< Raw surface alignment
+    uint8_t                     m_rawSurfAlignment = 4;                                     //!< Raw surface alignment
+    uint8_t                     m_mfxReconSurfAlignment = 16;                               //!< Recon surface alignment for MFX engine
+    uint8_t                     m_hcpReconSurfAlignment = 8;                                //!< Recon surface alignment for HCP engine
     uint32_t                    m_cscRawSurfWidth = 0;                                      //!< Raw surface allocation width
     uint32_t                    m_cscRawSurfHeight = 0;                                     //!< Raw surface allocation height
     uint32_t                    m_walkerResolutionX = 0;                                    //!< Media walker resolution X
@@ -594,9 +632,8 @@ protected:
 
     //!
     //! Reference to data members in Encoder class
-    //! 
+    //!
     bool&                       m_useRawForRef;
-    bool&                       m_waitForPak;
     bool&                       m_useCommonKernel;
     bool&                       m_useHwScoreboard;
     bool&                       m_renderContextUsesNullHw;
@@ -614,15 +651,9 @@ protected:
     bool&                       m_firstTaskInPhase;
     bool&                       m_lastTaskInPhase;
     uint8_t&                    m_groupId;
-    uint8_t&                    m_currScalingIdx;
     uint8_t&                    m_outputChromaFormat;
-    uint16_t&                   m_pictureCodingType;
     uint32_t&                   m_standard;
     uint32_t&                   m_mode;
-    uint32_t&                   m_oriFrameWidth; 
-    uint32_t&                   m_oriFrameHeight;
-    uint32_t&                   m_frameWidth;
-    uint32_t&                   m_frameHeight;
     uint32_t&                   m_downscaledWidth4x;
     uint32_t&                   m_downscaledHeight4x;
     uint32_t&                   m_downscaledWidth16x;
@@ -642,11 +673,9 @@ protected:
     MOS_GPU_CONTEXT&            m_renderContext;
     MHW_WALKER_MODE&            m_walkerMode;
     CODEC_REF_LIST*&            m_currRefList;
-    MOS_SURFACE&                m_flatnessCheckSurface;
     MOS_RESOURCE&               m_resMbStatsBuffer;
     MOS_SURFACE*&               m_rawSurfaceToEnc;
     MOS_SURFACE*&               m_rawSurfaceToPak;
-    CODEC_TRACKED_BUFFER*       m_trackedBuffer;
 
 private:
     //!
@@ -746,19 +775,19 @@ private:
         uint32_t DW2_Reserved;
 
         // DW3
-		uint32_t DW3_Reserved;
+        uint32_t DW3_Reserved;
 
         // DW4
-		uint32_t DW4_Reserved;
+        uint32_t DW4_Reserved;
 
         // DW5
-		uint32_t DW5_Reserved;
+        uint32_t DW5_Reserved;
 
         // DW6
         uint32_t DW6_Reserved;
 
         // DW7
-		uint32_t DW7_Reserved;
+        uint32_t DW7_Reserved;
 
         // DW8
         union
@@ -802,9 +831,9 @@ private:
     {
         DsKernelInlineData()
         {
-            DW04_VideoXScalingStep = 
+            DW04_VideoXScalingStep =
             DW05_VideoStepDelta = 0.0;
-            DW00 = 
+            DW00 =
             DW01 =
             DW02 =
             DW03 =
@@ -820,191 +849,175 @@ private:
             DW15_Reserved = 0;
         }
 
-		// uint32_t 0 - GRF R7.0
-		union
-		{
-			// All
-			struct
-			{
-				uint32_t       DestinationBlockHorizontalOrigin : 16;
-				uint32_t       DestinationBlockVerticalOrigin : 16;
-			};
-			// Block Copy
-			struct
-			{
-				uint32_t       BlockHeight : 16;
-				uint32_t       BufferOffset : 16;
-			};
-			// FMD Summation
-			struct
-			{
-				uint32_t       StartRowOffset;
-			};
-			uint32_t DW00;
-		};
+        // uint32_t 0 - GRF R7.0
+        union
+        {
+            // All
+            struct
+            {
+                uint32_t       DestinationBlockHorizontalOrigin : 16;
+                uint32_t       DestinationBlockVerticalOrigin : 16;
+            };
+            // Block Copy
+            struct
+            {
+                uint32_t       BlockHeight : 16;
+                uint32_t       BufferOffset : 16;
+            };
+            // FMD Summation
+            struct
+            {
+                uint32_t       StartRowOffset;
+            };
+            uint32_t DW00;
+        };
 
-		// uint32_t 1 - GRF R7.1
-		union
-		{
-			// Composite
-			struct
-			{
-				uint32_t       HorizontalBlockCompositeMaskLayer0 : 16;
-				uint32_t       VerticalBlockCompositeMaskLayer0 : 16;
-			};
-			// FMD Summation
-			struct
-			{
-				uint32_t       TotalRows;
-			};
-			uint32_t DW01;
-		};
+        // uint32_t 1 - GRF R7.1
+        union
+        {
+            // Composite
+            struct
+            {
+                uint32_t       HorizontalBlockCompositeMaskLayer0 : 16;
+                uint32_t       VerticalBlockCompositeMaskLayer0 : 16;
+            };
+            // FMD Summation
+            struct
+            {
+                uint32_t       TotalRows;
+            };
+            uint32_t DW01;
+        };
 
-		// uint32_t 2 - GRF R7.2
-		union
-		{
-			// Composite
-			struct
-			{
-				uint32_t       HorizontalBlockCompositeMaskLayer1 : 16;
-				uint32_t       VerticalBlockCompositeMaskLayer1 : 16;
-			};
-			// FMD Summation
-			struct
-			{
-				uint32_t       StartColumnOffset;
-			};
-			uint32_t DW02;
-		};
+        // uint32_t 2 - GRF R7.2
+        union
+        {
+            // Composite
+            struct
+            {
+                uint32_t       HorizontalBlockCompositeMaskLayer1 : 16;
+                uint32_t       VerticalBlockCompositeMaskLayer1 : 16;
+            };
+            // FMD Summation
+            struct
+            {
+                uint32_t       StartColumnOffset;
+            };
+            uint32_t DW02;
+        };
 
-		// uint32_t 3 - GRF R7.3
-		union
-		{
-			// Composite
-			struct
-			{
-				uint32_t       HorizontalBlockCompositeMaskLayer2 : 16;
-				uint32_t       VerticalBlockCompositeMaskLayer2 : 16;
-			};
-			// FMD Summation
-			struct
-			{
-				uint32_t       TotalColumns;
-			};
+        // uint32_t 3 - GRF R7.3
+        union
+        {
+            // Composite
+            struct
+            {
+                uint32_t       HorizontalBlockCompositeMaskLayer2 : 16;
+                uint32_t       VerticalBlockCompositeMaskLayer2 : 16;
+            };
+            // FMD Summation
+            struct
+            {
+                uint32_t       TotalColumns;
+            };
             uint32_t DW03;
-		};
+        };
 
-		// uint32_t 4 - GRF R7.4
-		// Sampler Load
+        // uint32_t 4 - GRF R7.4
+        // Sampler Load
         float       DW04_VideoXScalingStep;
 
-		// uint32_t 5 - GRF R7.5
-		// NLAS
+        // uint32_t 5 - GRF R7.5
+        // NLAS
         float       DW05_VideoStepDelta;
 
-		// uint32_t 6 - GRF R7.6
-		union
-		{
-			// AVScaling
-			struct
-			{
-				uint32_t       VerticalBlockNumber : 17;
-				uint32_t       AreaOfInterest : 1;
-				uint32_t : 14;
-			};
+        // uint32_t 6 - GRF R7.6
+        union
+        {
+            // AVScaling
+            struct
+            {
+                uint32_t       VerticalBlockNumber : 17;
+                uint32_t       AreaOfInterest : 1;
+                uint32_t : 14;
+            };
             uint32_t DW06;
-		};
+        };
 
-		// uint32_t 7 - GRF R7.7
-		// AVScaling
+        // uint32_t 7 - GRF R7.7
+        // AVScaling
         uint32_t       DW07_GroupIDNumber;
 
-		// uint32_t 8 - GRF R8.0
-		union
-		{
-			// Composite
-			struct
-			{
-				uint32_t       HorizontalBlockCompositeMaskLayer3 : 16;
-				uint32_t       VerticalBlockCompositeMaskLayer3 : 16;
-			};
+        // uint32_t 8 - GRF R8.0
+        union
+        {
+            // Composite
+            struct
+            {
+                uint32_t       HorizontalBlockCompositeMaskLayer3 : 16;
+                uint32_t       VerticalBlockCompositeMaskLayer3 : 16;
+            };
             uint32_t DW08;
-		};
+        };
 
-		// uint32_t 9 - GRF R8.1
-		union
-		{
-			// Composite
-			struct
-			{
-				uint32_t       HorizontalBlockCompositeMaskLayer4 : 16;
-				uint32_t       VerticalBlockCompositeMaskLayer4 : 16;
-			};
+        // uint32_t 9 - GRF R8.1
+        union
+        {
+            // Composite
+            struct
+            {
+                uint32_t       HorizontalBlockCompositeMaskLayer4 : 16;
+                uint32_t       VerticalBlockCompositeMaskLayer4 : 16;
+            };
             uint32_t DW09;
-		};
+        };
 
-		// uint32_t 10 - GRF R8.2
-		union
-		{
-			// Composite
-			struct
-			{
-				uint32_t       HorizontalBlockCompositeMaskLayer5 : 16;
-				uint32_t       VerticalBlockCompositeMaskLayer5 : 16;
-			};
+        // uint32_t 10 - GRF R8.2
+        union
+        {
+            // Composite
+            struct
+            {
+                uint32_t       HorizontalBlockCompositeMaskLayer5 : 16;
+                uint32_t       VerticalBlockCompositeMaskLayer5 : 16;
+            };
             uint32_t DW10;
-		};
+        };
 
-		// uint32_t 11 - GRF R8.3
-		union
-		{
-			// Composite
-			struct
-			{
-				uint32_t       HorizontalBlockCompositeMaskLayer6 : 16;
-				uint32_t       VerticalBlockCompositeMaskLayer6 : 16;
-			};
+        // uint32_t 11 - GRF R8.3
+        union
+        {
+            // Composite
+            struct
+            {
+                uint32_t       HorizontalBlockCompositeMaskLayer6 : 16;
+                uint32_t       VerticalBlockCompositeMaskLayer6 : 16;
+            };
             uint32_t DW11;
-		};
+        };
 
-		// uint32_t 12 - GRF R8.4
-		union
-		{
-			// Composite
-			struct
-			{
-				uint32_t       HorizontalBlockCompositeMaskLayer7 : 16;
-				uint32_t       VerticalBlockCompositeMaskLayer7 : 16;
-			};
+        // uint32_t 12 - GRF R8.4
+        union
+        {
+            // Composite
+            struct
+            {
+                uint32_t       HorizontalBlockCompositeMaskLayer7 : 16;
+                uint32_t       VerticalBlockCompositeMaskLayer7 : 16;
+            };
             uint32_t DW12;
-		};
+        };
 
-		// uint32_t 13 - GRF R8.5
+        // uint32_t 13 - GRF R8.5
         uint32_t DW13_Reserved;
 
-		// uint32_t 14 - GRF R8.6
+        // uint32_t 14 - GRF R8.6
         uint32_t DW14_Reserved;
 
-		// uint32_t 15 - GRF R8.7
+        // uint32_t 15 - GRF R8.7
         uint32_t DW15_Reserved;
     };
-	C_ASSERT(MOS_BYTES_TO_DWORDS(sizeof(DsKernelInlineData)) == 16);
-
-    //!
-    //! \brief    Release CSC surface
-    //!
-    //! \return   MOS_STATUS
-    //!           MOS_STATUS_SUCCESS if success, else fail reason
-    //!
-    void ReleaseSurfaceCsc(uint8_t index);
-
-    //!
-    //! \brief    Look up a free slot to be used
-    //!
-    //! \return   MOS_STATUS
-    //!           MOS_STATUS_SUCCESS if success, else fail reason
-    //!
-    uint8_t LookUpBufSlot();
+    C_ASSERT(MOS_BYTES_TO_DWORDS(sizeof(DsKernelInlineData)) == 16);
 
     //!
     //! \brief    Check raw surface color format
@@ -1063,14 +1076,6 @@ private:
     virtual MOS_STATUS SendSurfaceCsc(PMOS_COMMAND_BUFFER cmdBuffer);
 
     //!
-    //! \brief    Set-up surface sent to ENC/PAK
-    //!
-    //! \return   MOS_STATUS
-    //!           MOS_STATUS_SUCCESS if success, else fail reason
-    //!
-    MOS_STATUS SetSurfacesToEncPak();
-
-    //!
     //! \brief    Setup Curbe for DS kernel
     //!
     //! \return   MOS_STATUS
@@ -1099,17 +1104,8 @@ private:
         uint8_t                 m_cscDsConvEnable;
     };
 
-    uint8_t                     m_cscBufLastIdx = 0;                                        //!< last copy buffer index
-    uint8_t                     m_cscBufPenuIdx = 0;                                        //!< 2nd-to-last copy buffer index
-    uint8_t                     m_cscBufAnteIdx = 0;                                        //!< 3rd-to-last copy buffer index
-    uint8_t                     m_cscBufRingIdx = 0;                                        //!< buffer index when ring buffer is used
-    uint8_t                     m_cscBufCountNonRef = 0;                                    //!< counting number of CSC surface when ring buffer is used
-    uint8_t                     m_cscBufCountResize = 0;                                    //!< 3 buffers to be delay-destructed during resolution change
-    bool                        m_waitCscSurf = false;                                      //!< wait to re-use CSC surface
     uint32_t                    m_threadTraverseSizeX = 5;                                  //!< target traverse thread space size in width
     uint32_t                    m_threadTraverseSizeY = 2;                                  //!< target traverse thread space size in height
-
-    CODECHAL_ENCODE_SFC_STATE*  m_sfcState = nullptr;                                       //!< SFC interface
 };
 
 #endif  // __CODECHAL_ENCODE_CSC_DS_H__

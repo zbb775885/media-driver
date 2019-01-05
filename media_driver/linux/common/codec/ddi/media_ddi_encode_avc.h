@@ -46,7 +46,7 @@ public:
     //!
     virtual ~DdiEncodeAvc();
 
-    virtual VAStatus ContextInitialize(PCODECHAL_SETTINGS codecHalSettings);
+    virtual VAStatus ContextInitialize(CodechalSetting * codecHalSettings);
 
     virtual VAStatus RenderPicture(
         VADriverContextP ctx,
@@ -98,6 +98,31 @@ public:
         DDI_MEDIA_CONTEXT *mediaCtx,
         void              *ptr,
         uint32_t          numSlices);
+
+    //!
+    //! \brief    Find the NAL Unit Start Codes
+    //! \details  Find the NAL unit start codes offset and NAL Unit start codes 
+    //!           length in packed header NAL unit data buffer
+    //!
+    //! \param    [in] buf
+    //!           Pointer to packed header NAL unit data
+    //! \param    [in] size
+    //!           byte size of packed header NAL unit data
+    //! \param    [in] startCodesOffset
+    //!           Pointer to NAL unit start codes offset from the packed header
+    //!           NAL unit data buf
+    //! \param    [in] startCodesLength
+    //!           Pointer to NAL unit start codes length
+    //!
+    //! \return   VAStatus
+    //!           VA_STATUS_SUCCESS if success, 
+    //!           else VA_STATUS_ERROR_INVALID_BUFFER if start codes doesn't exit
+    //!
+    VAStatus FindNalUnitStartCodes(
+        uint8_t * buf,
+        uint32_t size,
+        uint32_t * startCodesOffset,
+        uint32_t * startCodesLength);
 
     //!
     //! \brief    Parse packedHeader paramters
@@ -415,8 +440,15 @@ protected:
     CODECHAL_ENCODE_AVC_ROUNDING_PARAMS     *m_roundingParams = nullptr; //!< Rounding parameters.
     uint8_t                                 m_weightScale4x4[6][16];     //!< Inverse quantization weight scale 4x4.
     uint8_t                                 m_weightScale8x8[2][64];     //!< Inverse quantization weight scale 8x8.
+    uint16_t                                m_previousFRper100sec = 0;   //!< For saving FR value to be used in case of dynamic BRC reset.
 
 private:
+    //! \brief H.264 current picture parameter set id
+    uint8_t current_pic_parameter_set_id = 0;
+
+    //! \brief H.264 current sequence parameter set id
+    uint8_t current_seq_parameter_set_id = 0;
+
     //! \brief H.264 Inverse Quantization Matrix Buffer.
     PCODEC_AVC_IQ_MATRIX_PARAMS iqMatrixParams = nullptr;
 

@@ -37,7 +37,7 @@ typedef enum _MEDIA_EVENT
     EVENT_RESOURCE_REGISTER,        //! event for register MOS resource to gpu command
     EVENT_RESOURCE_PATCH,           //! event for patch MOS resource
     EVENT_PPED_HUC,                 //! event for PPED HuC path
-    EVENT_PPED_FW,                  //! event for PPED FW path 
+    EVENT_PPED_FW,                  //! event for PPED FW path
     EVENT_PPED_AUDIO,               //! event for PPED audio path
     EVENT_BLT_ENC,                  //! event for blt enc mode
     EVENT_BLT_DEC,                  //! event for blt dec mode
@@ -49,13 +49,22 @@ typedef enum _MEDIA_EVENT
     EVENT_CODEC_DECODE,             //! event for Decoder decode
     EVENT_CODEC_ENCODE_DDI,         //! event for Decoder encode DDI level
     EVENT_ENCODER_CREATE,           //! event for encoder create
-    EVENT_ENCODER_DESTROY,          //! event for encoder destory. 
+    EVENT_ENCODER_DESTROY,          //! event for encoder destory.
     EVENT_CODECHAL_CREATE,          //! event for codechal create.
     EVENT_CODECHAL_EXECUTE,         //! event for codechal execute.
     EVENT_CODECHAL_DESTROY,         //! event for codechal destory.
     EVENT_MHW_PROLOG,               //! event for MHW GPU cmd prolog.
     EVENT_MHW_EPILOG,               //! event for MHW GPU cmd epilog.
     EVENT_KEYEXCHANGE_WV,           //! event for WV key exchange
+    EVENT_TEST1,                    //! event for immediate event trace usage in debug. 
+    EVENT_TEST2,                    //! avoid build manifest for temp event.
+    EVENT_TEST3,                    //! pre allocate 3 events.
+    EVENT_CP_CREATE,                //! event for cp session create
+    EVENT_CP_DESTROY,               //! event for cp session destroy
+    EVENT_HECI_IOMSG,               //! event for heci IO message send receive
+    EVENT_CP_CHECK_SESSION_STATUS,  //! event for cp session status check
+    EVENT_CP_RESOURCR_SESSION,      //! event for cp resource session create
+    EVENT_PREPARE_RESOURCES,        //! event for prepare resource
 } MEDIA_EVENT;
 
 typedef enum _MEDIA_EVENT_TYPE

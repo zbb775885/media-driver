@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, Intel Corporation
+* Copyright (c) 2017-2018, Intel Corporation
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,11 @@
 
 #include "mos_os_specific.h"
 #include "mos_context.h"
+#include "mos_auxtable_mgr.h"
 
 class GraphicsResourceSpecific;
+class CmdBufMgr;
+class GpuContextMgr;
 
 class OsContextSpecific : public OsContext
 {
@@ -110,46 +113,70 @@ public:
     //!
     //! \brief  Get the performance information
     //!
-    struct PerfInfo GetPerfInfo(){return m_performanceInfo;};
+    struct PerfInfo GetPerfInfo() { return m_performanceInfo; }
 
     //!
     //! \brief  Get the performance information
     //!
-    void SetPerfInfo(const struct PerfInfo &performanceInfo){MOS_SecureMemcpy(&m_performanceInfo, sizeof(struct PerfInfo), &performanceInfo, sizeof(struct PerfInfo));};
+    void SetPerfInfo(const struct PerfInfo &performanceInfo)
+    {
+        MOS_SecureMemcpy(&m_performanceInfo, sizeof(struct PerfInfo), &performanceInfo, sizeof(struct PerfInfo));
+    }
 
     //!
     //! \brief  Return whether we need 64bit relocation
     //!
-    bool Is64BitRelocUsed(){return m_use64BitRelocs;};
+    bool Is64BitRelocUsed() { return m_use64BitRelocs; }
 
     //!
     //! \brief  Return whether the KMD support the 2nd VCS
     //!
-    bool IsKmdWithVcs2(){return m_kmdHasVCS2;};
+    bool IsKmdWithVcs2() { return m_kmdHasVCS2; }
 
     //!
     //! \brief  Return the semaphore ID we use to protect the IPC creation process
     //! \return sem id
     //!
-    int32_t GetSemId(){return m_semId;};
+    int32_t GetSemId() { return m_semId; }
 
     //!
     //! \brief  Return the shm ID for the IPC
     //! \return shm id
-    int32_t GetShmId(){return m_shmId;};
+    int32_t GetShmId() { return m_shmId; }
 
     //!
     //! \brief  Return the shm object for the IPC
     //! \return shm id
     //!
-    void* GetShmPtr(){return m_shm;};
+    void *GetShmPtr() { return m_shm; }
 
     //!
     //! \brief  Return the function ptr for memory decompression function
     //!
-    void* GetpfnMemoryDecompaddr(){return (void *)m_memoryDecompress;};
+    void *GetpfnMemoryDecompaddr() { return (void *)m_memoryDecompress; }
 
-    MOS_LINUX_CONTEXT* GetDrmContext(){return m_intelContext;};
+    MOS_LINUX_CONTEXT *GetDrmContext() { return m_intelContext; }
+
+    GPU_CONTEXT_HANDLE GetGpuContextHandle(MOS_GPU_CONTEXT GpuContext)
+    {
+        return m_GpuContextHandle[GpuContext];
+    }
+
+    void SetGpuContextHandle(MOS_GPU_CONTEXT GpuContext, GPU_CONTEXT_HANDLE gpuContextHandle)
+    {
+        m_GpuContextHandle[GpuContext] = gpuContextHandle;
+    }
+
+    GpuContextMgr *GetGpuContextMgr() { return m_gpuContextMgr; }
+
+    CmdBufMgr* GetCmdBufMgr(){return m_cmdBufMgr;}
+
+    GMM_CLIENT_CONTEXT*  GetGmmClientContext() { return m_pGmmClientContext; };
+
+    AuxTableMgr* GetAuxTableMgr() { return m_auxTableMgr; }
+
+    bool UseSwSwizzling() { return m_useSwSwizzling; }
+    bool GetTileYFlag() { return m_tileYFlag; }
 
 #ifndef ANDROID
 
@@ -269,6 +296,16 @@ private:
     bool                m_use64BitRelocs = false;
 
     //!
+    //! \brief  tiling/untiling with CPU
+    //!
+    bool                m_useSwSwizzling = false;
+
+    //!
+    //! \brief Sku tile Y flag
+    //!
+    bool                m_tileYFlag = true;
+
+    //!
     //! \brief  flag to mark the existance of the second VDBox
     //!
     bool                m_kmdHasVCS2 = false;
@@ -285,12 +322,16 @@ private:
     //!
     void*               m_shm = nullptr;
     //!
+    //! \brief  Support slice count set in KMD
+    //!
+    bool               m_sliceCountSetSupported = 0;
+    //!
     //! \brief  Enable/Disable dynamic slice shutdown and static slice config
-    //!         -1	Use timer-based dynamic slice shutdown
+    //!         -1    Use timer-based dynamic slice shutdown
     //!         0   [default] Use default slices count
     //!         >0  Static slice shutdown, N for N slices
     //!
-    int                m_enableDSS = 0;
+    int                m_enableDymanicSliceShutdown = 0;
     //!
     //! \brief  sseu for current context
     //!
@@ -317,11 +358,6 @@ private:
     bool                m_hybridDecoderRunningFlag = false;
 
     //!
-    //! \brief  Handle to CP context
-    //!
-    PMOS_CP_CONTEXT     m_cpContext = nullptr;
-
-    //!
     //! \brief  the function ptr for memory decompression function
     //!
     void (* m_memoryDecompress)(
@@ -336,7 +372,7 @@ private:
     //!
     //! \brief  ptr to mos context(kept for memory decompression function, to be cleaned up)
     //!
-    PMOS_CONTEXT        m_mosContext = nullptr; 
+    PMOS_CONTEXT        m_mosContext = nullptr;
 
     //!
     //! \brief  the function ptr for memory decompression function
@@ -362,5 +398,17 @@ private:
     //! \brief  drm device fd
     //!
     uint32_t            m_fd             = 0;
+
+    //!
+    //!UMD specific ClientContext object in GMM
+    //!
+    GMM_CLIENT_CONTEXT   *m_pGmmClientContext = nullptr;
+
+    AuxTableMgr          *m_auxTableMgr = nullptr;
+
+    GPU_CONTEXT_HANDLE  m_GpuContextHandle[MOS_GPU_CONTEXT_MAX]; // Index to GPU Context (GpuContextHandles)
+
+    GpuContextMgr      *m_gpuContextMgr = nullptr;
+    CmdBufMgr          *m_cmdBufMgr = nullptr;
 };
 #endif // #ifndef __MOS_CONTEXT_SPECIFIC_H__

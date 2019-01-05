@@ -28,13 +28,15 @@
 #define __MEDIA_LIBVA_DECODER_H__
 
 #include "media_libva.h"
-#include "media_libva_cp.h"
+#include "media_libva_cp_interface.h"
+#include "media_ddi_decode_base.h"
 
 #define DDI_DECODE_SFC_MAX_WIDTH                    4096
 #define DDI_DECODE_SFC_MAX_HEIGHT                   4096
 #define DDI_DECODE_SFC_MIN_WIDTH                    128
 #define DDI_DECODE_SFC_MIN_HEIGHT                   128
-
+#define DDI_DECODE_HCP_SFC_MAX_WIDTH                (16*1024)
+#define DDI_DECODE_HCP_SFC_MAX_HEIGHT               (16*1024)
 //!
 //! \struct DDI_DECODE_CONFIG_ATTR
 //! \brief  Ddi decode configuration attribute
@@ -65,7 +67,7 @@ struct DDI_DECODE_CONTEXT
     DdiCpInterface                  *pCpDdiInterface;
     // Parameters
     CodechalDecodeParams            DecodeParams;
-    uint16_t                        wMode;                  // Get the info during hand shaking    
+    uint16_t                        wMode;                  // Get the info during hand shaking
     Codechal                        *pCodecHal;
     bool                            bShortFormatInUse;
     VASurfaceDecodeMBErrors         vaSurfDecErrOutput[2];
@@ -103,7 +105,7 @@ static __inline PDDI_DECODE_CONTEXT DdiDecode_GetDecContextFromPVOID (void *decC
 //!     DAta
 //! \param  [in] bufId
 //!     VA buffer ID
-//!     
+//! 
 //! \return     VAStatus
 //!     VA_STATUS_SUCCESS if success, else fail reason
 //!
@@ -118,21 +120,6 @@ VAStatus DdiDecode_CreateBuffer(
 );
 
 //!
-//! \brief  Unregister RT surfaces
-//!
-//! \param  [in] ctx
-//!     Pointer to VA driver context
-//! \param  [in] surface
-//!     Pointer to ddi media surface
-//!     
-//! \return     VAStatus
-//!     VA_STATUS_SUCCESS if success, else fail reason
-//!
-VAStatus DdiDecode_UnRegisterRTSurfaces(
-    VADriverContextP    ctx,
-    PDDI_MEDIA_SURFACE surface);
-
-//!
 //! \brief  Begin picture
 //!
 //! \param  [in] ctx
@@ -141,7 +128,7 @@ VAStatus DdiDecode_UnRegisterRTSurfaces(
 //!     VA context ID
 //! \param  [in] renderTarget
 //!     VA surface ID
-//!     
+//! 
 //! \return     VAStatus
 //!     VA_STATUS_SUCCESS if success, else fail reason
 //!
@@ -158,7 +145,7 @@ VAStatus DdiDecode_BeginPicture (
 //!     Pointer to VA driver context
 //! \param  [in] context
 //!     VA context ID
-//!     
+//! 
 //! \return     VAStatus
 //!     VA_STATUS_SUCCESS if success, else fail reason
 //!
@@ -178,7 +165,7 @@ VAStatus DdiDecode_EndPicture (
 //!     VA buffer ID
 //! \param  [in] numBuffers
 //!     Number of buffers
-//!     
+//! 
 //! \return     VAStatus
 //!     VA_STATUS_SUCCESS if success, else fail reason
 //!
@@ -208,7 +195,7 @@ VAStatus DdiDecode_RenderPicture (
 //!     Number of render targets
 //! \param  [in] context
 //!     VA context ID
-//!     
+//! 
 //! \return     VAStatus
 //!     VA_STATUS_SUCCESS if success, else fail reason
 //!
@@ -230,7 +217,7 @@ VAStatus DdiDecode_CreateContext (
 //!     Pointer to VA driver context
 //! \param  [in] context
 //!     VA context ID
-//!     
+//! 
 //! \return     VAStatus
 //!     VA_STATUS_SUCCESS if success, else fail reason
 //!

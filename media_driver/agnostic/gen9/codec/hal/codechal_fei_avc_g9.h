@@ -149,18 +149,27 @@ public:
     static const uint32_t m_vmeSurfaceSize = m_vmeSurfacePerStreamSize * CODECHAL_ENCODE_AVC_MFE_MAX_FRAMES_G9;
     static const uint32_t m_commonSurfaceSize = m_commonSurfacePerStreamSize * CODECHAL_ENCODE_AVC_MFE_MAX_FRAMES_G9;
 
-    struct CodechalEncodeAvcSurfaceIdx *m_cmSurfIdx;
-    CodechalEncodeMdfKernelResource    *m_resMbencKernel;
-    CodechalEncodeMdfKernelResource    *m_origResMbencKernel;
+    struct CodechalEncodeAvcSurfaceIdx *m_cmSurfIdx = nullptr;
+    CodechalEncodeMdfKernelResource    *m_resMbencKernel = nullptr;
+    CodechalEncodeMdfKernelResource    *m_origResMbencKernel = nullptr;
 
-    SurfaceIndex *m_vmeSurface;
-    SurfaceIndex *m_commonSurface;
+    CmQueue *m_origCmQueue            = nullptr;
+    CmTask  *m_origCmTask             = nullptr;
 
+    SurfaceIndex *m_origVmeSurface    = nullptr;
+    SurfaceIndex *m_origCommonSurface = nullptr;
+
+    SurfaceIndex *m_vmeSurface        = nullptr;
+    SurfaceIndex *m_commonSurface     = nullptr;
 
     CodechalEncodeAvcEncFeiG9(
         CodechalHwInterface *   hwInterface,
         CodechalDebugInterface *debugInterface,
         PCODECHAL_STANDARD_INFO standardInfo);
+
+    CodechalEncodeAvcEncFeiG9(const CodechalEncodeAvcEncFeiG9&) = delete;
+
+    CodechalEncodeAvcEncFeiG9& operator=(const CodechalEncodeAvcEncFeiG9&) = delete;
 
     ~CodechalEncodeAvcEncFeiG9();
 
@@ -459,7 +468,7 @@ public:
     //!
     virtual MOS_STATUS GetMbEncKernelStateIdx(
         CodechalEncodeIdOffsetParams       *params,
-		uint32_t                           *kernelOffset);
+        uint32_t                           *kernelOffset);
 
     //!
     //! \brief    Set AVC MbEnc kernel Curbe data.

@@ -83,17 +83,17 @@ DdiEncodeMpeg2::~DdiEncodeMpeg2()
 }
 
 VAStatus DdiEncodeMpeg2::ContextInitialize(
-    CODECHAL_SETTINGS *codecHalSettings)
+    CodechalSetting *codecHalSettings)
 {
     DDI_CHK_NULL(m_encodeCtx, "nullptr m_encodeCtx.", VA_STATUS_ERROR_INVALID_CONTEXT);
     DDI_CHK_NULL(m_encodeCtx->pCpDdiInterface, "nullptr m_encodeCtx->pCpDdiInterface.", VA_STATUS_ERROR_INVALID_CONTEXT);
     DDI_CHK_NULL(codecHalSettings, "nullptr codecHalSettings.", VA_STATUS_ERROR_INVALID_CONTEXT);
 
-    codecHalSettings->CodecFunction = CODECHAL_FUNCTION_ENC_PAK;
-    codecHalSettings->dwWidth       = m_encodeCtx->dwFrameWidth;
-    codecHalSettings->dwHeight      = m_encodeCtx->dwFrameHeight;
-    codecHalSettings->Mode          = m_encodeCtx->wModeType;
-    codecHalSettings->Standard      = CODECHAL_MPEG2;
+    codecHalSettings->codecFunction = CODECHAL_FUNCTION_ENC_PAK;
+    codecHalSettings->width       = m_encodeCtx->dwFrameWidth;
+    codecHalSettings->height      = m_encodeCtx->dwFrameHeight;
+    codecHalSettings->mode          = m_encodeCtx->wModeType;
+    codecHalSettings->standard      = CODECHAL_MPEG2;
 
     m_encodeCtx->pSeqParams = (void *)MOS_AllocAndZeroMemory(sizeof(CodecEncodeMpeg2SequenceParams));
     DDI_CHK_NULL(m_encodeCtx->pSeqParams, "nullptr m_encodeCtx->pSeqParams.", VA_STATUS_ERROR_ALLOCATION_FAILED);
@@ -103,8 +103,6 @@ VAStatus DdiEncodeMpeg2::ContextInitialize(
 
     m_encodeCtx->pQmatrixParams = (void *)MOS_AllocAndZeroMemory(sizeof(CodecEncodeMpeg2QmatixParams));
     DDI_CHK_NULL(m_encodeCtx->pQmatrixParams, "nullptr m_encodeCtx->pQmatrixParams.", VA_STATUS_ERROR_ALLOCATION_FAILED);
-
-    codecHalSettings->pCpParams = m_encodeCtx->pCpDdiInterface->GetParams();
 
     m_encodeCtx->pVuiParams = (void *)MOS_AllocAndZeroMemory(sizeof(CodecEncodeMpeg2VuiParams));
     DDI_CHK_NULL(m_encodeCtx->pVuiParams, "nullptr m_encodeCtx->pVuiParams.", VA_STATUS_ERROR_ALLOCATION_FAILED);
@@ -155,7 +153,7 @@ VAStatus DdiEncodeMpeg2::RenderPicture(
 
     DDI_CHK_NULL(m_encodeCtx, "nullptr m_encodeCtx", VA_STATUS_ERROR_INVALID_CONTEXT);
 
-    for (uint32_t i = 0; i < numBuffers; i++)
+    for (int32_t i = 0; i < numBuffers; i++)
     {
         DDI_MEDIA_BUFFER *buf = DdiMedia_GetBufferFromVABufferID(mediaCtx, buffers[i]);
         DDI_CHK_NULL(buf, "Invalid buffer.", VA_STATUS_ERROR_INVALID_BUFFER);
@@ -192,9 +190,9 @@ VAStatus DdiEncodeMpeg2::RenderPicture(
 
         case VAEncSliceParameterBufferType:
             {
-                uint32_t numSlices = buf->iNumElements;
+                uint32_t numSlices = buf->uiNumElements;
                 DDI_CHK_STATUS(ParseSlcParams(mediaCtx, data, numSlices), VA_STATUS_ERROR_INVALID_BUFFER);
-            } 
+            }
             break;
 
         case VAEncPackedHeaderParameterBufferType:
@@ -260,6 +258,9 @@ VAStatus DdiEncodeMpeg2::EncodeInCodecHal(
     reconSurface.dwOffset = 0;
     DdiMedia_MediaSurfaceToMosResource(rtTbl->pCurrentReconTarget, &(reconSurface.OsResource));
 
+    //clear registered recon/ref surface flags
+    DDI_CHK_RET(ClearRefList(&m_encodeCtx->RTtbl, false), "ClearRefList failed!");
+
     // Bitstream surface
     MOS_RESOURCE bitstreamSurface;
     MOS_ZeroMemory(&bitstreamSurface, sizeof(MOS_RESOURCE));
@@ -294,6 +295,9 @@ VAStatus DdiEncodeMpeg2::EncodeInCodecHal(
     }
 
     encodeParams.pMpeg2UserDataListHead = m_userDataListHead;
+
+    CodecEncodeMpeg2SequenceParams *mpeg2Sps = (CodecEncodeMpeg2SequenceParams *)m_encodeCtx->pSeqParams;
+    mpeg2Sps->m_targetUsage               = m_encodeCtx->targetUsage;
 
     encodeParams.pSeqParams   = m_encodeCtx->pSeqParams;
     encodeParams.pVuiParams   = m_encodeCtx->pVuiParams;
@@ -468,7 +472,6 @@ VAStatus DdiEncodeMpeg2::ParseSeqParams(void *ptr)
     mpeg2Sps->m_progressiveSequence       = seqParams->sequence_extension.bits.progressive_sequence;
     mpeg2Sps->m_rateControlMethod         = VARC2HalRC(m_encodeCtx->uiRCMethod);
     mpeg2Sps->m_resetBRC                  = false;  // if reset the brc each i frame
-    mpeg2Sps->m_targetUsage               = TARGETUSAGE_BEST_QUALITY;
     mpeg2Sps->m_bitrate                   = seqParams->bits_per_second;
     mpeg2Sps->m_vbvBufferSize             = seqParams->vbv_buffer_size;
     //set Initial vbv buffer fullness to half of vbv buffer size in byte
@@ -571,16 +574,25 @@ VAStatus DdiEncodeMpeg2::ParsePicParams(
         mpeg2PicParams->m_burstAmplitude  = picParams->composite_display.bits.burst_amplitude;
         mpeg2PicParams->m_subCarrierPhase = picParams->composite_display.bits.sub_carrier_phase;
     }
-    mpeg2PicParams->m_currReconstructedPic.FrameIdx = GetRenderTargetID(rtTbl, DdiMedia_GetSurfaceFromVASurfaceID(mediaCtx, picParams->reconstructed_picture));
+    if ( picParams->reconstructed_picture == VA_INVALID_SURFACE)
+    {
+        return VA_STATUS_ERROR_INVALID_PARAMETER;
+    }
+    auto recon = DdiMedia_GetSurfaceFromVASurfaceID(mediaCtx, picParams->reconstructed_picture);
+    DDI_CHK_RET(RegisterRTSurfaces(&m_encodeCtx->RTtbl, recon),"RegisterRTSurfaces failed!");
+
+    mpeg2PicParams->m_currReconstructedPic.FrameIdx = GetRenderTargetID(rtTbl, recon);
     mpeg2PicParams->m_currReconstructedPic.PicFlags = PICTURE_FRAME;
 
     // be attention , that codec hal use this value to manager the reference list
-    mpeg2PicParams->m_currOriginalPic.FrameIdx = GetRenderTargetID(rtTbl, DdiMedia_GetSurfaceFromVASurfaceID(mediaCtx, picParams->reconstructed_picture));
+    mpeg2PicParams->m_currOriginalPic.FrameIdx = GetRenderTargetID(rtTbl, recon);
     mpeg2PicParams->m_currOriginalPic.PicFlags = mpeg2PicParams->m_currReconstructedPic.PicFlags;
 
     if (DDI_CODEC_INVALID_FRAME_INDEX != picParams->forward_reference_picture)
     {
-        mpeg2PicParams->m_refFrameList[0].FrameIdx = GetRenderTargetID(rtTbl, DdiMedia_GetSurfaceFromVASurfaceID(mediaCtx, picParams->forward_reference_picture));
+        auto fwRef = DdiMedia_GetSurfaceFromVASurfaceID(mediaCtx, picParams->forward_reference_picture);
+        UpdateRegisteredRTSurfaceFlag(&m_encodeCtx->RTtbl,fwRef);
+        mpeg2PicParams->m_refFrameList[0].FrameIdx = GetRenderTargetID(rtTbl, fwRef);
         mpeg2PicParams->m_refFrameList[0].PicFlags = PICTURE_FRAME;
     }
     else
@@ -590,7 +602,9 @@ VAStatus DdiEncodeMpeg2::ParsePicParams(
     }
     if (DDI_CODEC_INVALID_FRAME_INDEX != picParams->backward_reference_picture)
     {
-        mpeg2PicParams->m_refFrameList[1].FrameIdx = GetRenderTargetID(rtTbl, DdiMedia_GetSurfaceFromVASurfaceID(mediaCtx, picParams->backward_reference_picture));
+        auto bwRef = DdiMedia_GetSurfaceFromVASurfaceID(mediaCtx, picParams->backward_reference_picture);
+        UpdateRegisteredRTSurfaceFlag(&m_encodeCtx->RTtbl,bwRef);
+        mpeg2PicParams->m_refFrameList[1].FrameIdx = GetRenderTargetID(rtTbl, bwRef);
         mpeg2PicParams->m_refFrameList[1].PicFlags = PICTURE_FRAME;
     }
     else
@@ -606,7 +620,7 @@ VAStatus DdiEncodeMpeg2::ParsePicParams(
     {
         mpeg2PicParams->m_newGop = false;
     }
-    rtTbl->pCurrentReconTarget = DdiMedia_GetSurfaceFromVASurfaceID(mediaCtx, picParams->reconstructed_picture);
+    rtTbl->pCurrentReconTarget = recon;;
 
     DDI_MEDIA_BUFFER *buf = DdiMedia_GetBufferFromVABufferID(mediaCtx, picParams->coded_buf);
 
@@ -700,11 +714,14 @@ VAStatus DdiEncodeMpeg2::ParseSlcParams(
     //attention memory area protection
     MOS_ZeroMemory(mpeg2SlcParams, sizeof(CodecEncodeMpeg2SliceParmas) * numSlices);
 
+    CodecEncodeMpeg2SequenceParams *mpeg2Sps = (CodecEncodeMpeg2SequenceParams *)m_encodeCtx->pSeqParams;
+    auto picWidthInMb = CODECHAL_GET_WIDTH_IN_MACROBLOCKS(mpeg2Sps->m_frameWidth);
+
     for (uint32_t slcCount = 0; slcCount < numSlices; slcCount++)
     {
         mpeg2SlcParams->m_numMbsForSlice     = vaEncSlcParamsMPEG2->num_macroblocks;
-        mpeg2SlcParams->m_firstMbX           = (vaEncSlcParamsMPEG2->macroblock_address >> 16) & 0xFF;
-        mpeg2SlcParams->m_firstMbY           = vaEncSlcParamsMPEG2->macroblock_address & 0xFF;
+        mpeg2SlcParams->m_firstMbX           = (vaEncSlcParamsMPEG2->macroblock_address % picWidthInMb);
+        mpeg2SlcParams->m_firstMbY           = vaEncSlcParamsMPEG2->macroblock_address / picWidthInMb;
         mpeg2SlcParams->m_intraSlice         = vaEncSlcParamsMPEG2->is_intra_slice;
         mpeg2SlcParams->m_quantiserScaleCode = vaEncSlcParamsMPEG2->quantiser_scale_code;
         mpeg2SlcParams++;
@@ -864,17 +881,15 @@ void DdiEncodeMpeg2::ParseMiscParamEncQuality(void *data)
 void DdiEncodeMpeg2::ParseMiscParamEncQualityLevel(void *data)
 {
     VAEncMiscParameterBufferQualityLevel *vaMiscParamQualityLevel = (VAEncMiscParameterBufferQualityLevel*) data;
-    CodecEncodeMpeg2SequenceParams *mpeg2SeqParams = (CodecEncodeMpeg2SequenceParams *)(m_encodeCtx->pSeqParams);
-    mpeg2SeqParams->m_targetUsage= vaMiscParamQualityLevel->quality_level;
+    m_encodeCtx->targetUsage= vaMiscParamQualityLevel->quality_level;
     // check TU, correct to default if wrong
-    if ((mpeg2SeqParams->m_targetUsage > TARGETUSAGE_BEST_SPEED) ||
-        (0 == mpeg2SeqParams->m_targetUsage))
+    if ((m_encodeCtx->targetUsage > TARGETUSAGE_BEST_SPEED) ||
+        (0 == m_encodeCtx->targetUsage))
     {
-        mpeg2SeqParams->m_targetUsage = TARGETUSAGE_RT_SPEED;
+        m_encodeCtx->targetUsage = TARGETUSAGE_RT_SPEED;
         DDI_ASSERTMESSAGE("Target usage from application is not correct, should be in [0,7]!\n");
-    }    
+    }
 }
-
 
 void DdiEncodeMpeg2::ParseMiscParamMaxFrame(void *data)
 {

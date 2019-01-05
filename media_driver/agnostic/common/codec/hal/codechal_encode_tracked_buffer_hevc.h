@@ -39,7 +39,7 @@ class CodechalEncodeTrackedBufferHevc : public CodechalEncodeTrackedBuffer
 public:
     //!
     //! \brief    Constructor
-    //!            
+    //!
     CodechalEncodeTrackedBufferHevc(CodechalEncoderState* encoder);
 
     ~CodechalEncodeTrackedBufferHevc()
@@ -50,8 +50,8 @@ private:
     CodechalEncodeTrackedBufferHevc& operator=(const CodechalEncodeTrackedBufferHevc&) = delete;
 
     void LookUpBufIndexMbCode() override;
-    MOS_STATUS AllocateMvTemporalBuffer(uint8_t bufIndex) override;
-    void ReleaseBufferOnResChange() override;
+    MOS_STATUS AllocateMvTemporalBuffer() override;
+    void DeferredDeallocateOnResChange() override;
 
     CodechalEncodeHevcBase*         m_hevcState = nullptr;                      //!< HEVC encoder state
     uint8_t                         m_mbCodePenuIdx = 0;                        //!< 2nd-to-last MbCode buffer index

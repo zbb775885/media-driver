@@ -45,12 +45,18 @@ static bool InitGen10MediaSysInfo(struct GfxDeviceInfo *devInfo, MEDIA_GT_SYSTEM
         return false;
     }
 
-    if (!sysInfo->SliceCount ||
-        !sysInfo->SubSliceCount ||
-        !sysInfo->EUCount)
+    if (!sysInfo->SliceCount)
     {
         sysInfo->SliceCount    = devInfo->SliceCount;
+    }
+
+    if (!sysInfo->SubSliceCount)
+    {
         sysInfo->SubSliceCount = devInfo->SubSliceCount;
+    }
+
+    if (!sysInfo->EUCount)
+    {
         sysInfo->EUCount       = devInfo->EUCount;
     }
 
@@ -129,6 +135,8 @@ static bool InitGen10ShadowSku(struct GfxDeviceInfo *devInfo,
 
     skuTable->FtrDisplayYTiling = 1;
     skuTable->FtrEDram = devInfo->hasERAM;
+
+    skuTable->FtrTileY = 1;
 
     return true;
 }
@@ -256,7 +264,6 @@ static struct GfxDeviceInfo cnlGt3eInfo = {
     .InitShadowSku    = InitGen10ShadowSku,
     .InitShadowWa     = InitGen10ShadowWa,
 };
-
 
 static bool cnlDevice5a4a = DeviceInfoFactory<GfxDeviceInfo>::
     RegisterDevice(0x5a4a, &cnlGt1Info);

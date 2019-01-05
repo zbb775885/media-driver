@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011-2017, Intel Corporation
+* Copyright (c) 2011-2018, Intel Corporation
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -29,16 +29,19 @@
 #define __CODECHAL_DECODER_H__
 
 #include "codechal.h"
+#include "codechal_setting.h"
 #include "codechal_hw.h"
 #include "codechal_debug.h"
 #include "codechal_decode_downsampling.h"
 #include "codechal_decode_sfc.h"
 #include "codechal_mmc.h"
 #include "codechal_utilities.h"
+#include "codec_def_decode.h"
 #include "cm_wrapper.h"
+#include "media_perf_profiler.h"
+#include "codec_def_cenc_decode.h"
 
-class CodechalSecureDecode;
-class CodechalCencDecode;
+class CodechalSecureDecodeInterface;
 class CodechalDecodeHistogram;
 
 //------------------------------------------------------------------------------
@@ -117,6 +120,14 @@ typedef enum _CODECHAL_CS_ENGINE_ID_DEF
     // Class ID
     CODECHAL_CLASS_ID_VIDEO_ENGINE = 1,
 } CODECHAL_CS_ENGINE_ID_DEF;
+
+typedef enum _CODECHAL_DUMMY_REFERENCE_STATUS
+{
+    CODECHAL_DUMMY_REFERENCE_INVALID,
+    CODECHAL_DUMMY_REFERENCE_DPB,
+    CODECHAL_DUMMY_REFERENCE_DEST_SURFACE,
+    CODECHAL_DUMMY_REFERENCE_ALLOCATED
+} CODECHAL_DUMMY_REFERENCE_STATUS;
 
 typedef union _CODECHAL_CS_ENGINE_ID
 {
@@ -244,122 +255,6 @@ struct CodechalDecodeStatusBuffer
 };
 
 //!
-//! \struct CodechalDecodeParams
-//! \brief  Parameters passed in via Execute() to perform decoding.
-//!
-struct CodechalDecodeParams
-{
-    //! \brief Decode render target
-    PMOS_SURFACE            m_destSurface = nullptr;
-    //! \brief Reference frame surface
-    PMOS_SURFACE            m_refFrameSurface = nullptr;
-    //! \brief [VC1] Deblocked output of OLP
-    PMOS_SURFACE            m_deblockSurface = nullptr;
-    //! \brief Resource containing the bitstream (VLD mode) or residual difference (IT mode) data
-    PMOS_RESOURCE           m_dataBuffer = nullptr;
-    //! \brief [VC1] Resource containing the bitplane data
-    PMOS_RESOURCE           m_bitplaneBuffer = nullptr;
-    //! \brief [VP8 & VP9] resource containing coefficient probability data
-    PMOS_RESOURCE           m_coefProbBuffer = nullptr;
-    //! \brief [VC1 IT] Deblock data
-    //!    For advanced profile P frames, this data should be formated as an array of 6 bytes for each MB:
-    //!        Byte0: ILDBControlDataforY0
-    //!        Byte1: ILDBControlDataforY1
-    //!        Byte2: ILDBControlDataforY2
-    //!        Byte3: ILDBControlDataforY3
-    //!        Byte4: ILDBControlDataforCb
-    //!        Byte5: ILDBControlDataforCr
-    uint8_t                 *m_deblockData = nullptr;
-
-    //! \brief [Codecs (HEVC & VP9)] Bitstream buffer data
-    uint8_t                 *m_bitStreamBufData = nullptr;
-    //! \brief Size of the data contained in m_dataBuffer
-    uint32_t                m_dataSize = 0;
-    //! \brief Offset of the data contained in presDataBuffer
-    uint32_t                m_dataOffset = 0;
-    //! \brief [VLD mode] Number of slices to be decoded
-    uint32_t                m_numSlices = 0;
-    //! \brief [IT mode] Number of MBs to be decoded
-    uint32_t                m_numMacroblocks = 0;
-    //! \brief [VC1] size of the data contained in m_bitplaneBuffer
-    uint32_t                m_vc1BitplaneSize = 0;
-    //! \brief [VP8 & VP9] Size of the data contained in m_coefProbBuffer
-    uint32_t                m_coefProbSize = 0;
-    //! \brief [VC1 IT] Size of the data contained in m_deblockData
-    uint32_t                m_deblockDataSize = 0;
-    //! \brief Number of reference frame surface
-    uint32_t                m_refSurfaceNum = 0;
-
-    //! \brief Indicates whether or not stream out information should be returned to the DDI
-    bool                    m_streamOutEnabled = false;
-    //! \brief Resource to contain the stream out output from HW
-    PMOS_RESOURCE           m_externalStreamOutBuffer = nullptr;
-
-    //! \brief [CENC Decode] Status reporting number associated with the current frame.
-    uint16_t                m_cencDecodeStatusReportNum = 0;
-
-    //! \brief Picture level parameters to be used for decoding
-    void                    *m_picParams = nullptr;
-    //! \brief Additional picture level parameters to be used for decoding.
-    //!      In certain cases additional parameters are needed to supplement m_picParams (MVC, etc).
-    void                    *m_extPicParams = nullptr;
-    //! \brief Picture Level parameters for HEVC advanced feature
-    void                    *m_advPicParams = nullptr;
-    //! \brief [VLD mode] Slice level parameters to be used for decoding
-    void                    *m_sliceParams = nullptr;
-    //!< [VLD LF mode] Intel long format
-    void                    *m_subsetParams = nullptr;
-    //! \brief Additional slice level parameters to be used for decoding.
-    //!      In certain cases additional parameters are needed to supplement m_sliceParams (MVC, etc).
-    void                    *m_extSliceParams = nullptr;
-    //! \brief Inverse quant matrix data
-    void                    *m_iqMatrixBuffer = nullptr;
-    //! \brief [IT mode] MB level parameters to be used for decoding
-    void                    *m_macroblockParams = nullptr;
-
-    //! \brief Reference count used for downsampling, If non-zero enables downsampling of the render target.
-    uint32_t                m_refFrameCnt = 0;
-#ifdef _DECODE_PROCESSING_SUPPORTED
-    //! \brief Parameters used for processing the decode render target, if invalid, decode render target processing will not be used.
-    PCODECHAL_DECODE_PROCESSING_PARAMS  m_procParams = nullptr;
-#endif
-    //! \brief [Predication] Resource for predication
-    PMOS_RESOURCE           m_presPredication = nullptr;
-    //! \brief [Predication] Offset for Predication resource
-    uint64_t                m_predicationResOffset = 0;
-    //! \brief [Predication] Predication mode
-    bool                    m_predicationNotEqualZero = false;
-
-    //! \brief [Predication] Indicates whether or not Predication is enabled
-    bool                    m_predicationEnabled = false;
-    //! \brief [Predication] Temp buffer for Predication
-    PMOS_RESOURCE           *m_tempPredicationBuffer = nullptr;
-
-    //! \brief [JPEG] Huffman table data
-    void                    *m_huffmanTable = nullptr;
-    //! \brief [JPEG] Describes the layout of the decode render target
-    CodecDecodeJpegImageLayout m_outputSurfLayout = {{0}};
-
-    //! \brief [AVC] Indicates whethe or not PicId remapping is in use
-    bool                    m_picIdRemappingInUse = false;
-
-    // MPEG2 Specific Parameters
-    //! \brief [MPEG2] MPEG2 I slice concealment mode
-    uint32_t                m_mpeg2ISliceConcealmentMode = 0;
-    //! \brief [MPEG2] MPEG2 P/B slice concealment mode
-    uint32_t                m_mpeg2PBSliceConcealmentMode = 0;
-    //! \brief [MPEG2] MPEG2 P/B Slice Predicted BiDir Motion Type Override
-    uint32_t                m_mpeg2PBSlicePredBiDirMVTypeOverride = 0;
-    //! \brief [MPEG2] MPEG2 P/B Slice Predicted Motion Vector Override
-    uint32_t                m_mpeg2PBSlicePredMVOverride = 0;
-
-    //! \brief [VP8] Indicates whether or not the driver is expected to parse parameters from the frame header
-    bool                    m_bitstreamLockingInUse = false;
-    //! \brief [VP8] Indicates whether or not the bitstream buffer may be directly locked to perform header parsing.
-    bool                    m_bitstreamLockable = false;
-};
-
-//!
 //! \class CodechalDecode
 //! \brief This class defines the common member fields, functions etc as decode base class.
 //!
@@ -438,6 +333,16 @@ public:
         PCODECHAL_STANDARD_INFO standardInfo);
 
     //!
+    //! \brief    Copy constructor
+    //!
+    CodechalDecode(const CodechalDecode&) = delete;
+
+    //!
+    //! \brief    Copy assignment operator
+    //!
+    CodechalDecode& operator=(const CodechalDecode&) = delete;
+
+    //!
     //! \brief  Destructor
     //!
     virtual ~CodechalDecode();
@@ -474,7 +379,8 @@ public:
         uint32_t size,
         const char* name,
         bool initialize = false,
-        uint8_t value = 0);
+        uint8_t value = 0,
+        bool bPersistent = false);
 
     //!
     //! \brief    Help function to allocate a NV12 TILE_Y surface
@@ -507,7 +413,7 @@ public:
     //! \return MOS_STATUS
     //!         MOS_STATUS_SUCCESS if success, else fail reason
     //!
-    MOS_STATUS Allocate(PCODECHAL_SETTINGS codecHalSettings) override;
+    MOS_STATUS Allocate(CodechalSetting * codecHalSettings) override;
 
     //!
     //! \brief  The handle at the begining of each frame.
@@ -554,6 +460,19 @@ public:
     //!
     MOS_STATUS SendPredicationCommand(
         PMOS_COMMAND_BUFFER cmdBuffer);
+
+    //!
+    //! \brief  Inserts marker commands for a command buffer
+    //! \param  [in] cmdBuffer
+    //!         Command buffer
+    //! \param  [in] isRender
+    //!         Whether render engine workload or not
+    //! \return MOS_STATUS
+    //!         MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    MOS_STATUS SendMarkerCommand(
+        PMOS_COMMAND_BUFFER cmdBuffer,
+        bool isRender);
 
     //!
     //! \brief  The entry to get status report.
@@ -623,22 +542,25 @@ public:
     MOS_GPU_CONTEXT GetVideoContext() { return m_videoContext; }
 
     //!
+    //! \brief  Sets video context
+    //! \return The video context \see m_videoContext
+    //!
+    void SetVideoContext(MOS_GPU_CONTEXT context) { m_videoContext = context; }
+
+    //!
     //! \brief  Gets video WA context
     //! \return The video WA context \see m_videoContextForWa
     //!
     MOS_GPU_CONTEXT GetVideoWAContext() { return m_videoContextForWa; }
 
     //!
-    //! \brief  Gets cenc decoder interface
-    //! \return The cenc decoder interface
+    //! \brief  Sets cenc decoder batch buffer
+    //! \param    [in] cmdBuffer
+    //!           Pointer of command buffer.
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
     //!
-    CodechalCencDecode* GetCencDecoder() { return m_cencDecoder; }
-
-    //!
-    //! \brief  Gets cenc decoder interface
-    //! \return The cenc decoder interface
-    //!
-    void SetCencDecoder(CodechalCencDecode* cencDecoder) { m_cencDecoder = cencDecoder; }
+    virtual MOS_STATUS SetCencBatchBuffer( PMOS_COMMAND_BUFFER cmdBuffer);
 
     //!
     //! \brief  Indicates whether or not the status query reporting is enabled
@@ -729,16 +651,44 @@ public:
     FieldScalingInterface       *m_fieldScalingInterface = nullptr;
 #endif
 
+    //!
+    //! \brief  Get dummy reference surface
+    //! \return Pointer of reference surface
+    //!
+    MOS_SURFACE* GetDummyReference() { return &m_dummyReference; }
+
+    //!
+    //! \brief  Get dummy reference status
+    //! \return CODECHAL_DUMMY_REFERENCE_STATUS
+    //!
+    CODECHAL_DUMMY_REFERENCE_STATUS GetDummyReferenceStatus() { return m_dummyReferenceStatus; }
+
+    //!
+    //! \brief  Set dummy reference status
+    //! \return void
+    //!
+    void SetDummyReferenceStatus(CODECHAL_DUMMY_REFERENCE_STATUS status)
+    {
+        m_dummyReferenceStatus = status;
+    }
+
 protected:
+
+    //!
+    //! \brief  Set up params for gpu context creation
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    virtual MOS_STATUS SetGpuCtxCreatOption(CodechalSetting * settings);
 
     //!
     //! \brief  Allocate and initialize GEN specific decoder standard
     //! \param  [in] settings
-    //!         Pointer to CODECHAL_SETTINGS
+    //!         Pointer to CodechalSetting
     //! \return MOS_STATUS
     //!         MOS_STATUS_SUCCESS if success, else fail reason
     //!
-    virtual MOS_STATUS AllocateStandard(PCODECHAL_SETTINGS settings)   = 0;
+    virtual MOS_STATUS AllocateStandard(CodechalSetting * settings)   = 0;
 
     //!
     //! \brief  Set states for each frame to prepare for decode
@@ -840,7 +790,7 @@ protected:
     {
         return MOS_STATUS_SUCCESS;
     }
-    
+
     //!
     //! \brief  Linear to Y tiled address
     //!
@@ -863,7 +813,7 @@ protected:
         PCODECHAL_DECODE_PROCESSING_PARAMS decProcParams);
 
 #endif
-    
+
 private:
 
     //!
@@ -896,7 +846,7 @@ private:
     //!         MOS_STATUS_SUCCESS if success, else fail reason
     //!
     MOS_STATUS CreateGpuContexts(
-        PCODECHAL_SETTINGS codecHalSettings);
+        CodechalSetting * codecHalSettings);
 
     //!
     //! \brief  Indicates whether or not the SFC is inuse
@@ -904,7 +854,7 @@ private:
     //!         Pointer to CODECHAL Settings
     //! \return If SFC is inuse
     //!
-    virtual bool IsSfcInUse(PCODECHAL_SETTINGS codecHalSettings) { return false; }
+    virtual bool IsSfcInUse(CodechalSetting * codecHalSettings) { return false; }
 
     //!
     //! \brief  Indicates whether or not the frame level multiple thread is enable
@@ -959,6 +909,14 @@ private:
     //!
     void DeallocateRefSurfaces();
 
+    //!
+    //! \brief    Set dummy reference
+    //! \details  Set dummy reference for error concealment
+    //! \return   MOS_STATUS
+    //!           MOS_STATUS_SUCCESS if success, else fail reason
+    //!
+    MOS_STATUS SetDummyReference();
+
 protected:
     //! \brief Mfx Interface
     MhwVdboxMfxInterface        *m_mfxInterface     = nullptr;
@@ -974,7 +932,7 @@ protected:
     MhwCpInterface              *m_cpInterface      = nullptr;
 
     //! \brief Security Decode
-    CodechalSecureDecode        *m_secureDecoder    = nullptr;
+    CodechalSecureDecodeInterface *m_secureDecoder    = nullptr;
 
     //! \brief WA table
     MEDIA_WA_TABLE              *m_waTable           = nullptr;
@@ -982,7 +940,7 @@ protected:
     MEDIA_FEATURE_TABLE         *m_skuTable          = nullptr;
 
     //!< mmc state
-    CodecHalMmcState            *m_mmc              = nullptr; 
+    CodecHalMmcState            *m_mmc              = nullptr;
     //! \brief Decode parameters
     CodechalDecodeParams        m_decodeParams;
     //! \brief Decode mode
@@ -1027,6 +985,9 @@ protected:
 
     //! \brief Flag to indicate if we support eStatus query reporting on current platform
     bool                        m_statusQueryReportingEnabled = false;
+    //! \brief Flag to indicate if UMD Perf Profiler FE BE timing measurement is enabled
+    bool                        m_perfFEBETimingEnabled = false;
+
     //! \brief Stores all the status_query related data
     CodechalDecodeStatusBuffer  m_decodeStatusBuf;
     //! \brief The feedback number reported by app in picparams call
@@ -1063,9 +1024,6 @@ protected:
     //!          modify this value in specific decoder files.
     uint8_t                     m_decodePassNum     = 1;
 
-    //! \brief MMIO Mfx Frame CRC report offset
-    uint32_t                    m_mfxFrameCrcRegOffset = 0;
-
     //! \brief MMIO Hcp Frame CRC report offset
     uint32_t                    m_hcpFrameCrcRegOffset = 0;
 
@@ -1098,53 +1056,19 @@ protected:
     //! \brief    Decode histogram interface
     //! \details  Support YUV Luma histogram.
     CodechalDecodeHistogram    *m_decodeHistogram = nullptr;
-};
+    PMOS_GPUCTX_CREATOPTIONS   m_gpuCtxCreatOpt = nullptr;
 
-//!
-//! \class CodechalDecodeRestoreData
-//! \brief This class restore the data when destory, used as temporal storage and restore automatically.
-//!
-template   <typename T>
-class CodechalDecodeRestoreData
-{
-public:
-    //!
-    //! \brief    Constructor
-    //!
-    CodechalDecodeRestoreData (T *mem):
-        m_mem(mem)
-    {
-        if (m_mem != nullptr)
-        {
-            m_restoreValue = *mem;
-        }
-    }
-    //!
-    //! \brief    Constructor
-    //!
-    CodechalDecodeRestoreData (T *mem, T restoreValue):
-        m_mem(mem)
-    {
-        if (m_mem != nullptr)
-        {
-            m_restoreValue = restoreValue;
-        }
-    }
+    //! \brief Performance data profiler
+    MediaPerfProfiler           *m_perfProfiler    = nullptr;
 
-    //!
-    //! \brief    Destructor
-    //!
-    ~CodechalDecodeRestoreData ()
-    {
-        if (m_mem != nullptr)
-        {
-            *m_mem = m_restoreValue;
-        }
-    }
+    // CencDecode buffer
+    CencDecodeShareBuf          *m_cencBuf    = nullptr;
 
-private:
-    T *m_mem;           //!< Point to the memory need to be restored when this class destroy
-    T m_restoreValue;   //!< The value to be restored to memory when this class destroy
+    //! \brief Dummy reference surface
+    MOS_SURFACE                 m_dummyReference;
+
+    //! \brief Indicate the status of dummy reference
+    CODECHAL_DUMMY_REFERENCE_STATUS m_dummyReferenceStatus = CODECHAL_DUMMY_REFERENCE_INVALID;
 };
 
 #endif  // __CODECHAL_DECODER_H__

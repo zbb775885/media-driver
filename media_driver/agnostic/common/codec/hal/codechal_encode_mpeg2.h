@@ -44,6 +44,17 @@ class CodechalEncodeMpeg2 : public CodechalEncoderState
 public:
 
     //!
+    //! \brief    Copy construtor
+    //!
+    CodechalEncodeMpeg2(const CodechalEncodeMpeg2&) = delete;
+
+
+    //!
+    //! \brief    Copy assignment construtor
+    //!
+    CodechalEncodeMpeg2& operator=(const CodechalEncodeMpeg2&) = delete;
+
+    //!
     //! \brief    Destructor
     //!
     virtual ~CodechalEncodeMpeg2();
@@ -113,12 +124,12 @@ public:
     //! \brief    Initialize encoder instance
     //! \details  When GEN specific derived class implements this function to do its own initialization,
     //            it is required that the derived class calls #CodechalEncodeMpeg2::Initialize() first
-    //            which would do common initialization for all GENs         
+    //            which would do common initialization for all GENs
     //!
     //! \return   MOS_STATUS
     //!           MOS_STATUS_SUCCESS if success, else fail reason
     //!
-    virtual MOS_STATUS Initialize(PCODECHAL_SETTINGS codecHalSettings);
+    virtual MOS_STATUS Initialize(CodechalSetting * codecHalSettings);
 
     //!
     //! \brief  Inserts the generic prologue command for a command buffer
@@ -154,10 +165,10 @@ public:
         SendKernelCmdsParams *params) override;
 
 protected:
-            
+
     //!
     //! \brief    Constructor
-    //!            
+    //!
     CodechalEncodeMpeg2(
         CodechalHwInterface* hwInterface,
         CodechalDebugInterface* debugInterface,
@@ -547,7 +558,7 @@ protected:
     virtual MOS_STATUS SetCurbeMe()
     {
         // No operations when m_hmeKernel exists
-        return MOS_STATUS_SUCCESS; 
+        return MOS_STATUS_SUCCESS;
     }
 
     //!
@@ -589,7 +600,7 @@ protected:
     virtual MOS_STATUS InitKernelStateBrc();
 
     //!
-    //! \brief    Update the slice count according to the DSS policy
+    //! \brief    Update the slice count according to the DymanicSliceShutdown policy
     //!
     virtual void UpdateSSDSliceCount();
 
@@ -609,7 +620,7 @@ protected:
     //!
     //! \enum  MbEncKernelStateIdx
     //! \brief MbEnc kernel index
-    //!     
+    //!
     enum MbEncKernelStateIdx
     {
         mbEncKernelIdxI = 0,
@@ -664,15 +675,6 @@ protected:
     static const uint32_t                  m_vmeSPathB0[16];                                    //!< vme search path table 0 for B frame
     static const uint32_t                  m_vmeSPathB1[16];                                    //!< vme search path table 1 for B frame
 
-    PMOS_INTERFACE                         m_osInterface = nullptr;                             //!< Pointer to OS interface
-    CodechalHwInterface                   *m_hwInterface = nullptr;                             //!< Pointer to HW interface
-    MhwVdboxMfxInterface                   *m_mfxInterface = nullptr;                           //!< Pointer to Mfx Interface
-    MhwVdboxHcpInterface                   *m_hcpInterface = nullptr;                           //!< Pointer to Hcp Interface
-    MhwVdboxHucInterface                   *m_hucInterface = nullptr;                           //!< Pointer to Huc Interface
-    MhwVdboxVdencInterface                 *m_vdencInterface = nullptr;                         //!< Pointer to Vdenc Interface
-    MhwMiInterface                         *m_miInterface = nullptr;                            //!< Pointer to common mi interface
-    PMHW_STATE_HEAP_INTERFACE              m_stateHeapInterface = nullptr;                      //!< Pointer to state heap interface
-
     CodecEncodeMpeg2SequenceParams         *m_seqParams = nullptr;                              //!< Pointer to sequence parameter
     CodecEncodeMpeg2VuiParams              *m_vuiParams = nullptr;                              //!< Pointer to vui parameter
     CodecEncodeMpeg2SliceParmas            *m_sliceParams = nullptr;                            //!< Pointer to slice parameter
@@ -707,7 +709,7 @@ protected:
     // MbEnc
     bool                                   m_mbQpDataEnabled = false;                           //!< Mb Qp data flag
     MOS_SURFACE                            m_mbQpDataSurface;                                   //!< MOS_SURFACE of Mb Qp data surface
-    uint32_t                               m_bFrameNum = 0;                                     //!< The num of the successive B frames
+    uint32_t                               m_frameNumB     = 0;                                 //!< The num of the successive B frames
     uint32_t                               m_prevMBCodeIdx = 0;                                 //!< Previous MB Code index                                                                                    // MbEnc
     MHW_KERNEL_STATE                       m_mbEncKernelStates[mbEncKernelIdxNum];              //!< MbEnc kernel state
     BindingTableMbEnc                      m_mbEncBindingTable;                                 //!< MbEnc binding table

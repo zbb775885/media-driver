@@ -21,7 +21,7 @@
 */
 //!
 //! \file      media_ddi_decode_vc1.h 
-//! \brief     libva(and its extension) decoder implementation  
+//! \brief     libva(and its extension) decoder implementation 
 //!
 
 #ifndef __MEDIA_DDI_DECODER_VC1_H__
@@ -77,7 +77,7 @@ public:
     virtual VAStatus AllocSliceControlBuffer(
         DDI_MEDIA_BUFFER       *buf) override;
 
-    virtual uint8_t* GetPicParamBuf( 
+    virtual uint8_t* GetPicParamBuf(
      DDI_CODEC_COM_BUFFER_MGR    *bufMgr) override;
 private:
     //!
@@ -90,14 +90,14 @@ private:
     //! \param   [in] *slcParam
     //!          VASliceParameterBufferVC1
     //! \param   [in] numSlices
-    //!             int32_t
+    //!             uint32_t
     //!
     //! \return  VA_STATUS_SUCCESS is returned if it is parsed successfully.
     //!          else fail reason
     VAStatus ParseSliceParams(
         DDI_MEDIA_CONTEXT          *mediaCtx,
         VASliceParameterBufferVC1  *slcParam,
-        int32_t                    numSlices);
+        uint32_t                    numSlices);
 
     //! \brief   ParsePicParam for VC1
     //! \details parse the PicParam info required by VC1 decoding
@@ -117,12 +117,12 @@ private:
     //! \details Alloc/resize SlicePram content for VC1 decoding
     //!
     //! \param   [in] numSlices
-    //!          int32_t the required number of slices
+    //!          uint32_t the required number of slices
     //!
     //! \return  VA_STATUS_SUCCESS is returned if it is parsed successfully.
     //!          else fail reason
     VAStatus AllocSliceParamContext(
-        int32_t numSlices);
+        uint32_t numSlices);
 
     //! \brief   Init Resource buffer for VC1
     //! \details Initialize and allocate the Resource buffer for VC1

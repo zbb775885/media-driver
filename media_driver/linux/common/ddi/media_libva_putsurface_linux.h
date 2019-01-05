@@ -21,7 +21,7 @@
 */
 //!
 //! \file      media_libva_putsurface_linux.h 
-//! \brief     libva(and its extension) putsurface linux implementaion head file  
+//! \brief     libva(and its extension) putsurface linux implementaion head file 
 //!
 #ifndef __MEDIA_LIBVA_PUTSURFACE_LINUX_H__
 #define __MEDIA_LIBVA_PUTSURFACE_LINUX_H__
@@ -31,7 +31,7 @@
 #include <va/va_dricommon.h>
 #include "mos_defs.h"
 
-#define LIBVA_X11_NAME "libva-x11.so.1"
+#define LIBVA_X11_NAME "libva-x11.so.2"
 typedef struct dri_drawable *(*dri_get_drawable_func)(
     VADriverContextP ctx, XID drawable);
 typedef union dri_buffer *(*dri_get_rendering_buffer_func)(
@@ -122,10 +122,9 @@ void Rect_init(
     uint16_t         desth
 );
 
-
 typedef GC (*TypeXCreateGC)(Display*, Drawable, unsigned long, XGCValues*);
 typedef int32_t (*TypeXFreeGC)(Display*, GC);
-typedef XImage* (*TypeXCreateImage)(Display*, Visual*, uint32_t, int32_t, int32_t, 
+typedef XImage* (*TypeXCreateImage)(Display*, Visual*, uint32_t, int32_t, int32_t,
                                     char*, uint32_t, uint32_t, int32_t, int32_t);
 typedef int32_t (*TypeXDestroyImage)(XImage*);
 typedef int32_t (*TypeXPutImage)(Display*, Drawable, GC, XImage*, int32_t, int32_t, int32_t, int32_t,

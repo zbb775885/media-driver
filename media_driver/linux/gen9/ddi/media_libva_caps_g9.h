@@ -48,7 +48,7 @@ public:
     {
         LoadProfileEntrypoints();
         return VA_STATUS_SUCCESS;
-    }   
+    }
 protected:
     virtual VAStatus GetPlatformSpecificAttrib(VAProfile profile,
             VAEntrypoint entrypoint,
@@ -75,6 +75,8 @@ protected:
     //! 
     //! \param  [in] rcMode
     //!     RC mode
+    //! \param  [in] isVdenc
+    //!     vdenc
     //! \param  [in] maxNum
     //!     Maximum number
     //! \param  [in] isRoiInDeltaQP
@@ -83,6 +85,6 @@ protected:
     //! \return VAStatus
     //!     Return VA_STATUS_SUCCESS if call success, else fail reason
     //!
-    VAStatus QueryAVCROIMaxNum(uint32_t rcMode, int32_t *maxNum, bool *isRoiInDeltaQP);
+    VAStatus QueryAVCROIMaxNum(uint32_t rcMode, bool isVdenc, uint32_t *maxNum, bool *isRoiInDeltaQP);
 };
 #endif

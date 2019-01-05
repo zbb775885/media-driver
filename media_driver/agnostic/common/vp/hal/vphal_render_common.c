@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015-2017, Intel Corporation
+* Copyright (c) 2015-2018, Intel Corporation
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -328,7 +328,7 @@ MOS_STATUS VpHal_RndrCommonSetPowerMode(
     {
         bSetRequestedSlices     = true;
         // bEUSaturationNoSSD: No slice shutdown, must request 2 slices [CM EU saturation on].
-        // bRequestSingleSlice: Always single slice. 
+        // bRequestSingleSlice: Always single slice.
         wNumRequestedEUSlices   = (pRenderHal->bEUSaturationNoSSD) ? 2 : 1;
     }
     else
@@ -422,8 +422,9 @@ MOS_STATUS VpHal_RndrCommonSubmitCommands(
     MhwRenderInterface                  *pMhwRender;
     MHW_MEDIA_STATE_FLUSH_PARAM         FlushParam;
     bool                                bEnableSLM;
-    RENDERHAL_GENERIC_PROLOG_PARAMS     GenericPrologParams;
+    RENDERHAL_GENERIC_PROLOG_PARAMS     GenericPrologParams = {};
     MOS_RESOURCE                        GpuStatusBuffer;
+    MediaPerfProfiler                   *pPerfProfiler;
 
     eStatus             = MOS_STATUS_UNKNOWN;
     pOsInterface        = pRenderHal->pOsInterface;
@@ -432,6 +433,7 @@ MOS_STATUS VpHal_RndrCommonSubmitCommands(
     iRemaining          = 0;
     FlushParam          = g_cRenderHal_InitMediaStateFlushParams;
     MOS_ZeroMemory(&CmdBuffer, sizeof(CmdBuffer));
+    pPerfProfiler       = pRenderHal->pPerfProfiler;
 
     // Allocate all available space, unused buffer will be returned later
     VPHAL_RENDER_CHK_STATUS(pOsInterface->pfnGetCommandBuffer(pOsInterface, &CmdBuffer, 0));
@@ -442,8 +444,6 @@ MOS_STATUS VpHal_RndrCommonSubmitCommands(
     VPHAL_RENDER_CHK_STATUS(VpHal_RndrCommonSetPowerMode(
         pRenderHal,
         KernelID));
-
-    MOS_ZeroMemory(&GenericPrologParams, sizeof(GenericPrologParams));
 
 #ifndef EMUL
     if (pOsInterface->bEnableKmdMediaFrameTracking)
@@ -468,6 +468,7 @@ MOS_STATUS VpHal_RndrCommonSubmitCommands(
     VPHAL_RENDER_CHK_STATUS(pRenderHal->pfnInitCommandBuffer(pRenderHal, &CmdBuffer, &GenericPrologParams));
     // Write timing data for 3P budget
     VPHAL_RENDER_CHK_STATUS(pRenderHal->pfnSendTimingData(pRenderHal, &CmdBuffer, true));
+    VPHAL_RENDER_CHK_STATUS(pPerfProfiler->AddPerfCollectStartCmd((void*)pRenderHal, pOsInterface, pMhwMiInterface, &CmdBuffer));
 
     bEnableSLM = (pGpGpuWalkerParams && pGpGpuWalkerParams->SLMSize > 0)? true : false;
     VPHAL_RENDER_CHK_STATUS(pRenderHal->pfnSetCacheOverrideParams(
@@ -503,6 +504,8 @@ MOS_STATUS VpHal_RndrCommonSubmitCommands(
         VPHAL_RENDER_CHK_STATUS(pRenderHal->pfnSendRcsStatusTag(pRenderHal, &CmdBuffer));
     }
 
+    VPHAL_RENDER_CHK_STATUS(pPerfProfiler->AddPerfCollectEndCmd((void*)pRenderHal, pOsInterface, pMhwMiInterface, &CmdBuffer));
+
     // Write timing data for 3P budget
     VPHAL_RENDER_CHK_STATUS(pRenderHal->pfnSendTimingData(pRenderHal, &CmdBuffer, false));
 
@@ -519,9 +522,7 @@ MOS_STATUS VpHal_RndrCommonSubmitCommands(
 
         if (MEDIA_IS_WA(pRenderHal->pWaTable, WaSendDummyVFEafterPipelineSelect))
         {
-            MHW_VFE_PARAMS VfeStateParams;
-
-            MOS_ZeroMemory(&VfeStateParams, sizeof(VfeStateParams));
+            MHW_VFE_PARAMS VfeStateParams = {};
             VfeStateParams.dwNumberofURBEntries = 1;
             VPHAL_RENDER_CHK_STATUS(pMhwRender->AddMediaVfeCmd(&CmdBuffer, &VfeStateParams));
         }
@@ -650,8 +651,9 @@ MOS_STATUS VpHal_RndrSubmitCommands(
     MhwRenderInterface                  *pMhwRender;
     MHW_MEDIA_STATE_FLUSH_PARAM         FlushParam;
     bool                                bEnableSLM;
-    RENDERHAL_GENERIC_PROLOG_PARAMS     GenericPrologParams;
+    RENDERHAL_GENERIC_PROLOG_PARAMS     GenericPrologParams = {};
     MOS_RESOURCE                        GpuStatusBuffer;
+    MediaPerfProfiler                   *pPerfProfiler;
 
     eStatus              = MOS_STATUS_UNKNOWN;
     pOsInterface         = pRenderHal->pOsInterface;
@@ -660,6 +662,7 @@ MOS_STATUS VpHal_RndrSubmitCommands(
     iRemaining           = 0;
     FlushParam           = g_cRenderHal_InitMediaStateFlushParams;
     MOS_ZeroMemory(&CmdBuffer, sizeof(CmdBuffer));
+    pPerfProfiler       = pRenderHal->pPerfProfiler;
 
     // Allocate all available space, unused buffer will be returned later
     VPHAL_RENDER_CHK_STATUS(pOsInterface->pfnGetCommandBuffer(pOsInterface, &CmdBuffer, 0));
@@ -670,8 +673,6 @@ MOS_STATUS VpHal_RndrSubmitCommands(
     VPHAL_RENDER_CHK_STATUS(VpHal_RndrCommonSetPowerMode(
         pRenderHal,
         KernelID));
-    
-    MOS_ZeroMemory(&GenericPrologParams, sizeof(GenericPrologParams));
 
 #ifndef EMUL
     if (pOsInterface->bEnableKmdMediaFrameTracking)
@@ -694,6 +695,9 @@ MOS_STATUS VpHal_RndrSubmitCommands(
 
     // Initialize command buffer and insert prolog
     VPHAL_RENDER_CHK_STATUS(pRenderHal->pfnInitCommandBuffer(pRenderHal, &CmdBuffer, &GenericPrologParams));
+
+    VPHAL_RENDER_CHK_STATUS(pPerfProfiler->AddPerfCollectStartCmd((void*)pRenderHal, pOsInterface, pMhwMiInterface, &CmdBuffer));
+
     // Write timing data for 3P budget
     VPHAL_RENDER_CHK_STATUS(pRenderHal->pfnSendTimingData(pRenderHal, &CmdBuffer, true));
 
@@ -702,6 +706,14 @@ MOS_STATUS VpHal_RndrSubmitCommands(
         pRenderHal,
         &pRenderHal->L3CacheSettings,
         bEnableSLM));
+
+    if (pRenderHal->bCmfcCoeffUpdate)
+    {
+        VPHAL_RENDER_CHK_STATUS(pRenderHal->pfnSendCscCoeffSurface(pRenderHal,
+            &CmdBuffer,
+            pRenderHal->pCmfcCoeffSurface,
+            pRenderHal->pStateHeap->pKernelAllocation[pRenderHal->iKernelAllocationID].pKernelEntry));
+    }
 
     // Flush media states
     VPHAL_RENDER_CHK_STATUS(pRenderHal->pfnSendMediaStates(
@@ -731,6 +743,8 @@ MOS_STATUS VpHal_RndrSubmitCommands(
         VPHAL_RENDER_CHK_STATUS(pRenderHal->pfnSendRcsStatusTag(pRenderHal, &CmdBuffer));
     }
 
+    VPHAL_RENDER_CHK_STATUS(pPerfProfiler->AddPerfCollectEndCmd((void*)pRenderHal, pOsInterface, pMhwMiInterface, &CmdBuffer));
+
     // Write timing data for 3P budget
     VPHAL_RENDER_CHK_STATUS(pRenderHal->pfnSendTimingData(pRenderHal, &CmdBuffer, false));
 
@@ -747,9 +761,7 @@ MOS_STATUS VpHal_RndrSubmitCommands(
 
         if (MEDIA_IS_WA(pRenderHal->pWaTable, WaSendDummyVFEafterPipelineSelect))
         {
-            MHW_VFE_PARAMS VfeStateParams;
-
-            MOS_ZeroMemory(&VfeStateParams, sizeof(VfeStateParams));
+            MHW_VFE_PARAMS VfeStateParams = {};
             VfeStateParams.dwNumberofURBEntries = 1;
             VPHAL_RENDER_CHK_STATUS(pMhwRender->AddMediaVfeCmd(&CmdBuffer, &VfeStateParams));
         }
@@ -887,8 +899,8 @@ MOS_STATUS VpHal_RndrCommonInitRenderHalSurface(
     pRenderHalSurface->OsSurface.bIsCompressed      = pVpSurface->bIsCompressed;
     pRenderHalSurface->OsSurface.bCompressible      = pVpSurface->bCompressible;
     pRenderHalSurface->OsSurface.CompressionMode    = pVpSurface->CompressionMode;
-	pRenderHalSurface->OsSurface.dwDepth            = pVpSurface->dwDepth;
-	pRenderHalSurface->OsSurface.dwQPitch           = pVpSurface->dwHeight;
+    pRenderHalSurface->OsSurface.dwDepth            = pVpSurface->dwDepth;
+    pRenderHalSurface->OsSurface.dwQPitch           = pVpSurface->dwHeight;
     pRenderHalSurface->OsSurface.MmcState           = (MOS_MEMCOMP_STATE)pVpSurface->CompressionMode;
 
     VpHal_RndrInitPlaneOffset(
@@ -909,7 +921,6 @@ MOS_STATUS VpHal_RndrCommonInitRenderHalSurface(
     pRenderHalSurface->ScalingMode                  =
                     VpHal_RndrInitRenderHalScalingMode(pVpSurface->ScalingMode);
     pRenderHalSurface->ChromaSiting                 = pVpSurface->ChromaSiting;
-
 
     if (pVpSurface->pDeinterlaceParams != nullptr)
     {
@@ -973,10 +984,9 @@ finish:
     return eStatus;
 }
 
-
 //!
 //! \brief    Set Surface for HW Access
-//! \details  Common Function for setting up surface state, if render would  
+//! \details  Common Function for setting up surface state, if render would 
 //!           use CP HM, need use VpHal_CommonSetSurfaceForHwAccess instead
 //! \param    [in] pRenderHal
 //!           Pointer to RenderHal Interface Structure
@@ -1027,8 +1037,8 @@ MOS_STATUS VpHal_RndrCommonSetSurfaceForHwAccess(
         true));
 
     VPHAL_RENDER_CHK_STATUS(VpHal_RndrCommonInitRenderHalSurface(
-		pSurface,
-		&RenderHalSurface));
+        pSurface,
+        &RenderHalSurface));
 
     // Setup surface states-----------------------------------------------------
     VPHAL_RENDER_CHK_STATUS(pRenderHal->pfnSetupSurfaceState(
@@ -1057,10 +1067,9 @@ finish:
     return eStatus;
 }
 
-
 //!
 //! \brief    Set Buffer Surface for HW Access
-//! \details  Common Function for setting up buffer surface state, if render would  
+//! \details  Common Function for setting up buffer surface state, if render would 
 //!           use CP HM, need use VpHal_CommonSetBufferSurfaceForHwAccess instead
 //! \param    [in] pRenderHal
 //!           Pointer to RenderHal Interface Structure
@@ -1116,8 +1125,8 @@ MOS_STATUS VpHal_RndrCommonSetBufferSurfaceForHwAccess(
     }
 
     VPHAL_RENDER_CHK_STATUS(VpHal_RndrCommonInitRenderHalSurface(
-		pSurface,
-		&RenderHalSurface));
+        pSurface,
+        &RenderHalSurface));
 
     VPHAL_RENDER_CHK_STATUS(pRenderHal->pfnSetupBufferSurfaceState(
         pRenderHal,
@@ -1135,7 +1144,6 @@ MOS_STATUS VpHal_RndrCommonSetBufferSurfaceForHwAccess(
 finish:
     return eStatus;
 }
-
 
 //!
 //! \brief    Set Surface for HW Access for CP HM
@@ -1187,8 +1195,8 @@ MOS_STATUS VpHal_CommonSetSurfaceForHwAccess(
         true));
 
     VPHAL_RENDER_CHK_STATUS(VpHal_RndrCommonInitRenderHalSurface(
-		pSurface,
-		pRenderSurface));
+        pSurface,
+        pRenderSurface));
 
     // Setup surface states-----------------------------------------------------
     VPHAL_RENDER_CHK_STATUS(pRenderHal->pfnSetupSurfaceState(
@@ -1216,7 +1224,6 @@ MOS_STATUS VpHal_CommonSetSurfaceForHwAccess(
 finish:
     return eStatus;
 }
-
 
 //!
 //! \brief    Set Buffer Surface for HW Access for CP HM
@@ -1273,8 +1280,8 @@ MOS_STATUS VpHal_CommonSetBufferSurfaceForHwAccess(
     }
 
     VPHAL_RENDER_CHK_STATUS(VpHal_RndrCommonInitRenderHalSurface(
-		pSurface,
-		pRenderSurface));
+        pSurface,
+        pRenderSurface));
 
     VPHAL_RENDER_CHK_STATUS(pRenderHal->pfnSetupBufferSurfaceState(
         pRenderHal,
@@ -1292,7 +1299,6 @@ MOS_STATUS VpHal_CommonSetBufferSurfaceForHwAccess(
 finish:
     return eStatus;
 }
-
 
 //!
 //! \brief      Is Alignment WA needed
@@ -1516,7 +1522,7 @@ MOS_STATUS VpHal_RndrCommonInitAVSParams(
         goto finish;
     }
 
-    pAVS_Params->piYCoefsX = (int32_t*)ptr; 
+    pAVS_Params->piYCoefsX = (int32_t*)ptr;
 
     ptr += uiYCoeffTableSize;
     pAVS_Params->piUVCoefsX = (int32_t*)ptr;

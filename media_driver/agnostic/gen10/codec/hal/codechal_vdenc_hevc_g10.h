@@ -28,6 +28,7 @@
 #define __CODECHAL_VDENC_HEVC_G10_H__
 
 #include "codechal_vdenc_hevc.h"
+#include "codechal_debug_encode_par_g10.h"
 
 enum CODECHAL_BINDING_TABLE_OFFSET_HEVC_VP9_VDENC_KERNEL_G10
 {
@@ -1738,7 +1739,6 @@ C_ASSERT(MOS_BYTES_TO_DWORDS(sizeof(CODECHAL_VDENC_HEVC_ME_CURBE_G10)) == 48);
 
 using PCODECHAL_VDENC_HEVC_ME_CURBE_G10 = CODECHAL_VDENC_HEVC_ME_CURBE_G10*;
 
-
 //!  HEVC VDEnc encoder class for GEN10
 /*!
 This class defines the member fields, functions for GEN10 platform
@@ -1750,25 +1750,40 @@ public:
     static constexpr uint32_t   m_brcConstantSurfaceWidth = 64;        //!< BRC constant surface width
     static constexpr uint32_t   m_brcConstantSurfaceHeight = 35;       //!< BRC constant surface height
     static constexpr uint32_t   m_brcHistoryBufferSize = 1016;          //!< BRC history buffer size
-    static constexpr uint32_t   m_bframeMeBidirectionalWeight = 32;    //!< B frame bidirection weight 
+    static constexpr uint32_t   m_bframeMeBidirectionalWeight = 32;    //!< B frame bidirection weight
     static constexpr uint32_t   m_insertOffsetAfterCMD1 = 120;        //!< Huc Initializer CMD1 delta
     static constexpr uint32_t   m_insertOffsetAfterCMD2 = 148;        //!< Huc Initializer CMD2 delta
 
-    //!< \cond SKIP_DOXYGEN
-    // HuC tables. 
+    // HuC tables.
     // These Values are diff for each Gen
-    static const int8_t         m_devThreshPB0[8];
-    static const int8_t         m_devThreshPB0LowDelay[8];
-    static const int8_t         m_devThreshVBR0[8];
-    static const int8_t         m_devThreshI0[8];
-    static const uint32_t       m_hucConstantData[];
-    //! \endcond
+    static constexpr uint32_t    m_numDevThreshlds = 8;
+    static constexpr double      m_devStdFPS = 30.0;
+    static constexpr double      m_bpsRatioLow = 0.1;
+    static constexpr double      m_bpsRatioHigh = 3.5;
+    static constexpr int32_t     m_postMultPB = 50;
+    static constexpr int32_t     m_negMultPB = -50;
+    static constexpr int32_t     m_posMultVBR = 100;
+    static constexpr int32_t     m_negMultVBR = -50;
 
+    static const double          m_devThreshIFPNEG[m_numDevThreshlds / 2];
+    static const double          m_devThreshIFPPOS[m_numDevThreshlds / 2];
+    static const double          m_devThreshPBFPNEG[m_numDevThreshlds / 2];
+    static const double          m_devThreshPBFPPOS[m_numDevThreshlds / 2];
+    static const double          m_devThreshVBRNEG[m_numDevThreshlds / 2];
+    static const double          m_devThreshVBRPOS[m_numDevThreshlds / 2];
+    static const int8_t          m_lowdelayDevThreshPB[m_numDevThreshlds];
+    static const int8_t          m_lowdelayDevThreshVBR[m_numDevThreshlds];
+    static const int8_t          m_lowdelayDevThreshI[m_numDevThreshlds];
+    static const int8_t          m_lowdelayDeltaFrmszI[][8];
+    static const int8_t          m_lowdelayDeltaFrmszP[][8];
+    static const int8_t          m_lowdelayDeltaFrmszB[][8];
+
+    static const uint32_t       m_hucConstantData[];
     static const uint32_t       m_meCurbeInit[48];                      //!< Curbe initialization data for ME kernel
- 
+
     //!
     //! \brief    Constructor
-    //!     
+    //!
     CodechalVdencHevcStateG10(CodechalHwInterface* hwInterface,
         CodechalDebugInterface* debugInterface,
         PCODECHAL_STANDARD_INFO standardInfo);
@@ -1776,7 +1791,13 @@ public:
     //!
     //! \brief    Destructor
     //!
-    ~CodechalVdencHevcStateG10() {};
+    ~CodechalVdencHevcStateG10()
+    {
+        CODECHAL_DEBUG_TOOL(
+            DestroyHevcPar();
+            MOS_Delete(m_encodeParState);
+        )
+    }
 
     //!
     //! \brief    Get encoder kernel header and kernel size
@@ -1882,11 +1903,11 @@ public:
     //!           MOS_STATUS_SUCCESS if success, else fail reason
     //!
     MOS_STATUS SendMeSurfaces(bool using4xMe, PMOS_COMMAND_BUFFER cmdBuffer);
-  
+
     // inherited virtual functions
     uint32_t GetMaxBtCount();
     bool CheckSupportedFormat(PMOS_SURFACE surface);
-    MOS_STATUS Initialize(PCODECHAL_SETTINGS settings);
+    MOS_STATUS Initialize(CodechalSetting * settings);
     MOS_STATUS InitKernelState();
     MOS_STATUS AllocatePakResources();
     MOS_STATUS FreePakResources();

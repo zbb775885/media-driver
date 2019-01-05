@@ -86,7 +86,7 @@ DdiEncodeHevc::~DdiEncodeHevc()
 }
 
 VAStatus DdiEncodeHevc::ContextInitialize(
-    CODECHAL_SETTINGS *codecHalSettings)
+    CodechalSetting *codecHalSettings)
 {
     DDI_CHK_NULL(m_encodeCtx, "nullptr m_encodeCtx.", VA_STATUS_ERROR_INVALID_CONTEXT);
     DDI_CHK_NULL(m_encodeCtx->pCpDdiInterface, "nullptr m_encodeCtx->pCpDdiInterface.", VA_STATUS_ERROR_INVALID_CONTEXT);
@@ -94,23 +94,59 @@ VAStatus DdiEncodeHevc::ContextInitialize(
 
     if (true == m_encodeCtx->bVdencActive)
     {
-        codecHalSettings->CodecFunction = CODECHAL_FUNCTION_ENC_VDENC_PAK;
+        codecHalSettings->codecFunction = CODECHAL_FUNCTION_ENC_VDENC_PAK;
+        codecHalSettings->disableUltraHME = true;
+        codecHalSettings->disableSuperHME = true;
     }
     else
     {
-        codecHalSettings->CodecFunction = CODECHAL_FUNCTION_ENC_PAK;
+        codecHalSettings->codecFunction = CODECHAL_FUNCTION_ENC_PAK;
     }
-    codecHalSettings->dwHeight          = m_encodeCtx->dwFrameHeight;
-    codecHalSettings->dwWidth           = m_encodeCtx->dwFrameWidth;
-    codecHalSettings->Mode              = m_encodeCtx->wModeType;
-    codecHalSettings->Standard          = CODECHAL_HEVC;
-    codecHalSettings->ucChromaFormat    = HCP_CHROMA_FORMAT_YUV420;
-    codecHalSettings->ucLumaChromaDepth = CODECHAL_LUMA_CHROMA_DEPTH_8_BITS;
-    if (m_is10Bit)
+    codecHalSettings->height          = m_encodeCtx->dworiFrameHeight;
+    codecHalSettings->width           = m_encodeCtx->dworiFrameWidth;
+    codecHalSettings->mode            = m_encodeCtx->wModeType;
+    codecHalSettings->standard        = CODECHAL_HEVC;
+
+    if(m_encodeCtx->vaProfile==VAProfileHEVCMain)
     {
-        codecHalSettings->ucLumaChromaDepth |= CODECHAL_LUMA_CHROMA_DEPTH_10_BITS;
+       codecHalSettings->chromaFormat    = HCP_CHROMA_FORMAT_YUV420;
+       codecHalSettings->lumaChromaDepth = CODECHAL_LUMA_CHROMA_DEPTH_8_BITS;
     }
-    codecHalSettings->pCpParams = m_encodeCtx->pCpDdiInterface->GetParams();
+    else if(m_encodeCtx->vaProfile==VAProfileHEVCMain10)
+    {
+       codecHalSettings->chromaFormat    = HCP_CHROMA_FORMAT_YUV420;
+       codecHalSettings->lumaChromaDepth = CODECHAL_LUMA_CHROMA_DEPTH_10_BITS;
+    }
+    else if(m_encodeCtx->vaProfile == VAProfileHEVCMain12)
+    {
+       codecHalSettings->chromaFormat    = HCP_CHROMA_FORMAT_YUV420;
+       codecHalSettings->lumaChromaDepth = CODECHAL_LUMA_CHROMA_DEPTH_12_BITS;
+    }
+    else if(m_encodeCtx->vaProfile == VAProfileHEVCMain422_10)
+    {
+        codecHalSettings->chromaFormat    = HCP_CHROMA_FORMAT_YUV422;
+        codecHalSettings->lumaChromaDepth = CODECHAL_LUMA_CHROMA_DEPTH_10_BITS;
+    }    
+    else if(m_encodeCtx->vaProfile == VAProfileHEVCMain422_12)
+    {
+        codecHalSettings->chromaFormat    = HCP_CHROMA_FORMAT_YUV422;
+        codecHalSettings->lumaChromaDepth = CODECHAL_LUMA_CHROMA_DEPTH_12_BITS;
+    }
+    else if (m_encodeCtx->vaProfile == VAProfileHEVCMain444)
+    {
+        codecHalSettings->chromaFormat = HCP_CHROMA_FORMAT_YUV444;
+        codecHalSettings->lumaChromaDepth = CODECHAL_LUMA_CHROMA_DEPTH_8_BITS;
+    }
+    else if (m_encodeCtx->vaProfile == VAProfileHEVCMain444_10)
+    {
+        codecHalSettings->chromaFormat = HCP_CHROMA_FORMAT_YUV444;
+        codecHalSettings->lumaChromaDepth = CODECHAL_LUMA_CHROMA_DEPTH_10_BITS;
+    }
+    else if (m_encodeCtx->vaProfile == VAProfileHEVCMain444_12)
+    {
+        codecHalSettings->chromaFormat = HCP_CHROMA_FORMAT_YUV444;
+        codecHalSettings->lumaChromaDepth = CODECHAL_LUMA_CHROMA_DEPTH_12_BITS;
+    }
 
     VAStatus eStatus = VA_STATUS_SUCCESS;
 
@@ -208,7 +244,7 @@ VAStatus DdiEncodeHevc::RenderPicture(VADriverContextP ctx, VAContextID context,
 
         case VAEncSliceParameterBufferType:
         {
-            uint32_t numSlices = buf->iNumElements;
+            uint32_t numSlices = buf->uiNumElements;
             DDI_CHK_STATUS(ParseSlcParams(mediaCtx, data, numSlices), VA_STATUS_ERROR_INVALID_BUFFER);
             break;
         }
@@ -264,14 +300,6 @@ VAStatus DdiEncodeHevc::EncodeInCodecHal(uint32_t numSlices)
     MOS_SURFACE rawSurface;
     MOS_ZeroMemory(&rawSurface, sizeof(rawSurface));
     rawSurface.dwOffset = 0;
-    if (m_encodeCtx->vaProfile == VAProfileHEVCMain10)
-    {
-        rawSurface.Format = Format_P010;
-    }
-    else  //VAProfileHEVCMain
-    {
-        rawSurface.Format = Format_NV12;
-    }
 
     DdiMedia_MediaSurfaceToMosResource(rtTbl->pCurrentRT, &(rawSurface.OsResource));
 
@@ -279,16 +307,11 @@ VAStatus DdiEncodeHevc::EncodeInCodecHal(uint32_t numSlices)
     MOS_SURFACE reconSurface;
     MOS_ZeroMemory(&reconSurface, sizeof(reconSurface));
     reconSurface.dwOffset = 0;
-    if (m_encodeCtx->vaProfile == VAProfileHEVCMain10)
-    {
-        reconSurface.Format = Format_P010;
-    }
-    else  //VAProfileHEVCMain
-    {
-        reconSurface.Format = Format_NV12;
-    }
 
     DdiMedia_MediaSurfaceToMosResource(rtTbl->pCurrentReconTarget, &(reconSurface.OsResource));
+
+    //clear registered recon/ref surface flags
+    DDI_CHK_RET(ClearRefList(&m_encodeCtx->RTtbl, true), "ClearRefList failed!");
 
     // Bitstream surface
     MOS_RESOURCE bitstreamSurface;
@@ -313,6 +336,8 @@ VAStatus DdiEncodeHevc::EncodeInCodecHal(uint32_t numSlices)
         encodeParams.bMbQpDataEnabled  = true;
     }
 
+    PCODEC_HEVC_ENCODE_SEQUENCE_PARAMS hevcSeqParams = (PCODEC_HEVC_ENCODE_SEQUENCE_PARAMS)((uint8_t *)m_encodeCtx->pSeqParams);
+    hevcSeqParams->TargetUsage = m_encodeCtx->targetUsage;
     encodeParams.pSeqParams   = m_encodeCtx->pSeqParams;
     encodeParams.pVuiParams   = m_encodeCtx->pVuiParams;
     encodeParams.pPicParams   = m_encodeCtx->pPicParams;
@@ -350,6 +375,12 @@ VAStatus DdiEncodeHevc::EncodeInCodecHal(uint32_t numSlices)
 
     encodeParams.pBSBuffer      = m_encodeCtx->pbsBuffer;
     encodeParams.pSlcHeaderData = (void *)m_encodeCtx->pSliceHeaderData;
+    
+    CodechalEncoderState *encoder = dynamic_cast<CodechalEncoderState *>(m_encodeCtx->pCodecHal);
+
+    encoder->m_mfeEncodeParams.submitIndex  = 0;
+    encoder->m_mfeEncodeParams.submitNumber = 1; //By default we only use one stream
+    encoder->m_mfeEncodeParams.streamId  = 0;
 
     MOS_STATUS status = m_encodeCtx->pCodecHal->Execute(&encodeParams);
     if (MOS_STATUS_SUCCESS != status)
@@ -401,7 +432,7 @@ VAStatus DdiEncodeHevc::ParseSeqParams(void *ptr)
 
     PCODEC_HEVC_ENCODE_SEQUENCE_PARAMS hevcSeqParams = (PCODEC_HEVC_ENCODE_SEQUENCE_PARAMS)((uint8_t *)m_encodeCtx->pSeqParams);
     DDI_CHK_NULL(hevcSeqParams, "nullptr hevcSeqParams", VA_STATUS_ERROR_INVALID_PARAMETER);
-    MOS_ZeroMemory(hevcSeqParams, sizeof(CODEC_HEVC_ENCODE_SEQUENCE_PARAMS));
+    //MOS_ZeroMemory(hevcSeqParams, sizeof(CODEC_HEVC_ENCODE_SEQUENCE_PARAMS));
 
     uint8_t log2MinCUSize = seqParams->log2_min_luma_coding_block_size_minus3 + 3;
 
@@ -414,15 +445,16 @@ VAStatus DdiEncodeHevc::ParseSeqParams(void *ptr)
     hevcSeqParams->GopRefDist                = seqParams->ip_period;
     hevcSeqParams->chroma_format_idc         = seqParams->seq_fields.bits.chroma_format_idc;
 
-    hevcSeqParams->TargetUsage       = TARGETUSAGE_RT_SPEED;
     hevcSeqParams->RateControlMethod = VARC2HalRC(m_encodeCtx->uiRCMethod);
 
     hevcSeqParams->TargetBitRate = MOS_ROUNDUP_DIVIDE(seqParams->bits_per_second, CODECHAL_ENCODE_BRC_KBPS);
     hevcSeqParams->MaxBitRate    = MOS_ROUNDUP_DIVIDE(seqParams->bits_per_second, CODECHAL_ENCODE_BRC_KBPS);
     hevcSeqParams->MinBitRate    = MOS_ROUNDUP_DIVIDE(seqParams->bits_per_second, CODECHAL_ENCODE_BRC_KBPS);
-    // fps it set to 30 by default, can be overwritten by misc paramter
-    hevcSeqParams->FrameRate.Numerator   = 3000;
-    hevcSeqParams->FrameRate.Denominator = 100;
+    // if didn't setting FrameRate, set to 30 by default, can be overwritten by misc paramter
+    if (!hevcSeqParams->FrameRate.Numerator) {
+        hevcSeqParams->FrameRate.Numerator   = 3000;
+        hevcSeqParams->FrameRate.Denominator = 100;
+    }
 
     // set default same as application, can be overwritten by HRD params
     hevcSeqParams->InitVBVBufferFullnessInBit = (uint32_t)seqParams->bits_per_second;
@@ -468,6 +500,11 @@ VAStatus DdiEncodeHevc::ParsePicParams(
 
     PCODEC_HEVC_ENCODE_SEQUENCE_PARAMS hevcSeqParams = (PCODEC_HEVC_ENCODE_SEQUENCE_PARAMS)((uint8_t *)m_encodeCtx->pSeqParams);
 
+    if(picParams->decoded_curr_pic.picture_id != VA_INVALID_SURFACE)
+    {
+        DDI_CHK_RET(RegisterRTSurfaces(&(m_encodeCtx->RTtbl), DdiMedia_GetSurfaceFromVASurfaceID(mediaCtx, picParams->decoded_curr_pic.picture_id)), "RegisterRTSurfaces failed!");
+    }
+
     // Curr Recon Pic
     SetupCodecPicture(
         mediaCtx,
@@ -495,6 +532,10 @@ VAStatus DdiEncodeHevc::ParsePicParams(
     // RefFrame List
     for (uint32_t i = 0; i < numMaxRefFrame; i++)
     {
+        if(picParams->reference_frames[i].picture_id != VA_INVALID_SURFACE)
+        {
+            DDI_CHK_RET(UpdateRegisteredRTSurfaceFlag(&(m_encodeCtx->RTtbl), DdiMedia_GetSurfaceFromVASurfaceID(mediaCtx, picParams->reference_frames[i].picture_id)), "RegisterRTSurfaces failed!");
+        }
         SetupCodecPicture(
             mediaCtx,
             &(m_encodeCtx->RTtbl),
@@ -524,8 +565,8 @@ VAStatus DdiEncodeHevc::ParsePicParams(
     hevcPicParams->weighted_bipred_flag           = picParams->pic_fields.bits.weighted_bipred_flag;
     hevcPicParams->loop_filter_across_slices_flag = picParams->pic_fields.bits.pps_loop_filter_across_slices_enabled_flag;
     hevcPicParams->loop_filter_across_tiles_flag  = picParams->pic_fields.bits.loop_filter_across_tiles_enabled_flag;
-    hevcPicParams->bLastPicInSeq                  = (picParams->last_picture == HEVC_LAST_PICTURE_EOSEQ) ? 1 : 0;
-    hevcPicParams->bLastPicInStream               = (picParams->last_picture == HEVC_LAST_PICTURE_EOSTREAM) ? 1 : 0;
+    hevcPicParams->bLastPicInSeq                  = (picParams->last_picture & HEVC_LAST_PICTURE_EOSEQ) ? 1 : 0;
+    hevcPicParams->bLastPicInStream               = (picParams->last_picture & HEVC_LAST_PICTURE_EOSTREAM) ? 1 : 0;
     hevcPicParams->bUseRawPicForRef               = false;
     hevcPicParams->bScreenContent                 = picParams->pic_fields.bits.screen_content_flag;
     hevcPicParams->bEmulationByteInsertion        = true;
@@ -678,26 +719,44 @@ VAStatus DdiEncodeHevc::ParseSlcParams(
 
         for (uint32_t i = 0; i < numMaxRefFrame; i++)
         {
-            SetupCodecPicture(
-                mediaCtx,
-                &(m_encodeCtx->RTtbl),
-                &(hevcSlcParams->RefPicList[0][i]),
-                vaEncSlcParamsHEVC->ref_pic_list0[i],
-                false,
-                true);
-            GetSlcRefIdx(&(hevcPicParams->RefFrameList[0]), &(hevcSlcParams->RefPicList[0][i]));
+            if(i >  hevcSlcParams->num_ref_idx_l0_active_minus1)
+            {
+                hevcSlcParams->RefPicList[0][i].FrameIdx = CODECHAL_NUM_UNCOMPRESSED_SURFACE_HEVC;
+                hevcSlcParams->RefPicList[0][i].PicFlags = PICTURE_INVALID;
+                hevcSlcParams->RefPicList[0][i].PicEntry = 0xFF;
+            }
+            else
+            {
+                SetupCodecPicture(
+                    mediaCtx,
+                    &(m_encodeCtx->RTtbl),
+                    &(hevcSlcParams->RefPicList[0][i]),
+                    vaEncSlcParamsHEVC->ref_pic_list0[i],
+                    false,
+                    true);
+                GetSlcRefIdx(&(hevcPicParams->RefFrameList[0]), &(hevcSlcParams->RefPicList[0][i]));
+            }
         }
 
         for (uint32_t i = 0; i < numMaxRefFrame; i++)
         {
-            SetupCodecPicture(
-                mediaCtx,
-                &(m_encodeCtx->RTtbl),
-                &(hevcSlcParams->RefPicList[1][i]),
-                vaEncSlcParamsHEVC->ref_pic_list1[i],
-                false,
-                true);
-            GetSlcRefIdx(&(hevcPicParams->RefFrameList[0]), &(hevcSlcParams->RefPicList[1][i]));
+            if(i >  hevcSlcParams->num_ref_idx_l1_active_minus1)
+            {
+                hevcSlcParams->RefPicList[1][i].FrameIdx = CODECHAL_NUM_UNCOMPRESSED_SURFACE_HEVC;
+                hevcSlcParams->RefPicList[1][i].PicFlags = PICTURE_INVALID;
+                hevcSlcParams->RefPicList[1][i].PicEntry = 0xFF;
+            }
+            else
+            {
+                SetupCodecPicture(
+                    mediaCtx,
+                    &(m_encodeCtx->RTtbl),
+                    &(hevcSlcParams->RefPicList[1][i]),
+                    vaEncSlcParamsHEVC->ref_pic_list1[i],
+                    false,
+                    true);
+                GetSlcRefIdx(&(hevcPicParams->RefFrameList[0]), &(hevcSlcParams->RefPicList[1][i]));
+            }
         }
 
         vaEncSlcParamsHEVC++;
@@ -705,6 +764,49 @@ VAStatus DdiEncodeHevc::ParseSlcParams(
 
     hevcPicParams->NumSlices += numSlices;
     m_encodeCtx->dwNumSlices = hevcPicParams->NumSlices;
+
+    return VA_STATUS_SUCCESS;
+}
+
+VAStatus DdiEncodeHevc::FindNalUnitStartCodes(
+    uint8_t * buf,
+    uint32_t size,
+    uint32_t * startCodesOffset,
+    uint32_t * startCodesLength)
+{
+    uint8_t i = 0;
+
+    while (((i + 3) < size) &&
+           (buf[i] != 0 || buf[i+1] != 0 || buf[i+2] != 0x01) &&
+           (buf[i] != 0 || buf[i+1] != 0 || buf[i+2] != 0 || buf[i+3] != 0x01))
+    {
+        i++;
+    }
+
+    if ((i + 3) == size)
+    {
+        if (buf[i] != 0 || buf[i+1] != 0 || buf[i+2] != 0x01)
+        {
+            return VA_STATUS_ERROR_INVALID_BUFFER; //NALU start codes doesn't exit
+        }
+        else
+        {
+            *startCodesOffset = size - 3;
+            *startCodesLength = 3;
+            return VA_STATUS_SUCCESS;
+        }
+    }
+
+    if (buf[i] != 0 || buf[i+1] != 0 || buf[i+2] != 0x01)
+    {
+        *startCodesOffset = i;
+        *startCodesLength = 4;
+    }
+    else
+    {
+        *startCodesOffset = i;
+        *startCodesLength = 3;
+    }
 
     return VA_STATUS_SUCCESS;
 }
@@ -729,26 +831,16 @@ VAStatus DdiEncodeHevc::ParsePackedHeaderParams(void *ptr)
 
         // get the packed header size
         m_encodeCtx->pSliceHeaderData[m_encodeCtx->uiSliceHeaderCnt].BitSize                = encPackedHeaderParamBuf->bit_length;
+        // don't know NALU start codes now, assign to 4 here when has_emulation_bytes is 0 and later will correct it
         m_encodeCtx->pSliceHeaderData[m_encodeCtx->uiSliceHeaderCnt].SkipEmulationByteCount = (encPackedHeaderParamBuf->has_emulation_bytes) ? (encPackedHeaderParamBuf->bit_length + 7) / 8 : 4;
     }
-    else if (encPackedHeaderParamBuf->type == VAEncPackedHeaderHEVC_SEI)
-    {
-        if (m_encodeCtx->pSEIFromApp->pSEIBuffer)
-            MOS_FreeMemory(m_encodeCtx->pSEIFromApp->pSEIBuffer);
-
-        uint32_t size                         = (encPackedHeaderParamBuf->bit_length + 7) / 8;
-        m_encodeCtx->pSEIFromApp->pSEIBuffer    = (uint8_t *)MOS_AllocAndZeroMemory(size);
-        m_encodeCtx->pSEIFromApp->dwSEIBufSize  = size;
-        m_encodeCtx->pSEIFromApp->dwSEIDataSize = 0;
-        m_encodeCtx->pSEIFromApp->newSEIData   = true;
-    }
-
-    if (encPackedHeaderParamBuf->type != VAEncPackedHeaderHEVC_Slice)
+    else
     {
         /* App does not indicate the type, using PPS in general for headers */
         m_encodeCtx->ppNALUnitParams[m_encodeCtx->indexNALUnit]->uiNalUnitType             = HEVC_NAL_UT_PPS;
         m_encodeCtx->ppNALUnitParams[m_encodeCtx->indexNALUnit]->bInsertEmulationBytes     = (encPackedHeaderParamBuf->has_emulation_bytes) ? false : true;
-        m_encodeCtx->ppNALUnitParams[m_encodeCtx->indexNALUnit]->uiSkipEmulationCheckCount = 4;
+        // don't know NALU start codes now, assign to 4 here when has_emulation_bytes is 0 and later will correct it
+        m_encodeCtx->ppNALUnitParams[m_encodeCtx->indexNALUnit]->uiSkipEmulationCheckCount = (encPackedHeaderParamBuf->has_emulation_bytes) ? (encPackedHeaderParamBuf->bit_length + 7) / 8 : 4;
         m_encodeCtx->ppNALUnitParams[m_encodeCtx->indexNALUnit]->uiSize                    = (encPackedHeaderParamBuf->bit_length + 7) / 8;
         m_encodeCtx->ppNALUnitParams[m_encodeCtx->indexNALUnit]->uiOffset                  = 0;
     }
@@ -786,6 +878,24 @@ VAStatus DdiEncodeHevc::ParsePackedHeaderData(void *ptr)
         }
 
         m_encodeCtx->pSliceHeaderData[m_encodeCtx->uiSliceHeaderCnt].SliceOffset = bsBuffer->pCurrent - bsBuffer->pBase;
+
+        // correct SkipEmulationByteCount
+        // according to LibVA principle, one packed header buffer should only contain one NALU,
+        // so when has_emulation_bytes is 0, SkipEmulationByteCount only needs to skip the NALU start codes
+        if (m_encodeCtx->pSliceHeaderData[m_encodeCtx->uiSliceHeaderCnt].SkipEmulationByteCount != hdrDataSize)
+        {
+            uint32_t startCodesOffset = 0;
+            uint32_t startCodesLength = 0;
+            VAStatus vaSts = VA_STATUS_SUCCESS;
+            vaSts = FindNalUnitStartCodes((uint8_t *)ptr, hdrDataSize, &startCodesOffset, &startCodesLength);
+            if (VA_STATUS_SUCCESS != vaSts)
+            {
+                DDI_ASSERTMESSAGE("DDI: packed slice header doesn't include NAL unit start codes!");
+                return vaSts;
+            }
+            m_encodeCtx->pSliceHeaderData[m_encodeCtx->uiSliceHeaderCnt].SkipEmulationByteCount = MOS_MIN(15, (startCodesOffset + startCodesLength));
+        }
+
         m_encodeCtx->uiSliceHeaderCnt++;
         m_encodeCtx->bLastPackedHdrIsSlice = false;
     }
@@ -799,6 +909,23 @@ VAStatus DdiEncodeHevc::ParsePackedHeaderData(void *ptr)
         {
             DDI_ASSERTMESSAGE("DDI:packed header size is too large to be supported!");
             return VA_STATUS_ERROR_INVALID_PARAMETER;
+        }
+
+        // correct uiSkipEmulationCheckCount
+        // according to LibVA principle, one packed header buffer should only contain one NALU,
+        // so when has_emulation_bytes is 0, uiSkipEmulationCheckCount only needs to skip the NALU start codes
+        if (m_encodeCtx->ppNALUnitParams[m_encodeCtx->indexNALUnit]->uiSkipEmulationCheckCount != hdrDataSize)
+        {
+            uint32_t startCodesOffset = 0;
+            uint32_t startCodesLength = 0;
+            VAStatus vaSts = VA_STATUS_SUCCESS;
+            vaSts = FindNalUnitStartCodes((uint8_t *)ptr, hdrDataSize, &startCodesOffset, &startCodesLength);
+            if (VA_STATUS_SUCCESS != vaSts)
+            {
+                DDI_ASSERTMESSAGE("DDI: packed header doesn't include NAL unit start codes!");
+                return vaSts;
+            }
+            m_encodeCtx->ppNALUnitParams[m_encodeCtx->indexNALUnit]->uiSkipEmulationCheckCount = MOS_MIN(15, (startCodesOffset + startCodesLength));
         }
 
         m_encodeCtx->ppNALUnitParams[m_encodeCtx->indexNALUnit]->uiOffset = bsBuffer->pCurrent - bsBuffer->pBase;
@@ -830,7 +957,7 @@ VAStatus DdiEncodeHevc::ParseMiscParams(void *ptr)
     case VAEncMiscParameterTypeQualityLevel:
     {
         VAEncMiscParameterBufferQualityLevel *vaEncMiscParamQualityLevel = (VAEncMiscParameterBufferQualityLevel *)miscParamBuf->data;
-        seqParams->TargetUsage                                           = (uint8_t)vaEncMiscParamQualityLevel->quality_level;
+        m_encodeCtx->targetUsage                                         = (uint8_t)vaEncMiscParamQualityLevel->quality_level;
 
 #ifdef _FULL_OPEN_SOURCE
         if(seqParams->TargetUsage >= 1 && seqParams->TargetUsage <= 2)
@@ -849,7 +976,7 @@ VAStatus DdiEncodeHevc::ParseMiscParams(void *ptr)
 #endif
 
         // HEVC only supports TU=1, 4, and 7
-        if (1 != seqParams->TargetUsage && 4 != seqParams->TargetUsage && 7 != seqParams->TargetUsage)
+        if (1 != m_encodeCtx->targetUsage && 4 != m_encodeCtx->targetUsage && 7 != m_encodeCtx->targetUsage)
         {
             DDI_ASSERTMESSAGE("unsupported target usage in HEVC encoder.");
             return VA_STATUS_ERROR_INVALID_PARAMETER;
@@ -867,12 +994,31 @@ VAStatus DdiEncodeHevc::ParseMiscParams(void *ptr)
     case VAEncMiscParameterTypeFrameRate:
     {
         VAEncMiscParameterFrameRate *vaEncMiscParamFR = (VAEncMiscParameterFrameRate *)miscParamBuf->data;
-        seqParams->FrameRate.Numerator                = vaEncMiscParamFR->framerate & 0xffff;
-        seqParams->FrameRate.Denominator              = (vaEncMiscParamFR->framerate >> 16 ) & 0xffff;
-        if(seqParams->FrameRate.Denominator == 0)
+        uint32_t vaFRnumerator = vaEncMiscParamFR->framerate & 0xffff;
+
+#if (VA_MAJOR_VERSION < 1)
+        uint32_t vaFRDenominator = 100;
+#else
+        uint32_t vaFRDenominator = (vaEncMiscParamFR->framerate >> 16) & 0xffff;
+#endif
+
+        if(vaFRDenominator == 0)
         {
-            seqParams->FrameRate.Denominator = 1;
+            vaFRDenominator = 1;
         }
+        // Pass frame rate value to seqParams and set BRC reset flag and bNewSeq to true while dynamic BRC occures
+        seqParams->FrameRate.Numerator = vaFRnumerator;
+        seqParams->FrameRate.Denominator = vaFRDenominator;
+        if(m_previousFRvalue != 0)
+        {
+            uint16_t seqFRvalue = (uint16_t)(seqParams->FrameRate.Numerator / seqParams->FrameRate.Denominator);
+            if(m_previousFRvalue != seqFRvalue)
+            {
+                seqParams->bResetBRC = 0x1;
+                m_encodeCtx->bNewSeq = true;
+            }
+        }
+        m_previousFRvalue = (uint16_t)(vaFRnumerator / vaFRDenominator);
         break;
     }
     case VAEncMiscParameterTypeRateControl:
@@ -894,36 +1040,36 @@ VAStatus DdiEncodeHevc::ParseMiscParams(void *ptr)
             seqParams->RateControlMethod = RATECONTROL_CQP;
             seqParams->MBBRC             = 0;
         }
-        else if ((VA_RC_CBR | VA_RC_MB) == m_encodeCtx->uiRCMethod || (VA_RC_CBR | VA_RC_MB | VA_RC_PARALLEL) == m_encodeCtx->uiRCMethod)
+        else if (VA_RC_CBR & m_encodeCtx->uiRCMethod )
         {
             seqParams->MaxBitRate        = seqParams->TargetBitRate;
             seqParams->MinBitRate        = seqParams->TargetBitRate;
             seqParams->RateControlMethod = RATECONTROL_CBR;
         }
-        else if (VA_RC_ICQ == m_encodeCtx->uiRCMethod || (VA_RC_ICQ | VA_RC_PARALLEL) == m_encodeCtx->uiRCMethod)
+        else if (VA_RC_ICQ & m_encodeCtx->uiRCMethod)
         {
             seqParams->ICQQualityFactor  = vaEncMiscParamRC->ICQ_quality_factor;
             seqParams->RateControlMethod = RATECONTROL_ICQ;
             seqParams->MBBRC             = 1;
         }
+        else if(VA_RC_VCM & m_encodeCtx->uiRCMethod)
+        {
+            seqParams->RateControlMethod = RATECONTROL_VCM;
+            seqParams->MBBRC             = 0;
+        }
+        else if(VA_RC_VBR & m_encodeCtx->uiRCMethod)
+        {
+            seqParams->RateControlMethod = RATECONTROL_VBR;
+        }
         else
         {
-            switch (m_encodeCtx->uiRCMethod)
-            {
-            case (VA_RC_VCM | VA_RC_PARALLEL):
-            case VA_RC_VCM:
-                seqParams->RateControlMethod = RATECONTROL_VCM;
-                seqParams->MBBRC             = 0;
-                break;
-            case (VA_RC_VBR | VA_RC_MB | VA_RC_PARALLEL):
-            case (VA_RC_VBR | VA_RC_MB):
-                seqParams->RateControlMethod = RATECONTROL_VBR;
-                break;
-            default:
-                DDI_ASSERTMESSAGE("invalid RC method.");
-                return VA_STATUS_ERROR_INVALID_PARAMETER;
-            }
-
+            DDI_ASSERTMESSAGE("invalid RC method.");
+            return VA_STATUS_ERROR_INVALID_PARAMETER;
+        }
+        if((RATECONTROL_VCM == seqParams->RateControlMethod)
+            || (RATECONTROL_VBR == seqParams->RateControlMethod)
+            || (RATECONTROL_CBR == seqParams->RateControlMethod))
+        {
             seqParams->MaxBitRate    = seqParams->TargetBitRate;
             seqParams->MinBitRate    = seqParams->TargetBitRate * (2 * vaEncMiscParamRC->target_percentage - 100) / 100;
             seqParams->TargetBitRate = seqParams->TargetBitRate * vaEncMiscParamRC->target_percentage / 100;
@@ -934,6 +1080,7 @@ VAStatus DdiEncodeHevc::ParseMiscParams(void *ptr)
                 if ((m_encodeCtx->uiTargetBitRate != 0) && (m_encodeCtx->uiMaxBitRate != 0))
                 {
                     seqParams->bResetBRC = 0x1;
+                    m_encodeCtx->bNewSeq = true;
                 }
                 m_encodeCtx->uiTargetBitRate = seqParams->TargetBitRate;
                 m_encodeCtx->uiMaxBitRate    = seqParams->MaxBitRate;
@@ -1012,6 +1159,11 @@ VAStatus DdiEncodeHevc::ParseMiscParams(void *ptr)
 #ifndef ANDROID
         // support DeltaQP based ROI by default
         seqParams->ROIValueInDeltaQP = vaEncMiscParamROI->roi_flags.bits.roi_value_is_qp_delta;
+        if(picParams->NumROI != 0 && seqParams->ROIValueInDeltaQP == 0)
+        {
+            DDI_ASSERTMESSAGE("ROI does not support priority level now.");
+            return VA_STATUS_ERROR_INVALID_PARAMETER;
+        }
 #endif
         break;
     }

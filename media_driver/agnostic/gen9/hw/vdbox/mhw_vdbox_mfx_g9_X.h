@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, Intel Corporation
+* Copyright (c) 2017-2018, Intel Corporation
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -29,7 +29,7 @@
 
 #include "mhw_vdbox_mfx_generic.h"
 #include "mhw_mi_hwcmd_g9_X.h"
-
+#include "mhw_mmio_g9.h"
 //!  MHW Vdbox Mfx interface for Gen9
 /*!
 This class defines the Mfx command construction functions for Gen9 platforms as template
@@ -90,7 +90,7 @@ protected:
         PMOS_INTERFACE osInterface,
         MhwMiInterface *miInterface,
         MhwCpInterface *cpInterface,
-        bool decodeInUse) 
+        bool decodeInUse)
         : MhwVdboxMfxInterfaceGeneric<TMfxCmds, mhw_mi_g9_X>(osInterface, miInterface, cpInterface, decodeInUse)
     {
         MHW_FUNCTION_ENTER;
@@ -108,63 +108,63 @@ protected:
     {
         MmioRegistersMfx *mmioRegisters = &this->m_mmioRegisters[MHW_VDBOX_NODE_1];
 
-        mmioRegisters->generalPurposeRegister0LoOffset            = 0x12600;
-        mmioRegisters->generalPurposeRegister0HiOffset            = 0x12604;
-        mmioRegisters->generalPurposeRegister4LoOffset            = 0x12620;
-        mmioRegisters->generalPurposeRegister4HiOffset            = 0x12624;
-        mmioRegisters->mfcImageStatusMaskRegOffset                = 0x128B4;
-        mmioRegisters->mfcImageStatusCtrlRegOffset                = 0x128B8;
-        mmioRegisters->mfcAvcNumSlicesRegOffset                   = 0x12954;
-        mmioRegisters->mfcQPStatusCountOffset                     = 0x128BC;
-        mmioRegisters->mfxErrorFlagsRegOffset                     = 0x12800;
-        mmioRegisters->mfxFrameCrcRegOffset                       = 0x12850;
-        mmioRegisters->mfxMBCountRegOffset                        = 0x12868;
-        mmioRegisters->mfcBitstreamBytecountFrameRegOffset        = 0x128A0;
-        mmioRegisters->mfcBitstreamSeBitcountFrameRegOffset       = 0x128A4;
-        mmioRegisters->mfcBitstreamBytecountSliceRegOffset        = 0x128D0;
-        mmioRegisters->mfcVP8BitstreamBytecountFrameRegOffset     = 0x12908;
-        mmioRegisters->mfcVP8ImageStatusMaskRegOffset             = 0x12900;
-        mmioRegisters->mfcVP8ImageStatusCtrlRegOffset             = 0x12904;
-        mmioRegisters->mfxVP8BrcDQIndexRegOffset                  = 0x12910;
-        mmioRegisters->mfxVP8BrcDLoopFilterRegOffset              = 0x12914;
-        mmioRegisters->mfxVP8BrcCumulativeDQIndex01RegOffset      = 0X12918;
-        mmioRegisters->mfxVP8BrcCumulativeDQIndex23RegOffset      = 0X1291C;
-        mmioRegisters->mfxVP8BrcCumulativeDLoopFilter01RegOffset  = 0X12920;
-        mmioRegisters->mfxVP8BrcCumulativeDLoopFilter23RegOffset  = 0X12924;
-        mmioRegisters->mfxVP8BrcConvergenceStatusRegOffset        = 0X12928;
-        mmioRegisters->mfxLra0RegOffset                           = 0x04A50;
-        mmioRegisters->mfxLra1RegOffset                           = 0x04A54;
-        mmioRegisters->mfxLra2RegOffset                           = 0x04A58;
+        mmioRegisters->generalPurposeRegister0LoOffset            = GENERAL_PURPOSE_REGISTER0_LO_OFFSET_NODE_1_INIT_G9;
+        mmioRegisters->generalPurposeRegister0HiOffset            = GENERAL_PURPOSE_REGISTER0_HI_OFFSET_NODE_1_INIT_G9;
+        mmioRegisters->generalPurposeRegister4LoOffset            = GENERAL_PURPOSE_REGISTER4_LO_OFFSET_NODE_1_INIT_G9;
+        mmioRegisters->generalPurposeRegister4HiOffset            = GENERAL_PURPOSE_REGISTER4_HI_OFFSET_NODE_1_INIT_G9;
+        mmioRegisters->mfcImageStatusMaskRegOffset                = MFC_IMAGE_STATUS_MASK_REG_OFFSET_NODE_1_INIT_G9;
+        mmioRegisters->mfcImageStatusCtrlRegOffset                = MFC_IMAGE_STATUS_CTRL_REG_OFFSET_NODE_1_INIT_G9;
+        mmioRegisters->mfcAvcNumSlicesRegOffset                   = MFC_AVC_NUM_SLICES_REG_OFFSET_NODE_1_INIT_G9;
+        mmioRegisters->mfcQPStatusCountOffset                     = MFC_QP_STATUS_COUNT_OFFSET_NODE_1_INIT_G9;
+        mmioRegisters->mfxErrorFlagsRegOffset                     = MFX_ERROR_FLAG_REG_OFFSET_NODE_1_INIT_G9;
+        mmioRegisters->mfxFrameCrcRegOffset                       = MFX_FRAME_CRC_REG_OFFSET_NODE_1_INIT_G9;
+        mmioRegisters->mfxMBCountRegOffset                        = MFX_MB_COUNT_REG_OFFSET_NODE_1_INIT_G9;
+        mmioRegisters->mfcBitstreamBytecountFrameRegOffset        = MFC_BITSTREAM_BYTECOUNT_FRAME_REG_OFFSET_NODE_1_INIT_G9;
+        mmioRegisters->mfcBitstreamSeBitcountFrameRegOffset       = MFC_BITSTREAM_SE_BITCOUNT_FRAME_REG_OFFSET_NODE_1_INIT_G9;
+        mmioRegisters->mfcBitstreamBytecountSliceRegOffset        = MFC_BITSTREAM_BYTECOUNT_SLICE_REG_OFFSET_NODE_1_INIT_G9;
+        mmioRegisters->mfcVP8BitstreamBytecountFrameRegOffset     = MFC_VP8_BITSTREAM_BYTECOUNT_FRAME_REG_OFFSET_NODE_1_INIT_G9;
+        mmioRegisters->mfcVP8ImageStatusMaskRegOffset             = MFC_VP8_IMAGE_STATUS_MASK_REG_OFFSET_NODE_1_INIT_G9;
+        mmioRegisters->mfcVP8ImageStatusCtrlRegOffset             = MFC_VP8_IMAGE_STATUS_CTRL_REG_OFFSET_NODE_1_INIT_G9;
+        mmioRegisters->mfxVP8BrcDQIndexRegOffset                  = MFX_VP8_BRC_DQ_INDEX_REG_OFFSET_NODE_1_INIT_G9;
+        mmioRegisters->mfxVP8BrcDLoopFilterRegOffset              = MFX_VP8_BRC_LOOP_FILTER_REG_OFFSET_NODE_1_INIT_G9;
+        mmioRegisters->mfxVP8BrcCumulativeDQIndex01RegOffset      = MFX_VP8_BRC_CUMULATIVE_DQ_INDEX01_REG_OFFSET_NODE_1_INIT_G9;
+        mmioRegisters->mfxVP8BrcCumulativeDQIndex23RegOffset      = MFX_VP8_BRC_CUMULATIVE_DQ_INDEX23_REG_OFFSET_NODE_1_INIT_G9;
+        mmioRegisters->mfxVP8BrcCumulativeDLoopFilter01RegOffset  = MFX_VP8_BRC_CUMULATIVE_LOOP_FILTER01_REG_OFFSET_NODE_1_INIT_G9;
+        mmioRegisters->mfxVP8BrcCumulativeDLoopFilter23RegOffset  = MFX_VP8_BRC_CUMULATIVE_LOOP_FILTER23_REG_OFFSET_NODE_1_INIT_G9;
+        mmioRegisters->mfxVP8BrcConvergenceStatusRegOffset        = MFX_VP8_BRC_CONVERGENCE_STATUS_REG_OFFSET_NODE_1_INIT_G9;
+        mmioRegisters->mfxLra0RegOffset                           = MFX_LRA0_REG_OFFSET_NODE_1_INIT_G9;
+        mmioRegisters->mfxLra1RegOffset                           = MFX_LRA1_REG_OFFSET_NODE_1_INIT_G9;
+        mmioRegisters->mfxLra2RegOffset                           = MFX_LRA2_REG_OFFSET_NODE_1_INIT_G9;
 
         mmioRegisters = &this->m_mmioRegisters[MHW_VDBOX_NODE_2];
 
-        mmioRegisters->generalPurposeRegister0LoOffset            = 0x1C600;
-        mmioRegisters->generalPurposeRegister0HiOffset            = 0x1C604;
-        mmioRegisters->generalPurposeRegister4LoOffset            = 0x1C620;
-        mmioRegisters->generalPurposeRegister4HiOffset            = 0x1C624;
-        mmioRegisters->mfcImageStatusMaskRegOffset                = 0x1C8B4;
-        mmioRegisters->mfcImageStatusCtrlRegOffset                = 0x1C8B8;
-        mmioRegisters->mfcAvcNumSlicesRegOffset                   = 0x1C954;
-        mmioRegisters->mfcQPStatusCountOffset                     = 0x1C8BC;
-        mmioRegisters->mfxErrorFlagsRegOffset                     = 0x1C800;
-        mmioRegisters->mfxFrameCrcRegOffset                       = 0x1C850;
-        mmioRegisters->mfxMBCountRegOffset                        = 0x1C868;
-        mmioRegisters->mfcBitstreamBytecountFrameRegOffset        = 0x1C8A0;
-        mmioRegisters->mfcBitstreamSeBitcountFrameRegOffset       = 0x1C8A4;
-        mmioRegisters->mfcBitstreamBytecountSliceRegOffset        = 0x1C8D0;
-        mmioRegisters->mfcVP8BitstreamBytecountFrameRegOffset     = 0x1C908;
-        mmioRegisters->mfcVP8ImageStatusMaskRegOffset             = 0x1C900;
-        mmioRegisters->mfcVP8ImageStatusCtrlRegOffset             = 0x1C904;
-        mmioRegisters->mfxVP8BrcDQIndexRegOffset                  = 0x1C910;
-        mmioRegisters->mfxVP8BrcDLoopFilterRegOffset              = 0x1C914;
-        mmioRegisters->mfxVP8BrcCumulativeDQIndex01RegOffset      = 0X1C918;
-        mmioRegisters->mfxVP8BrcCumulativeDQIndex23RegOffset      = 0X1C91C;
-        mmioRegisters->mfxVP8BrcCumulativeDLoopFilter01RegOffset  = 0X1C920;
-        mmioRegisters->mfxVP8BrcCumulativeDLoopFilter23RegOffset  = 0X1C924;
-        mmioRegisters->mfxVP8BrcConvergenceStatusRegOffset        = 0X1C928;
-        mmioRegisters->mfxLra0RegOffset                           = 0;
-        mmioRegisters->mfxLra1RegOffset                           = 0;
-        mmioRegisters->mfxLra2RegOffset                           = 0;
+        mmioRegisters->generalPurposeRegister0LoOffset            = GENERAL_PURPOSE_REGISTER0_LO_OFFSET_NODE_2_INIT_G9;
+        mmioRegisters->generalPurposeRegister0HiOffset            = GENERAL_PURPOSE_REGISTER0_HI_OFFSET_NODE_2_INIT_G9;
+        mmioRegisters->generalPurposeRegister4LoOffset            = GENERAL_PURPOSE_REGISTER4_LO_OFFSET_NODE_2_INIT_G9;
+        mmioRegisters->generalPurposeRegister4HiOffset            = GENERAL_PURPOSE_REGISTER4_HI_OFFSET_NODE_2_INIT_G9;
+        mmioRegisters->mfcImageStatusMaskRegOffset                = MFC_IMAGE_STATUS_MASK_REG_OFFSET_NODE_2_INIT_G9;
+        mmioRegisters->mfcImageStatusCtrlRegOffset                = MFC_IMAGE_STATUS_CTRL_REG_OFFSET_NODE_2_INIT_G9;
+        mmioRegisters->mfcAvcNumSlicesRegOffset                   = MFC_AVC_NUM_SLICES_REG_OFFSET_NODE_2_INIT_G9;
+        mmioRegisters->mfcQPStatusCountOffset                     = MFC_QP_STATUS_COUNT_OFFSET_NODE_2_INIT_G9;
+        mmioRegisters->mfxErrorFlagsRegOffset                     = MFX_ERROR_FLAG_REG_OFFSET_NODE_2_INIT_G9;
+        mmioRegisters->mfxFrameCrcRegOffset                       = MFX_FRAME_CRC_REG_OFFSET_NODE_2_INIT_G9;
+        mmioRegisters->mfxMBCountRegOffset                        = MFX_MB_COUNT_REG_OFFSET_NODE_2_INIT_G9;
+        mmioRegisters->mfcBitstreamBytecountFrameRegOffset        = MFC_BITSTREAM_BYTECOUNT_FRAME_REG_OFFSET_NODE_2_INIT_G9;
+        mmioRegisters->mfcBitstreamSeBitcountFrameRegOffset       = MFC_BITSTREAM_SE_BITCOUNT_FRAME_REG_OFFSET_NODE_2_INIT_G9;
+        mmioRegisters->mfcBitstreamBytecountSliceRegOffset        = MFC_BITSTREAM_BYTECOUNT_SLICE_REG_OFFSET_NODE_2_INIT_G9;
+        mmioRegisters->mfcVP8BitstreamBytecountFrameRegOffset     = MFC_VP8_BITSTREAM_BYTECOUNT_FRAME_REG_OFFSET_NODE_2_INIT_G9;
+        mmioRegisters->mfcVP8ImageStatusMaskRegOffset             = MFC_VP8_IMAGE_STATUS_MASK_REG_OFFSET_NODE_2_INIT_G9;
+        mmioRegisters->mfcVP8ImageStatusCtrlRegOffset             = MFC_VP8_IMAGE_STATUS_CTRL_REG_OFFSET_NODE_2_INIT_G9;
+        mmioRegisters->mfxVP8BrcDQIndexRegOffset                  = MFX_VP8_BRC_DQ_INDEX_REG_OFFSET_NODE_2_INIT_G9;
+        mmioRegisters->mfxVP8BrcDLoopFilterRegOffset              = MFX_VP8_BRC_LOOP_FILTER_REG_OFFSET_NODE_2_INIT_G9;
+        mmioRegisters->mfxVP8BrcCumulativeDQIndex01RegOffset      = MFX_VP8_BRC_CUMULATIVE_DQ_INDEX01_REG_OFFSET_NODE_2_INIT_G9;
+        mmioRegisters->mfxVP8BrcCumulativeDQIndex23RegOffset      = MFX_VP8_BRC_CUMULATIVE_DQ_INDEX23_REG_OFFSET_NODE_2_INIT_G9;
+        mmioRegisters->mfxVP8BrcCumulativeDLoopFilter01RegOffset  = MFX_VP8_BRC_CUMULATIVE_LOOP_FILTER01_REG_OFFSET_NODE_2_INIT_G9;
+        mmioRegisters->mfxVP8BrcCumulativeDLoopFilter23RegOffset  = MFX_VP8_BRC_CUMULATIVE_LOOP_FILTER23_REG_OFFSET_NODE_2_INIT_G9;
+        mmioRegisters->mfxVP8BrcConvergenceStatusRegOffset        = MFX_VP8_BRC_CONVERGENCE_STATUS_REG_OFFSET_NODE_2_INIT_G9;
+        mmioRegisters->mfxLra0RegOffset                           = MFX_LRA0_REG_OFFSET_NODE_2_INIT_G9;
+        mmioRegisters->mfxLra1RegOffset                           = MFX_LRA1_REG_OFFSET_NODE_2_INIT_G9;
+        mmioRegisters->mfxLra2RegOffset                           = MFX_LRA2_REG_OFFSET_NODE_2_INIT_G9;
     }
 
     void InitRowstoreUserFeatureSettings()
@@ -316,7 +316,7 @@ protected:
                     this->m_mprRowstoreCache.dwAddress = MPRROWSTORE_FRAME_FIELD_BASEADDRESS_PICWIDTH_GREATER_THAN_3K;
                 }
             }
-            else  //Mbaff 
+            else  //Mbaff
             {
                 if (rowstoreParams->dwPicWidth < MHW_VDBOX_PICWIDTH_2K)
                 {
@@ -498,7 +498,7 @@ protected:
         }
         else if (standard == CODECHAL_JPEG)
         {
-            // Added to prevent error for JPEG 
+            // Added to prevent error for JPEG
         }
         else
         {
@@ -555,7 +555,7 @@ protected:
 
                     patchListMaxSize +=
                         PATCH_LIST_COMMAND(MFD_AVC_DPB_STATE_CMD) +
-						PATCH_LIST_COMMAND(MFD_AVC_SLICEADDR_CMD);
+                        PATCH_LIST_COMMAND(MFD_AVC_SLICEADDR_CMD);
                 }
                 else
                 {
@@ -571,30 +571,26 @@ protected:
             else // CODECHAL_ENCODE_MODE_AVC
             {
                 // 1 PAK_INSERT_OBJECT inserted for every end of frame/stream with 1 DW payload
-                maxSize = TMfxCmds::MFX_PAK_INSERT_OBJECT_CMD::byteSize + sizeof(uint32_t);
-                patchListMaxSize = PATCH_LIST_COMMAND(MFC_AVC_PAK_INSERT_OBJECT_CMD);
-
-                if (isModeSpecific)
-                {
-                    // isModeSpecific = bSingleTaskPhaseSupported for AVC encode
-                    maxSize += (2 * mhw_mi_g9_X::MI_BATCH_BUFFER_START_CMD::byteSize);
-                    patchListMaxSize += (2 * PATCH_LIST_COMMAND(MI_BATCH_BUFFER_START_CMD));
-                }
-                else
-                {
-                    maxSize +=
+                maxSize = TMfxCmds::MFX_PAK_INSERT_OBJECT_CMD::byteSize + sizeof(uint32_t) +
                         TMfxCmds::MFX_AVC_SLICE_STATE_CMD::byteSize +
                         (2 * TMfxCmds::MFX_AVC_REF_IDX_STATE_CMD::byteSize) +
                         (2 * TMfxCmds::MFX_AVC_WEIGHTOFFSET_STATE_CMD::byteSize) +
                         TMfxCmds::MFX_PAK_INSERT_OBJECT_CMD::byteSize +
                         MHW_VDBOX_PAK_BITSTREAM_OVERFLOW_SIZE + // slice header payload
-                        mhw_mi_g9_X::MI_BATCH_BUFFER_END_CMD::byteSize;
+                        mhw_mi_g9_X::MI_BATCH_BUFFER_START_CMD::byteSize;
 
-                    patchListMaxSize +=
+                patchListMaxSize = PATCH_LIST_COMMAND(MFC_AVC_PAK_INSERT_OBJECT_CMD) +
                         PATCH_LIST_COMMAND(MFX_AVC_SLICE_STATE_CMD) +
                         (2 * PATCH_LIST_COMMAND(MFX_AVC_REF_IDX_STATE_CMD)) +
                         (2 * PATCH_LIST_COMMAND(MFX_AVC_WEIGHTOFFSET_STATE_CMD)) +
-                        PATCH_LIST_COMMAND(MFC_AVC_PAK_INSERT_OBJECT_CMD);
+                        PATCH_LIST_COMMAND(MFC_AVC_PAK_INSERT_OBJECT_CMD) +
+                        PATCH_LIST_COMMAND(MI_BATCH_BUFFER_START_CMD);
+
+                if (isModeSpecific)
+                {
+                    // isModeSpecific = bSingleTaskPhaseSupported for AVC encode
+                    maxSize += mhw_mi_g9_X::MI_BATCH_BUFFER_START_CMD::byteSize;
+                    patchListMaxSize += PATCH_LIST_COMMAND(MI_BATCH_BUFFER_START_CMD);
                 }
             }
         }
@@ -647,7 +643,7 @@ protected:
         else if (standard == CODECHAL_JPEG)
         {
             // Adds only 2 DWORDs per PAK_INSERT_OBJ command since the rest of the DWORDs are currently unknown
-            // This also does not include PAK_INSERT_OBJ for app data 
+            // This also does not include PAK_INSERT_OBJ for app data
             maxSize +=
                 TMfxCmds::MFX_FQM_STATE_CMD::byteSize * 3 +
                 TMfxCmds::MFC_JPEG_HUFF_TABLE_STATE_CMD::byteSize * 2 +
@@ -680,7 +676,7 @@ protected:
 
         typename TMfxCmds::MFX_PIPE_MODE_SELECT_CMD cmd;
 
-        this->m_cpInterface->SetProtectionSettingsForMfxPipeModeSelect((uint32_t *)&cmd);
+        MHW_MI_CHK_STATUS(this->m_cpInterface->SetProtectionSettingsForMfxPipeModeSelect((uint32_t *)&cmd));
 
         // VDEnc does not use Multi-pass PAK streamOut
         cmd.DW1.StreamOutEnable = params->bStreamOutEnabled && (!params->bVdencEnabled);
@@ -719,9 +715,9 @@ protected:
             cmd.DW1.VdencMode = 1;
             // Enable 4xDS in PAK for VDENC HME
             cmd.DW1.ScaledSurfaceEnable = 1;
-            // Disable PAK streamout from previous PAK pass, as VDEnc does not support standalone PAK 
+            // Disable PAK streamout from previous PAK pass, as VDEnc does not support standalone PAK
             cmd.DW1.StreamOutEnable = 0;
-            // Enable PAK statistics streamout 
+            // Enable PAK statistics streamout
             cmd.DW1.FrameStatisticsStreamoutEnable = 1;
         }
 
@@ -783,7 +779,7 @@ protected:
             // this parameter must always be 0 for JPEG regardless of the YUV format
             cmd.DW3.InterleaveChroma = 0;
 
-            // Separate function for JPEG decode because this surface format should match with that programmed 
+            // Separate function for JPEG decode because this surface format should match with that programmed
             // in JPEG Picture State
             cmd.DW3.SurfaceFormat = this->GetJpegDecodeFormat(params->psSurface->Format);
 
@@ -1017,7 +1013,7 @@ protected:
         MHW_MI_CHK_NULL(params->pAvcPicParams);
 
         auto avcPicParams = params->pAvcPicParams;
-        
+
         typename TMfxCmds::MFX_AVC_IMG_STATE_CMD cmd;
 
         uint32_t numMBs =
@@ -1045,8 +1041,6 @@ protected:
         cmd.DW4.Fieldpicflag = avcPicParams->pic_fields.field_pic_flag;
 
         cmd.DW5.TrellisQuantizationChromaDisableTqchromadisable = true;
-
-        cmd.DW12.VadErrorLogic = 1;
 
         cmd.DW13.CurrentPictureHasPerformedMmco5 = 0;
         cmd.DW13.NumberOfReferenceFrames = params->ucActiveFrameCnt;
@@ -1203,8 +1197,6 @@ protected:
         cmd.DW11.Framebitratemaxdelta = bitrateParams.frameBitRateMaxDelta;
         cmd.DW11.SliceStatsStreamoutEnable = params->bSliceSizeStreamOutEnabled;
 
-        cmd.DW12.VadErrorLogic = 1;
-
         //add for multiple pass
         if (params->dwMaxFrameSize > 0 && params->pDeltaQp && (!params->bIPCMPass))
         {
@@ -1275,8 +1267,6 @@ protected:
         PMOS_COMMAND_BUFFER cmdBuffer,
         PMHW_VDBOX_AVC_DIRECTMODE_PARAMS params)
     {
-        MOS_STATUS eStatus = MOS_STATUS_SUCCESS;
-
         MHW_FUNCTION_ENTER;
 
         MHW_MI_CHK_NULL(cmdBuffer);
@@ -1310,20 +1300,23 @@ protected:
                 &resourceParams));
         }
 
+        CODEC_REF_LIST** refList;
+        MHW_MI_CHK_NULL(refList = (CODEC_REF_LIST**)params->avcRefList);
+
         if (CodecHal_PictureIsBottomField(params->CurrPic))
         {
             cmd.PocList[MHW_VDBOX_AVC_DMV_DEST_TOP] = 0;
             cmd.PocList[MHW_VDBOX_AVC_DMV_DEST_BOTTOM] =
-                params->ppAvcRefList[params->CurrPic.FrameIdx]->iFieldOrderCnt[1];
+                refList[params->CurrPic.FrameIdx]->iFieldOrderCnt[1];
         }
         else
         {
             cmd.PocList[MHW_VDBOX_AVC_DMV_DEST_TOP] = cmd.PocList[MHW_VDBOX_AVC_DMV_DEST_BOTTOM] =
-                params->ppAvcRefList[params->CurrPic.FrameIdx]->iFieldOrderCnt[0];
+                refList[params->CurrPic.FrameIdx]->iFieldOrderCnt[0];
             if (CodecHal_PictureIsFrame(params->CurrPic))
             {
                 cmd.PocList[MHW_VDBOX_AVC_DMV_DEST_BOTTOM] =
-                    params->ppAvcRefList[params->CurrPic.FrameIdx]->iFieldOrderCnt[1];
+                    refList[params->CurrPic.FrameIdx]->iFieldOrderCnt[1];
             }
         }
 
@@ -1340,8 +1333,8 @@ protected:
             if (params->pAvcPicIdx[i].bValid)
             {
                 uint8_t idx = params->pAvcPicIdx[i].ucPicIdx;
-                uint8_t picID = params->bPicIdRemappingInUse ? i : params->ppAvcRefList[idx]->ucFrameId;
-                uint8_t mvIdx = params->ppAvcRefList[idx]->ucDMVIdx[0];
+                uint8_t picID = params->bPicIdRemappingInUse ? i : refList[idx]->ucFrameId;
+                uint8_t mvIdx = refList[idx]->ucDMVIdx[0];
 
                 uint8_t validRef = ((params->uiUsedForReferenceFlags >> (i * 2)) >> 0) & 1;
                 uint8_t frameID = picID << 1;
@@ -1365,8 +1358,7 @@ protected:
                             &resourceParams));
                     }
 
-                    cmd.PocList[frameID] =
-                        params->ppAvcRefList[idx]->iFieldOrderCnt[0] * validRef;
+                    cmd.PocList[frameID] = refList[idx]->iFieldOrderCnt[0] * validRef;
                 }
                 else
                 {
@@ -1377,8 +1369,7 @@ protected:
                 frameID = (picID << 1) + 1;
                 if (frameID < CODEC_AVC_NUM_REF_DMV_BUFFERS * 2)
                 {
-                    cmd.PocList[frameID] =
-                        params->ppAvcRefList[idx]->iFieldOrderCnt[1] * validRef;
+                    cmd.PocList[frameID] = refList[idx]->iFieldOrderCnt[1] * validRef;
                 }
                 else
                 {
@@ -1413,7 +1404,7 @@ protected:
 
         MHW_MI_CHK_STATUS(Mos_AddCommand(cmdBuffer, &cmd, sizeof(cmd)));
 
-        return eStatus;
+        return MOS_STATUS_SUCCESS;
     }
 
     MOS_STATUS AddMfdAvcSliceAddrCmd(
@@ -1429,8 +1420,16 @@ protected:
 
         typename TMfxCmds::MFD_AVC_SLICEADDR_CMD cmd;
 
-        cmd.DW1.IndirectBsdDataLength = (avcSliceState->dwNextLength + 1 - this->m_osInterface->dwNumNalUnitBytesIncluded);
-        cmd.DW2.IndirectBsdDataStartAddress = (avcSliceState->dwNextOffset - 1 + this->m_osInterface->dwNumNalUnitBytesIncluded);
+        if (avcSliceState->bFullFrameData)
+        {
+            cmd.DW1.IndirectBsdDataLength       = avcSliceState->dwNextLength;
+            cmd.DW2.IndirectBsdDataStartAddress = avcSliceState->dwNextOffset;
+        }
+        else
+        {
+            cmd.DW1.IndirectBsdDataLength       = (avcSliceState->dwNextLength + 1 - this->m_osInterface->dwNumNalUnitBytesIncluded);
+            cmd.DW2.IndirectBsdDataStartAddress = (avcSliceState->dwNextOffset - 1 + this->m_osInterface->dwNumNalUnitBytesIncluded);
+        }
 
         MHW_CP_SLICE_INFO_PARAMS sliceInfoParam;
         sliceInfoParam.presDataBuffer = avcSliceState->presDataBuffer;
@@ -1439,11 +1438,11 @@ protected:
         sliceInfoParam.dwDataStartOffset[0] = cmd.DW2.IndirectBsdDataStartAddress;
         sliceInfoParam.dwDataStartOffset[1] = avcSliceState->pAvcSliceParams->slice_data_offset;
 
-        this->m_cpInterface->SetMfxProtectionState(
+        MHW_MI_CHK_STATUS(this->m_cpInterface->SetMfxProtectionState(
             this->m_decodeInUse,
             cmdBuffer,
             nullptr,
-            &sliceInfoParam);
+            &sliceInfoParam));
 
         MHW_MI_CHK_STATUS(Mos_AddCommand(cmdBuffer, &cmd, sizeof(cmd)));
 
@@ -1474,9 +1473,17 @@ protected:
 
         if (avcSliceState->bShortFormatInUse)
         {
-            cmd.DW1.IndirectBsdDataLength = avcSliceState->dwLength + 1 - this->m_osInterface->dwNumNalUnitBytesIncluded;
-            cmd.DW2.IndirectBsdDataStartAddress =
-                sliceParams->slice_data_offset - 1 + this->m_osInterface->dwNumNalUnitBytesIncluded;
+            if (avcSliceState->bFullFrameData)
+            {
+                cmd.DW1.IndirectBsdDataLength       = avcSliceState->dwLength;
+                cmd.DW2.IndirectBsdDataStartAddress = sliceParams->slice_data_offset;
+            }
+            else
+            {
+                cmd.DW1.IndirectBsdDataLength = avcSliceState->dwLength + 1 - this->m_osInterface->dwNumNalUnitBytesIncluded;
+                cmd.DW2.IndirectBsdDataStartAddress =
+                    sliceParams->slice_data_offset - 1 + this->m_osInterface->dwNumNalUnitBytesIncluded;
+            }
             cmd.DW4.FirstMbByteOffsetOfSliceDataOrSliceHeader = 0;
         }
         else
@@ -1507,11 +1514,11 @@ protected:
         sliceInfoParam.dwDataStartOffset[1] = sliceParams->slice_data_offset;
         sliceInfoParam.dwDataLength[1] = sliceParams->slice_data_size;
 
-        this->m_cpInterface->SetMfxProtectionState(
+        MHW_MI_CHK_STATUS(this->m_cpInterface->SetMfxProtectionState(
             this->m_decodeInUse,
             cmdBuffer,
             nullptr,
-            &sliceInfoParam);
+            &sliceInfoParam));
 
         MHW_MI_CHK_STATUS(Mos_AddCommand(cmdBuffer, &cmd, sizeof(cmd)));
 
@@ -1528,7 +1535,7 @@ protected:
         MHW_FUNCTION_ENTER;
 
         MHW_MI_CHK_NULL(params);
-       
+
         if (cmdBuffer == nullptr && batchBuffer == nullptr)
         {
             MHW_ASSERTMESSAGE("No valid buffer to add the command to!");
@@ -1602,7 +1609,7 @@ protected:
                 params->bHeaderLengthExcludeFrmSize; // Cannot be set to true if emulation byte bit insertion is enabled
             MHW_MI_CHK_STATUS(Mhw_AddCommandCmdOrBB(cmdBuffer, batchBuffer, &cmd, sizeof(cmd)));
 
-            // Add actual data 
+            // Add actual data
             uint8_t* data = (uint8_t*)(params->pBsBuffer->pBase + params->dwOffset);
             MHW_MI_CHK_STATUS(Mhw_AddCommandCmdOrBB(cmdBuffer, batchBuffer, data, byteSize));
         }
@@ -1766,7 +1773,7 @@ protected:
 
             auto j = 0;
             // Copy over 32 uint32_t worth of values - Each uint32_t will contain 2 16 bit quantizer values
-            // where for the DWordx Bits [15: 0] = 1/QM[0][x] Bits[32:16] = 1/QM[1][x] 
+            // where for the DWordx Bits [15: 0] = 1/QM[0][x] Bits[32:16] = 1/QM[1][x]
             for (auto k = 0; k < 8; k++)
             {
                 for (auto l = k; l < 64; l += 16)
@@ -1799,15 +1806,15 @@ protected:
         cmd.DW1.HuffTableId = params->HuffTableID;
 
         // cmd DWORDS 2:13 for DC Table
-        // Format- 3Bytes: Byte0 for Code length, Byte1 and Byte2 for Code word, and Byte3 for dummy 
+        // Format- 3Bytes: Byte0 for Code length, Byte1 and Byte2 for Code word, and Byte3 for dummy
         for (auto j = 0; j < JPEG_NUM_HUFF_TABLE_DC_HUFFVAL; j++)
         {
             cmd.DcTable[j] = 0;
             cmd.DcTable[j] = (params->pDCCodeLength[j] & 0xFF) | ((params->pDCCodeValues[j] & 0xFFFF) << 8);
         }
 
-        // cmd DWORDS 14:175 for AC table 
-        // Format- 3Bytes: Byte0 for Code length, Byte1 and Byte2 for Code word, and Byte3 for dummy 
+        // cmd DWORDS 14:175 for AC table
+        // Format- 3Bytes: Byte0 for Code length, Byte1 and Byte2 for Code word, and Byte3 for dummy
         for (auto j = 0; j < JPEG_NUM_HUFF_TABLE_AC_HUFFVAL; j++)
         {
             cmd.AcTable[j] = 0;
@@ -1839,8 +1846,8 @@ protected:
         cmd.DW1.McuCount = ((params->dwPicWidth + (horizontalSamplingFactor * 8 - 1)) / (horizontalSamplingFactor * 8))
             * ((params->dwPicHeight + (verticalSamplingFactor * 8 - 1)) / (verticalSamplingFactor * 8));
         cmd.DW2.RestartInterval = params->pJpegEncodeScanParams->m_restartInterval;
-        cmd.DW2.IsLastScan = 1; // Always 1 since there is only 1 scan in the JPEG frame 
-        cmd.DW2.HeadPresentFlag = 1; // There will always be MFC_JPEG_PAK_INSERT_OBJECT commands sent 
+        cmd.DW2.IsLastScan = 1; // Always 1 since there is only 1 scan in the JPEG frame
+        cmd.DW2.HeadPresentFlag = 1; // There will always be MFC_JPEG_PAK_INSERT_OBJECT commands sent
 
         for (auto i = 0; i < jpegNumComponent; i++)
         {
@@ -2362,9 +2369,9 @@ protected:
         mhw_mi_g9_X::MI_BATCH_BUFFER_END_CMD *miBatchBufferEndCmd = (mhw_mi_g9_X::MI_BATCH_BUFFER_END_CMD *)data;
         *miBatchBufferEndCmd = mhw_mi_g9_X::MI_BATCH_BUFFER_END_CMD();
 
-        this->m_osInterface->pfnUnlockResource(
+        MHW_MI_CHK_STATUS(this->m_osInterface->pfnUnlockResource(
             this->m_osInterface,
-            cfgCmdBuffer);
+            cfgCmdBuffer));
 
         return eStatus;
     }
@@ -2380,7 +2387,7 @@ protected:
         MHW_MI_CHK_NULL(cmdBuffer);
         MHW_MI_CHK_NULL(params);
 
-        if (params->dwPartitions == 0 || params->dwPartitions >= MhwVdboxMfxInterface::m_vp8MaxNumPartitions)
+        if (params->dwPartitions == 0 || params->dwPartitions > MhwVdboxMfxInterface::m_vp8MaxNumPartitions)
         {
             MHW_ASSERTMESSAGE("Invalid Partitions.");
             eStatus = MOS_STATUS_INVALID_PARAMETER;

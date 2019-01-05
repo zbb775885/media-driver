@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2009-2017, Intel Corporation
+* Copyright (c) 2009-2018, Intel Corporation
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -20,8 +20,8 @@
 * OTHER DEALINGS IN THE SOFTWARE.
 */
 //!
-//! \file        mos_utilities_specific.c  
-//! \brief        This module implements the MOS wrapper functions for Linux/Android  
+//! \file        mos_utilities_specific.c 
+//! \brief        This module implements the MOS wrapper functions for Linux/Android 
 //!
 
 #include "mos_utilities_specific.h"
@@ -49,6 +49,66 @@
 #include <cutils/properties.h>
 #endif // ANDROID
 
+#ifdef __cplusplus
+
+void PerfUtility::startTick(std::string tag)
+{
+    Tick newTick = {};
+    struct timespec ts = {};
+
+    // get start tick count
+    clock_gettime(CLOCK_REALTIME, &ts);
+    newTick.start = int(ts.tv_sec * 1000000) + int(ts.tv_nsec / 1000); // us
+
+    std::vector<Tick> *perf = nullptr;
+    std::map<std::string, std::vector<Tick>*>::iterator it;
+    it = records.find(tag);
+    if (it == records.end())
+    {
+        perf = new std::vector<Tick>;
+        perf->push_back(newTick);
+        records[tag] = perf;
+    }
+    else
+    {
+        it->second->push_back(newTick);
+    }
+}
+
+void PerfUtility::stopTick(std::string tag)
+{
+    struct timespec ts = {};
+    std::map<std::string, std::vector<Tick>*>::iterator it;
+    it = records.find(tag);
+    if (it == records.end())
+    {
+        // should not happen
+        return;
+    }
+
+    // get stop tick count
+    clock_gettime(CLOCK_REALTIME, &ts);
+    it->second->back().stop = int(ts.tv_sec * 1000000) + int(ts.tv_nsec / 1000); // us
+
+    // calculate time interval
+    it->second->back().time = double(it->second->back().stop - it->second->back().start) / 1000.0; // ms
+}
+
+#endif // __cplusplus
+
+//!
+//! \brief    Get current run time
+//! \details  Get current run time in us
+//! \return   double
+//!           Returns time in us
+//!
+double MOS_GetTime()
+{
+    struct timespec ts = {};
+    clock_gettime(CLOCK_REALTIME, &ts);
+    return double(ts.tv_sec) * 1000000.0 + double(ts.tv_nsec) / 1000.0;
+}
+
 //!
 //! \brief Linux specific user feature define, used in MOS_UserFeature_ParsePath
 //!        They can be unified with the win definitions, since they are identical.
@@ -57,6 +117,9 @@
 #define MOS_UFKEY_EXT     "UFKEY_EXTERNAL"
 #define MOS_UFKEY_INT     "UFKEY_INTERNAL"
 PUFKEYOPS      pUFKeyOps = nullptr;
+
+extern int32_t MosMemAllocCounterNoUserFeature;
+extern int32_t MosMemAllocCounterNoUserFeatureGfx;
 
 //!
 //! \brief Linux specific trace entry path and file description.
@@ -242,7 +305,7 @@ MOS_STATUS MOS_CreateDirectory(
     MOS_OS_CHK_NULL(lpPathName);
 
     // Set read/write access right for usr/group.
-    mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP;
+    mode = S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP;
     if (mkdir(lpPathName, mode) < 0 &&
         errno != EEXIST) // Directory already exists, don't return failure in this case.
     {
@@ -964,6 +1027,14 @@ static MOS_STATUS _UserFeature_DumpFile(const char * const szFileName, MOS_PUF_K
                 MOS_FreeMemory(CurKey);
             }
         }
+        else
+        {
+            MOS_FreeMemory(CurKey);
+        }
+    }
+    else
+    {
+        MOS_FreeMemory(CurKey);
     }
     fclose(File);
     return eStatus;
@@ -1732,7 +1803,6 @@ finish:
     return eStatus;
 }
 
-
 /*----------------------------------------------------------------------------
 | Name      : MOS_UserFeatureGetValue_AndroidProp
 | Purpose   : Retrieves the type and data for the specified user feature value.
@@ -1924,7 +1994,6 @@ finish:
 }
 #endif
 
-
 /*----------------------------------------------------------------------------
 | Name      : MOS_UserFeatureOpenKey_File
 | Purpose   : Opens the specified user feature key.
@@ -2112,6 +2181,9 @@ MOS_STATUS MOS_OS_Utilities_Init()
         // Initialize MOS message params structure and HLT
         MOS_MessageInit();
 #endif // MOS_MESSAGES_ENABLED
+        MosMemAllocCounter     = 0;
+        MosMemAllocFakeCounter = 0;
+        MosMemAllocCounterGfx  = 0;
         MOS_TraceEventInit();
     }
     uiMOSUtilInitCount++;
@@ -2123,7 +2195,9 @@ finish:
 
 MOS_STATUS MOS_OS_Utilities_Close()
 {
-    MOS_STATUS     eStatus = MOS_STATUS_SUCCESS;
+    int32_t                             MemoryCounter = 0;
+    MOS_USER_FEATURE_VALUE_WRITE_DATA   UserFeatureWriteData = __NULL_USER_FEATURE_VALUE_WRITE_DATA__;
+    MOS_STATUS                          eStatus = MOS_STATUS_SUCCESS;
 
     // lock mutex to avoid multi close in multi-threading env
     MOS_LockMutex(&gMosUtilMutex);
@@ -2131,6 +2205,16 @@ MOS_STATUS MOS_OS_Utilities_Close()
     if (uiMOSUtilInitCount == 0 )
     {
         MOS_TraceEventClose();
+        MosMemAllocCounter -= MosMemAllocFakeCounter;
+        MemoryCounter = MosMemAllocCounter + MosMemAllocCounterGfx;
+        MosMemAllocCounterNoUserFeature = MosMemAllocCounter;
+        MosMemAllocCounterNoUserFeatureGfx = MosMemAllocCounterGfx;
+        MOS_OS_VERBOSEMESSAGE("MemNinja leak detection end");
+
+        UserFeatureWriteData.Value.i32Data    =   MemoryCounter;
+        UserFeatureWriteData.ValueID          = __MEDIA_USER_FEATURE_VALUE_MEMNINJA_COUNTER_ID;
+        MOS_UserFeature_WriteValues_ID(NULL, &UserFeatureWriteData, 1);
+
         eStatus = MOS_DestroyUserFeatureKeysForAllDescFields();
 #if _MEDIA_RESERVED
         if (utilUserInterface) delete utilUserInterface;
@@ -2516,6 +2600,7 @@ MOS_THREADHANDLE MOS_CreateThread(
     if (0 != pthread_create(&Thread, nullptr, (void *(*)(void *))ThreadFunction, ThreadData))
     {
         Thread = 0;
+        MOS_OS_ASSERTMESSAGE("Create thread failed.");
     }
 
     return Thread;
@@ -2538,8 +2623,14 @@ MOS_STATUS MOS_WaitThread(
 {
     MOS_STATUS                  eStatus = MOS_STATUS_SUCCESS;
 
-    if (0 != pthread_join(hThread, nullptr))
+    if (hThread == 0)
     {
+        MOS_OS_ASSERTMESSAGE("MOS wait thread failed, invalid thread handle.");
+        eStatus = MOS_STATUS_INVALID_PARAMETER; 
+    }
+    else if (0 != pthread_join(hThread, nullptr))
+    {
+        MOS_OS_ASSERTMESSAGE("Failed to join thread.");
         eStatus = MOS_STATUS_UNKNOWN;
     }
 
@@ -2555,6 +2646,7 @@ PMOS_MUTEX MOS_CreateMutex()
     {
         if (pthread_mutex_init(pMutex, nullptr))
         {
+            MOS_FreeMemory(pMutex);
             pMutex = nullptr;
         }
     }
@@ -2570,9 +2662,9 @@ MOS_STATUS MOS_DestroyMutex(PMOS_MUTEX pMutex)
     {
         if (pthread_mutex_destroy(pMutex))
         {
-		    eStatus = MOS_STATUS_UNKNOWN;
+            eStatus = MOS_STATUS_UNKNOWN;
         }
-		MOS_FreeMemory(pMutex);
+        MOS_FreeMemory(pMutex);
     }
 
     return eStatus;
@@ -2580,6 +2672,8 @@ MOS_STATUS MOS_DestroyMutex(PMOS_MUTEX pMutex)
 
 MOS_STATUS MOS_LockMutex(PMOS_MUTEX pMutex)
 {
+    MOS_OS_CHK_NULL_RETURN(pMutex);
+
     MOS_STATUS eStatus = MOS_STATUS_SUCCESS;
 
     if (pthread_mutex_lock(pMutex))
@@ -2592,6 +2686,8 @@ MOS_STATUS MOS_LockMutex(PMOS_MUTEX pMutex)
 
 MOS_STATUS MOS_UnlockMutex(PMOS_MUTEX pMutex)
 {
+    MOS_OS_CHK_NULL_RETURN(pMutex);
+
     MOS_STATUS eStatus = MOS_STATUS_SUCCESS;
 
     if (pthread_mutex_unlock(pMutex))
@@ -2608,10 +2704,13 @@ PMOS_SEMAPHORE MOS_CreateSemaphore(
 {
     PMOS_SEMAPHORE pSemaphore = nullptr;
     MOS_UNUSED(uiMaximumCount);
-    
+
     pSemaphore = (PMOS_SEMAPHORE)MOS_AllocMemory(sizeof(*pSemaphore));
+    if (!pSemaphore)
+        return nullptr;
     if (sem_init(pSemaphore, 0, uiInitialCount))
     {
+        MOS_SafeFreeMemory(pSemaphore);
         pSemaphore = nullptr;
     }
 
@@ -2686,7 +2785,7 @@ uint32_t MOS_WaitForSingleObject(
     uint32_t WaitSignal = 0;
     MOS_UNUSED(pObject);
     MOS_UNUSED(uiMilliseconds);
-    
+
     return WaitSignal;
 }
 
@@ -2701,6 +2800,18 @@ uint32_t MOS_WaitForMultipleObjects(
     MOS_UNUSED(bWaitAll);
     MOS_UNUSED(uiMilliseconds);
     return 0;
+}
+
+int32_t MOS_AtomicIncrement(
+    int32_t *pValue)
+{
+    return __sync_fetch_and_add(pValue, 1);
+}
+
+int32_t MOS_AtomicDecrement(
+    int32_t *pValue)
+{
+    return __sync_fetch_and_sub(pValue, 1);
 }
 
 VAStatus MOS_StatusToOsResult(
@@ -2750,7 +2861,7 @@ MOS_STATUS MOS_GetLocalTime(
     }
 
     eStatus = MOS_SecureMemcpy(Tm, sizeof(struct tm), pTm, sizeof(struct tm));
-    return eStatus;    
+    return eStatus;
 }
 
 void MOS_TraceEventInit()
@@ -2762,7 +2873,7 @@ void MOS_TraceEventInit()
         MosTraceFd = -1;
     }
     MosTraceFd = open(MosTracePath, O_WRONLY);
-    return; 
+    return;
 }
 
 void MOS_TraceEventClose()
@@ -2792,18 +2903,18 @@ void MOS_TraceEvent(
         if (pTraceBuf)
         {
             MOS_SecureStringPrint(pTraceBuf,
-                        TRACE_EVENT_MAX_SIZE, 
-                        (TRACE_EVENT_MAX_SIZE-1), 
+                        TRACE_EVENT_MAX_SIZE,
+                        (TRACE_EVENT_MAX_SIZE-1),
                         "IMTE|%d|%d", // magic number IMTE (IntelMediaTraceEvent)
-                        usId, 
+                        usId,
                         ucType);
             nLen = strlen(pTraceBuf);
             if (pArg1)
             {
-                // convert raw event data to string. native raw data will be supported 
-                // from linux kernel 4.10, hopefully we can skip this convert in the future. 
+                // convert raw event data to string. native raw data will be supported
+                // from linux kernel 4.10, hopefully we can skip this convert in the future.
                 const static char n2c[] = "0123456789ABCDEF";
-                char  *pData = (char *)pArg1;
+                unsigned char *pData = (unsigned char *)pArg1;
 
                 pTraceBuf[nLen++] = '|'; // prefix splite marker.
                 while(dwSize1-- > 0 && nLen < TRACE_EVENT_MAX_SIZE-2)
@@ -2813,7 +2924,7 @@ void MOS_TraceEvent(
                 }
                 if (pArg2)
                 {
-                    pData = (char *)pArg2; 
+                    pData = (unsigned char *)pArg2;
                     while(dwSize2-- > 0 && nLen < TRACE_EVENT_MAX_SIZE-2)
                     {
                         pTraceBuf[nLen++] = n2c[(*pData) >> 4];
@@ -2828,3 +2939,38 @@ void MOS_TraceEvent(
     return;
 }
 
+MOS_STATUS MOS_GfxInfoInit()
+{
+    // not implemented
+    return MOS_STATUS_SUCCESS;
+}
+
+void MOS_GfxInfoClose()
+{
+    // not implemented
+}
+
+void MOS_GfxInfo(uint8_t ver, uint16_t compId, uint16_t tmtryID, char const* xmlTmtryStr)
+{
+    // not implemented
+}
+
+void MOS_GfxInfo_RTErr(uint8_t ver,
+    uint16_t    compId,
+    uint16_t    FtrId,
+    uint32_t    ErrorCode,
+    uint8_t     num_of_triples,
+    ...)
+{
+    // not implemented
+}
+
+void MOS_GfxInfo_Params(
+    uint8_t         ver,
+    uint16_t        compId,
+    uint32_t        tmtryID,
+    uint8_t         num_of_triples,
+    ...)
+{
+    // not implemented
+}

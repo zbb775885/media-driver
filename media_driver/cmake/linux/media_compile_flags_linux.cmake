@@ -25,7 +25,6 @@ set(MEDIA_COMPILER_FLAGS_COMMON
     -Wpointer-arith
     -Wno-unused
     -Wno-unknown-pragmas
-    -Wno-endif-labels
     -Wno-comments
     -Wno-sign-compare
     -Wno-attributes
@@ -82,6 +81,7 @@ set(MEDIA_COMPILER_FLAGS_COMMON
     -g
 )
 
+
 if(${UFO_MARCH} STREQUAL "slm")
     set(MEDIA_COMPILER_FLAGS_COMMON
         ${MEDIA_COMPILER_FLAGS_COMMON}
@@ -103,11 +103,11 @@ if(NOT ${PLATFORM} STREQUAL "android")
     set(MEDIA_COMPILER_FLAGS_COMMON
         ${MEDIA_COMPILER_FLAGS_COMMON}
         -D__linux__
-        -fno-tree-pre
+            -fno-tree-pre
         -fPIC
-        -Wl,--no-as-needed
-    )
-endif()
+            -Wl,--no-as-needed
+        )
+    endif()
 
 set(MEDIA_COMPILER_CXX_FLAGS_COMMON
     # for cpp
@@ -143,10 +143,10 @@ endif()
 
 if(NOT ${PLATFORM} STREQUAL "android")
     if(${UFO_VARIANT} STREQUAL "default")
-        set(MEDIA_COMPILER_FLAGS_RELEASE
-            ${MEDIA_COMPILER_FLAGS_RELEASE}
-            -finline-limit=100
-        )
+            set(MEDIA_COMPILER_FLAGS_RELEASE
+                ${MEDIA_COMPILER_FLAGS_RELEASE}
+                -finline-limit=100
+            )
     elseif(${UFO_VARIANT} STREQUAL "nano")
         set(MEDIA_COMPILER_FLAGS_RELEASE
             ${MEDIA_COMPILER_FLAGS_RELEASE}
@@ -165,11 +165,11 @@ set(MEDIA_COMPILER_FLAGS_RELEASEINTERNAL
 )
 
 if(NOT ${PLATFORM} STREQUAL "android")
-    set(MEDIA_COMPILER_FLAGS_RELEASEINTERNAL
-        ${MEDIA_COMPILER_FLAGS_RELEASEINTERNAL}
-        -finline-limit=100
-    )
-endif()
+        set(MEDIA_COMPILER_FLAGS_RELEASEINTERNAL
+            ${MEDIA_COMPILER_FLAGS_RELEASEINTERNAL}
+            -finline-limit=100
+        )
+    endif()
 
 set(MEDIA_COMPILER_FLAGS_DEBUG
     -O0
@@ -194,4 +194,6 @@ endif()
 
 if (DEFINED MEDIA_VERSION)
     add_definitions(-DUFO_VERSION="${MEDIA_VERSION}")
+elseif (DEFINED ENV{MEDIA_VERSION})
+    add_definitions(-DUFO_VERSION="$ENV{MEDIA_VERSION}")
 endif()

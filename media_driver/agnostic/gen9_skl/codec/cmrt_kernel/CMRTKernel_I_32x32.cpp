@@ -30,7 +30,8 @@
 CMRTKernelI32x32::CMRTKernelI32x32()
 {
 
-    m_isaName          = HEVC_I_ISA_FILE_NAME_G9;
+    m_isaName          = HEVCENCFEI_I_GEN9;
+    m_isaSize          = HEVCENCFEI_I_GEN9_SIZE;
     m_kernelName       = HEVCENCKERNELNAME_I_32x32;
 
     m_cmSurface2DCount = 6;
@@ -112,7 +113,7 @@ CM_RETURN_CODE CMRTKernelI32x32::CreateAndDispatchKernel(CmEvent *&cmEvent, bool
     height = (curbe[0] >> 16) & 0x0FFFF;
     width_padded = ((width + 16) >> 5) << 5;
     height_padded = ((height + 16) >> 5) << 5;
- 
+
     threadSpaceWidth = width_padded >> 5;
     threadSpaceHeight = height_padded >> 5;
 
@@ -125,7 +126,7 @@ CM_RETURN_CODE CMRTKernelI32x32::CreateAndDispatchKernel(CmEvent *&cmEvent, bool
 
     CM_CHK_STATUS_RETURN(m_cmKernel->SetThreadCount(threadSpaceWidth * threadSpaceHeight));
     //create Thread Space
-    result = m_cmDev->CreateThreadSpace(threadSpaceWidth, threadSpaceHeight, m_cmThreadSpace);
+    result = CreateThreadSpace(threadSpaceWidth, threadSpaceHeight);
     if (result != CM_SUCCESS)
     {
         printf("CM Create ThreadSpace error : %d", result);
@@ -139,7 +140,7 @@ CM_RETURN_CODE CMRTKernelI32x32::CreateAndDispatchKernel(CmEvent *&cmEvent, bool
 CM_RETURN_CODE CMRTKernelI32x32UMD::AllocateSurfaces(void *params)
 {
     IFrameKernelParams *I32x32Params = (IFrameKernelParams *)params;
- 
+
     CM_CHK_STATUS_RETURN(m_cmDev->CreateBuffer((MOS_RESOURCE *)I32x32Params->m_cmSurfPer32x32PUDataOut, m_cmBuffer[0]));
     CM_CHK_STATUS_RETURN(m_cmBuffer[0]->GetIndex(m_surfIndex[0]));
     CM_CHK_STATUS_RETURN(m_cmDev->CreateSurface2D((MOS_RESOURCE *)I32x32Params->m_cmSurfCurrY, m_cmSurface2D[0]));

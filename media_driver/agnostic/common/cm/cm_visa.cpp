@@ -20,8 +20,8 @@
 * OTHER DEALINGS IN THE SOFTWARE.
 */
 //!
-//! \file      cm_visa.cpp  
-//! \brief     Contains ISAfile definitions  
+//! \file      cm_visa.cpp 
+//! \brief     Contains ISAfile definitions 
 //!
 
 #include "cm_visa.h"
@@ -58,7 +58,6 @@ ISAfile::ISAfile(const ISAfile& other) {
         function_data.push_back(fb2);
     }
 }
-
 
 ISAfile& ISAfile::operator= (const ISAfile& other) {
     if (this != &other) {
@@ -190,11 +189,17 @@ const uint8_t* ISAfile::readField(const uint8_t *p, const uint8_t *buffEnd,
     }
     case Datatype::GDATA:
     {
-        uint8_t *gdata = new uint8_t[dataSize];
-        MOS_SecureMemcpy(gdata, dataSize , p, dataSize);
-        field.gdata = gdata;
-        field.size = dataSize;
-        p += dataSize;
+        // copy only if no out of bound.
+        if (p + dataSize < end) {
+            uint8_t *gdata = new uint8_t[dataSize];
+            MOS_SecureMemcpy(gdata, dataSize , p, dataSize);
+            field.gdata = gdata;
+            field.size = dataSize;
+            p += dataSize;
+        } else {
+            field.gdata = nullptr;
+            field.size = 0;
+        }
         break;
     }
     default: break;

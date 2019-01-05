@@ -82,13 +82,13 @@ VAStatus DdiDecodeVP8::ParseSliceParams(
     uint8_t num_token_partitions;
     num_token_partitions                = slcParam->num_of_partitions - 1;
     picParams->CodedCoeffTokenPartition = (num_token_partitions != 8) ? (num_token_partitions >> 1) : 3;
-    //macroblock_offset is in unit of bit.
-    picParams->uiFirstMbByteOffset = slcParam->slice_data_offset + slcParam->macroblock_offset >> 3;
+    //macroblock_offset is in unit of bit.it should be always the next byte, the byte is divided to two parts
+    //used bits and remaining bits, if used bits == 8, uiFirstMbByteOffset should add 1, so use 8 to do the ceil operator
+    picParams->uiFirstMbByteOffset = slcParam->slice_data_offset + ((slcParam->macroblock_offset + 8) >> 3);
 
-    memcpy(picParams->uiPartitionSize, slcParam->partition_size, sizeof(picParams->uiPartitionSize));
-
-    //partition 0 size in command buffer includes the one byte in bool decoder if remaining bits of bool decoder is not zero.
-    picParams->uiPartitionSize[0] += (slcParam->macroblock_offset & 0x7) ? 1 : 0;
+    MOS_SecureMemcpy(picParams->uiPartitionSize, sizeof(picParams->uiPartitionSize), slcParam->partition_size, sizeof(picParams->uiPartitionSize));
+    //partition 0 size in command buffer includes the one byte in bool decoder if remaining bits of bool decoder is zero.
+    picParams->uiPartitionSize[0] -= (slcParam->macroblock_offset & 0x7) ? 0 : 1;
 
     return VA_STATUS_SUCCESS;
 }
@@ -149,21 +149,27 @@ VAStatus DdiDecodeVP8::ParsePicParams(
     DDI_MEDIA_CONTEXT           *mediaCtx,
     VAPictureParameterBufferVP8 *picParam)
 {
+    PDDI_MEDIA_SURFACE lastRefSurface   = nullptr;
+    PDDI_MEDIA_SURFACE goldenRefSurface = nullptr;
+    PDDI_MEDIA_SURFACE altRefSurface    = nullptr;
+
     PCODEC_VP8_PIC_PARAMS codecPicParams = (PCODEC_VP8_PIC_PARAMS)(m_ddiDecodeCtx->DecodeParams.m_picParams);
 
     PDDI_MEDIA_SURFACE *vp8Surfaces = m_ddiDecodeCtx->BufMgr.Codec_Param.Codec_Param_VP8.pReferenceFrames;
 
     PDDI_MEDIA_SURFACE currentSurface = m_ddiDecodeCtx->RTtbl.pCurrentRT;
 
-    PDDI_MEDIA_SURFACE lastRefSurface = DdiMedia_GetSurfaceFromVASurfaceID(mediaCtx, picParam->last_ref_frame);
-
-    PDDI_MEDIA_SURFACE goldenRefSurface = DdiMedia_GetSurfaceFromVASurfaceID(mediaCtx, picParam->golden_ref_frame);
-
-    PDDI_MEDIA_SURFACE altRefSurface = DdiMedia_GetSurfaceFromVASurfaceID(mediaCtx, picParam->alt_ref_frame);
+    // only no-keyframe have last/gold/alt reference frame
+    if (picParam->pic_fields.bits.key_frame)
+    {
+        lastRefSurface   = DdiMedia_GetSurfaceFromVASurfaceID(mediaCtx, picParam->last_ref_frame);
+        goldenRefSurface = DdiMedia_GetSurfaceFromVASurfaceID(mediaCtx, picParam->golden_ref_frame);
+        altRefSurface    = DdiMedia_GetSurfaceFromVASurfaceID(mediaCtx, picParam->alt_ref_frame);
+    }
 
     int32_t frameIdx;
     frameIdx = GetRenderTargetID(&m_ddiDecodeCtx->RTtbl, currentSurface);
-    if (frameIdx == DDI_CODEC_INVALID_FRAME_INDEX)
+    if (frameIdx == (int32_t)DDI_CODEC_INVALID_FRAME_INDEX)
     {
         return VA_STATUS_ERROR_INVALID_PARAMETER;
     }
@@ -216,13 +222,15 @@ VAStatus DdiDecodeVP8::ParsePicParams(
     codecPicParams->ucUvModeProbs[2]            = picParam->uv_mode_probs[2];
     if (codecPicParams->ucMvUpdateProb[0] && picParam->mv_probs[0])
     {
-        memcpy(codecPicParams->ucMvUpdateProb[0],
+        MOS_SecureMemcpy(codecPicParams->ucMvUpdateProb[0],
+            sizeof(codecPicParams->ucMvUpdateProb[0]),
             picParam->mv_probs[0],
             sizeof(codecPicParams->ucMvUpdateProb[0]));
     }
     if (codecPicParams->ucMvUpdateProb[1] && picParam->mv_probs[1])
     {
-        memcpy(codecPicParams->ucMvUpdateProb[1],
+        MOS_SecureMemcpy(codecPicParams->ucMvUpdateProb[1],
+            sizeof(codecPicParams->ucMvUpdateProb[1]),
             picParam->mv_probs[1],
             sizeof(codecPicParams->ucMvUpdateProb[1]));
     }
@@ -299,7 +307,7 @@ VAStatus DdiDecodeVP8::RenderPicture(
         {
         case VASliceDataBufferType:
         {
-            int32_t index = m_ddiDecodeCtx->m_ddiDecode->GetBitstreamBufIndexFromBuffer(&m_ddiDecodeCtx->BufMgr, buf);
+            int32_t index = GetBitstreamBufIndexFromBuffer(&m_ddiDecodeCtx->BufMgr, buf);
             if (index == DDI_CODEC_INVALID_BUFFER_INDEX)
             {
                 return VA_STATUS_ERROR_INVALID_BUFFER;
@@ -318,14 +326,14 @@ VAStatus DdiDecodeVP8::RenderPicture(
                 DDI_NORMALMESSAGE("SliceParamBufferVP8 is already rendered\n");
                 break;
             }
-            if (buf->iNumElements == 0)
+            if (buf->uiNumElements == 0)
             {
                 return VA_STATUS_ERROR_INVALID_BUFFER;
             }
-            int32_t numSlices = buf->iNumElements;
+            uint32_t numSlices = buf->uiNumElements;
 
             VASliceParameterBufferVP8 *slcInfoVP8 = (VASliceParameterBufferVP8 *)data;
-            for(int32_t j = 0; j < numSlices; j++)
+            for(uint32_t j = 0; j < numSlices; j++)
             {
                 slcInfoVP8[j].slice_data_offset += GetBsBufOffset(m_groupIndex);
             }
@@ -344,7 +352,7 @@ VAStatus DdiDecodeVP8::RenderPicture(
         case VAProbabilityBufferType:
         {
             VAProbabilityDataBufferVP8 *probInput = (VAProbabilityDataBufferVP8 *)data;
-	    DDI_CHK_RET(ParseProbabilityData(m_ddiDecodeCtx->BufMgr.Codec_Param.Codec_Param_VP8.pVP8ProbabilityDataBuffObject, probInput),"ParseProbabilityData failed!");
+        DDI_CHK_RET(ParseProbabilityData(m_ddiDecodeCtx->BufMgr.Codec_Param.Codec_Param_VP8.pVP8ProbabilityDataBuffObject, probInput),"ParseProbabilityData failed!");
             DdiMedia_MediaBufferToMosResource(m_ddiDecodeCtx->BufMgr.Codec_Param.Codec_Param_VP8.pVP8ProbabilityDataBuffObject,
                 &m_ddiDecodeCtx->BufMgr.Codec_Param.Codec_Param_VP8.resProbabilityDataBuffer);
             m_ddiDecodeCtx->DecodeParams.m_coefProbSize = dataSize;
@@ -502,10 +510,10 @@ void DdiDecodeVP8::FreeResourceBuffer()
     bufMgr->pSliceData = nullptr;
 }
 
-uint8_t* DdiDecodeVP8::GetPicParamBuf( 
-    DDI_CODEC_COM_BUFFER_MGR    *bufMgr) 
-{ 
-    return (uint8_t*)(&(bufMgr->Codec_Param.Codec_Param_VP8.PicParamVP8)); 
+uint8_t* DdiDecodeVP8::GetPicParamBuf(
+    DDI_CODEC_COM_BUFFER_MGR    *bufMgr)
+{
+    return (uint8_t*)(&(bufMgr->Codec_Param.Codec_Param_VP8.PicParamVP8));
 }
 
 VAStatus DdiDecodeVP8::AllocSliceControlBuffer(
@@ -522,7 +530,7 @@ VAStatus DdiDecodeVP8::AllocSliceControlBuffer(
     buf->pData      = (uint8_t*)bufMgr->Codec_Param.Codec_Param_VP8.pVASliceParaBufVP8;
     buf->uiOffset   = bufMgr->dwNumSliceControl * sizeof(VASliceParameterBufferVP8);
 
-    bufMgr->dwNumSliceControl += buf->iNumElements;
+    bufMgr->dwNumSliceControl += buf->uiNumElements;
 
     return VA_STATUS_SUCCESS;
 }
@@ -535,27 +543,25 @@ VAStatus DdiDecodeVP8::CodecHalInit(
     MOS_CONTEXT *mosCtx   = (MOS_CONTEXT *)ptr;
 
     CODECHAL_FUNCTION codecFunction = CODECHAL_FUNCTION_DECODE;
-    m_ddiDecodeCtx->pCpDdiInterface->SetEncryptionType(m_ddiDecodeAttr->uiEncryptionType, &codecFunction);
+    m_ddiDecodeCtx->pCpDdiInterface->SetCpParams(m_ddiDecodeAttr->uiEncryptionType, m_codechalSettings);
 
-    CODECHAL_SETTINGS      codecHalSettings;
     CODECHAL_STANDARD_INFO standardInfo;
     memset(&standardInfo, 0, sizeof(standardInfo));
-    memset(&codecHalSettings, 0, sizeof(codecHalSettings));
 
     standardInfo.CodecFunction = codecFunction;
     standardInfo.Mode          = (CODECHAL_MODE)m_ddiDecodeCtx->wMode;
 
-    codecHalSettings.CodecFunction                = codecFunction;
-    codecHalSettings.dwWidth                      = m_width;
-    codecHalSettings.dwHeight                     = m_height;
-    codecHalSettings.bIntelEntrypointInUse        = false;
+    m_codechalSettings->codecFunction                = codecFunction;
+    m_codechalSettings->width                      = m_width;
+    m_codechalSettings->height                     = m_height;
+    m_codechalSettings->intelEntrypointInUse        = false;
 
-    codecHalSettings.ucLumaChromaDepth = CODECHAL_LUMA_CHROMA_DEPTH_8_BITS;
+    m_codechalSettings->lumaChromaDepth = CODECHAL_LUMA_CHROMA_DEPTH_8_BITS;
 
-    codecHalSettings.bShortFormatInUse = m_ddiDecodeCtx->bShortFormatInUse;
+    m_codechalSettings->shortFormatInUse = m_ddiDecodeCtx->bShortFormatInUse;
 
-    codecHalSettings.Mode     = CODECHAL_DECODE_MODE_VP8VLD;
-    codecHalSettings.Standard = CODECHAL_VP8;
+    m_codechalSettings->mode     = CODECHAL_DECODE_MODE_VP8VLD;
+    m_codechalSettings->standard = CODECHAL_VP8;
 
     m_ddiDecodeCtx->DecodeParams.m_iqMatrixBuffer = MOS_AllocAndZeroMemory(sizeof(CODEC_VP8_IQ_MATRIX_PARAMS));
     if (m_ddiDecodeCtx->DecodeParams.m_iqMatrixBuffer == nullptr)
@@ -572,7 +578,6 @@ VAStatus DdiDecodeVP8::CodecHalInit(
 
     vaStatus = CreateCodecHal(mediaCtx,
         ptr,
-        &codecHalSettings,
         &standardInfo);
 
     if (vaStatus != VA_STATUS_SUCCESS)
@@ -590,12 +595,6 @@ VAStatus DdiDecodeVP8::CodecHalInit(
 
 CleanUpandReturn:
     FreeResourceBuffer();
-
-    if (m_decodeStatusReport)
-    {
-        MOS_DeleteArray(m_decodeStatusReport);
-        m_decodeStatusReport = nullptr;
-    }
 
     if (m_ddiDecodeCtx->pCodecHal)
     {

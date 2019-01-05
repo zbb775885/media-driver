@@ -126,7 +126,7 @@ enum REFLIST
 };
 
 //!
-//! \enum     CODECHAL_STANDARD    
+//! \enum     CODECHAL_STANDARD 
 //! \brief    Codec standard
 //!
 enum CODECHAL_STANDARD
@@ -194,17 +194,6 @@ typedef enum tagSLICE_GROUP_MASK
     SLICE_GROUP_LAST    = 0x4
 } SLICE_GROUP_MASK;
 
-typedef struct _CODEC_TRACKED_BUFFER
-{
-    uint8_t             ucSurfIndex7bits;             // 0xFF means the entry can be re-used
-    MOS_SURFACE         sScaled4xSurface;             // Handle of the 4x scaled surfaces
-    MOS_SURFACE         sScaled2xSurface;             // Handle of the 2x scaled surfaces
-    MOS_SURFACE         sScaled16xSurface;            // Handle of the 16x scaled surfaces
-    MOS_SURFACE         sScaled32xSurface;            // Handle of the 32x scaled surfaces
-    MOS_SURFACE         sCopiedSurface;               // Handle of copied surface
-    bool                bUsedforCurFrame;             // Used for FEI Preenc to mark whether this enty can be reused in multi-call case
-} CODEC_TRACKED_BUFFER, *PCODEC_TRACKED_BUFFER;
-
 typedef struct _CODEC_PIC_ID
 {
     uint8_t   ucPicIdx;
@@ -212,7 +201,7 @@ typedef struct _CODEC_PIC_ID
     bool      bValid;
 } CODEC_PIC_ID, *PCODEC_PIC_ID;
 
-#ifdef _AVC_ENCODE_SUPPORTED
+#if defined (_AVC_ENCODE_VME_SUPPORTED) || defined (_AVC_ENCODE_VDENC_SUPPORTED)
 struct _CODEC_AVC_REF_PIC_SELECT_LIST;
 typedef struct _CODEC_AVC_REF_PIC_SELECT_LIST   *PCODEC_AVC_REF_PIC_SELECT_LIST;
 #endif
@@ -246,9 +235,7 @@ struct _CODEC_REF_LIST
     uint8_t                             ucAvcPictureCodingType; // used for PAFF case, 0: frame, 1: tff field, 2: invalid, 3: bff field
     CODEC_PICTURE                       RefList[CODEC_MAX_NUM_REF_FRAME];
     int16_t                             sFrameNumber;
-    // Cenc Decode: stored 2nd level batch buffer and Pic Param index
-    uint8_t                             ucCencBufIdx[2]; // 0 - frame/top field, 1 - bottom field
-
+ 
     // Shared encoding parameters
     uint8_t                             ucMbCodeIdx;
     uint8_t                             ucScalingIdx;
@@ -277,7 +264,7 @@ struct _CODEC_REF_LIST
            uint16_t                             usNonExistingFrameFlags;
            bool                                 bUsedAsInterViewRef;
            uint32_t                             uiUsedForReferenceFlags;
-#ifdef _AVC_ENCODE_SUPPORTED
+#if defined (_AVC_ENCODE_VME_SUPPORTED) || defined (_AVC_ENCODE_VDENC_SUPPORTED)
            PCODEC_AVC_REF_PIC_SELECT_LIST       pRefPicSelectListEntry;
 #endif
            MOS_RESOURCE                         resRefTopFieldMbCodeBuffer;
@@ -525,6 +512,21 @@ static __inline uint8_t Map44LutValue(uint32_t v, uint8_t max)
     ret = (ret & 0xf) == 0 ? (ret | 8) : ret;
 
     return ret;
+}
+
+static __inline uint8_t GetU62ModeCost(double mcost)
+{
+    return (uint8_t)(mcost * 4 + 0.5);
+}
+
+static __inline uint8_t GetU71ModeCost(double mcost)
+{
+    return (uint8_t)(mcost * 2 + 0.5);
+}
+
+static __inline uint8_t GetU44ModeCost(double mcost)
+{
+    return (uint8_t)(mcost * 16 + 0.5);
 }
 
 static __inline uint32_t CodecHal_GetStandardFromMode(uint32_t mode)

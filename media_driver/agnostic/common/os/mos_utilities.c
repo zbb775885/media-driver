@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2009-2017, Intel Corporation
+* Copyright (c) 2009-2018, Intel Corporation
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -29,6 +29,7 @@
 #include "mos_utilities_specific.h"
 #ifdef __cplusplus
 #include "mos_util_user_interface.h"
+#include <sstream>
 #endif
 #include <fcntl.h>     //open
 
@@ -37,8 +38,193 @@
 #include <stdlib.h>    // atoi atol
 #include <math.h>
 
+#ifdef _MOS_UTILITY_EXT
+#include "mos_utilities_ext.h"
+#endif
+
+#ifdef __cplusplus
+
+PerfUtility *PerfUtility::instance = nullptr;
+
+PerfUtility *PerfUtility::getInstance()
+{
+    if (instance == nullptr)
+    {
+        instance = new PerfUtility();
+    }
+
+    return instance;
+}
+
+PerfUtility::PerfUtility()
+{
+}
+
+PerfUtility::~PerfUtility()
+{
+    for (const auto data : records)
+    {
+        if (data.second)
+        {
+            delete data.second;
+        }
+    }
+    records.clear();
+}
+
+void PerfUtility::savePerfData()
+{
+    printPerfSummary();
+
+    printPerfDetails();
+}
+
+void PerfUtility::printPerfSummary()
+{
+    std::ofstream fout;
+    fout.open("perf_summary.txt");
+
+    printHeader(fout);
+    printBody(fout);
+    printFooter(fout);
+
+    fout.close();
+}
+
+void PerfUtility::printPerfDetails()
+{
+    std::ofstream fout;
+    fout.open("perf_details.txt");
+
+    for (auto data : records)
+    {
+        fout << getDashString((uint32_t)data.first.length());
+        fout << data.first << std::endl;
+        fout << getDashString((uint32_t)data.first.length());
+        for (auto t : *data.second)
+        {
+            fout << t.time << std::endl;
+        }
+        fout << std::endl;
+    }
+
+    fout.close();
+}
+
+void PerfUtility::printHeader(std::ofstream& fout)
+{
+    fout << "Summary: " << std::endl;
+    fout << getDashString(80);
+    std::stringstream ss;
+    ss.width(16);
+    ss << "CPU Latency Tag";
+    ss.width(16);
+    ss << "Hit Count";
+    ss.width(16);
+    ss << "Average (ms)";
+    ss.width(16);
+    ss << "Minimum (ms)";
+    ss.width(16);
+    ss << "Maximum (ms)" << std::endl;
+    fout << ss.str();
+    fout << getDashString(80);
+}
+
+void PerfUtility::printBody(std::ofstream& fout)
+{
+    for (const auto& data : records)
+    {
+        fout << formatPerfData(data.first, *data.second);
+    }
+}
+
+std::string PerfUtility::formatPerfData(std::string tag, std::vector<Tick>& record)
+{
+    std::stringstream ss;
+    PerfInfo info = {};
+    getPerfInfo(record, &info);
+
+    ss.width(16);
+    ss << tag;
+
+    ss.precision(2);
+    ss.setf(std::ios::fixed, std::ios::floatfield);
+
+    ss.width(16);
+    ss << info.count;
+    ss.width(16);
+    ss << info.avg;
+    ss.width(16);
+    ss << info.min;
+    ss.width(16);
+    ss << info.max << std::endl;
+
+    return ss.str();
+}
+
+void PerfUtility::getPerfInfo(std::vector<Tick>& record, PerfInfo* info)
+{
+    if (record.size() <= 0)
+        return;
+
+    info->count = (uint32_t)record.size();
+    double sum = 0, max = 0, min = 10000000.0;
+    for (auto t : record)
+    {
+        sum += t.time;
+        max = (max < t.time) ? t.time : max;
+        min = (min > t.time) ? t.time : min;
+    }
+    info->avg = sum / info->count;
+    info->max = max;
+    info->min = min;
+}
+
+void PerfUtility::printFooter(std::ofstream& fout)
+{
+    fout << getDashString(80);
+}
+
+std::string PerfUtility::getDashString(uint32_t num)
+{
+    std::stringstream ss;
+    ss.width(num);
+    ss.fill('-');
+    ss << std::left << "" << std::endl;
+    return ss.str();
+}
+
+#endif // __cplusplus
+
 int32_t MosMemAllocCounter;      //!< Counter to check memory leaks
+int32_t MosMemAllocFakeCounter;
 int32_t MosMemAllocCounterGfx;
+int32_t MosMemAllocCounterNoUserFeature;
+int32_t MosMemAllocCounterNoUserFeatureGfx;
+uint8_t MosUltFlag;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+    MOS_FUNC_EXPORT void MOS_SetUltFlag(uint8_t ultFlag)
+    {
+        MosUltFlag = ultFlag;
+    }
+
+    MOS_FUNC_EXPORT int32_t MOS_GetMemNinjaCounter()
+    {
+        return MosMemAllocCounterNoUserFeature;
+    }
+
+    MOS_FUNC_EXPORT int32_t MOS_GetMemNinjaCounterGfx()
+    {
+        return MosMemAllocCounterNoUserFeatureGfx;
+    }
+
+#ifdef __cplusplus
+}
+#endif
 
 #define __MOS_USER_FEATURE_VALUE_SINGLE_SLICE_VEBOX_DEFAULT_VALUE "1"
 #define __MAX_MULTI_STRING_COUNT         128
@@ -94,6 +280,123 @@ static MOS_USER_FEATURE_VALUE MOSUserFeatureDescFields[__MOS_USER_FEATURE_KEY_MA
      MOS_USER_FEATURE_VALUE_TYPE_INT32,
      "0",
      "Linux Performance Tag"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_PERF_PROFILER_ENABLE_ID,
+     "Perf Profiler Enable",
+     __MEDIA_USER_FEATURE_SUBKEY_PERFORMANCE,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "General",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_BOOL,
+     "0",
+     "Perf Profiler Enable Control Flag"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_PERF_PROFILER_FE_BE_TIMING,
+        "Perf Profiler FE BE timing measurement",
+        __MEDIA_USER_FEATURE_SUBKEY_PERFORMANCE,
+        __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+        "General",
+        MOS_USER_FEATURE_TYPE_USER,
+        MOS_USER_FEATURE_VALUE_TYPE_BOOL,
+        "0",
+        "Perf Profiler FE&BE Timing Measurement Flag"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_PERF_PROFILER_OUTPUT_FILE,
+     "Perf Profiler Output File Name",
+     __MEDIA_USER_FEATURE_SUBKEY_PERFORMANCE,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "General",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_STRING,
+     "Perf_DATA_00_00.bin",
+     "Performance Profiler Output File Name"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_PERF_PROFILER_BUFFER_SIZE,
+     "Perf Profiler Buffer Size",
+     __MEDIA_USER_FEATURE_SUBKEY_PERFORMANCE,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "General",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "10000000",
+     "Performance Profiler Buffer Size"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_PERF_PROFILER_TIMER_REG,
+     "Perf Profiler Timer Reg",
+     __MEDIA_USER_FEATURE_SUBKEY_PERFORMANCE,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "General",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "0",
+     "Performance Profiler Timer Register"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_PERF_PROFILER_REGISTER_1,
+     "Perf Profiler Register 1",
+     __MEDIA_USER_FEATURE_SUBKEY_PERFORMANCE,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "General",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "0",
+     "Performance Profiler Memory Information Register"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_PERF_PROFILER_REGISTER_2,
+     "Perf Profiler Register 2",
+     __MEDIA_USER_FEATURE_SUBKEY_PERFORMANCE,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "General",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "0",
+     "Performance Profiler Memory Information Register"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_PERF_PROFILER_REGISTER_3,
+     "Perf Profiler Register 3",
+     __MEDIA_USER_FEATURE_SUBKEY_PERFORMANCE,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "General",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "0",
+     "Performance Profiler Memory Information Register"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_PERF_PROFILER_REGISTER_4,
+     "Perf Profiler Register 4",
+     __MEDIA_USER_FEATURE_SUBKEY_PERFORMANCE,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "General",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "0",
+     "Performance Profiler Memory Information Register"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_PERF_PROFILER_REGISTER_5,
+     "Perf Profiler Register 5",
+     __MEDIA_USER_FEATURE_SUBKEY_PERFORMANCE,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "General",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "0",
+     "Performance Profiler Memory Information Register"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_PERF_PROFILER_REGISTER_6,
+     "Perf Profiler Register 6",
+     __MEDIA_USER_FEATURE_SUBKEY_PERFORMANCE,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "General",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "0",
+     "Performance Profiler Memory Information Register"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_PERF_PROFILER_REGISTER_7,
+     "Perf Profiler Register 7",
+     __MEDIA_USER_FEATURE_SUBKEY_PERFORMANCE,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "General",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "0",
+     "Performance Profiler Memory Information Register"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_PERF_PROFILER_REGISTER_8,
+     "Perf Profiler Register 8",
+     __MEDIA_USER_FEATURE_SUBKEY_PERFORMANCE,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "General",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "0",
+     "Performance Profiler Memory Information Register"),
     MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_DISABLE_KMD_WATCHDOG_ID,
      "Disable KMD Watchdog",
      __MEDIA_USER_FEATURE_SUBKEY_PERFORMANCE,
@@ -715,6 +1018,15 @@ static MOS_USER_FEATURE_VALUE MOSUserFeatureDescFields[__MOS_USER_FEATURE_KEY_MA
      MOS_USER_FEATURE_VALUE_TYPE_INT32,
      "0",
      "Report key to indicate if Adaptive RePAK is turned on."),
+     MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_VP9_ENCODE_SINGLE_PASS_DYS_ENABLE_ID,
+     "VP9 Encode Single Pass Dys Enable",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Encode",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_INT32,
+     "1",
+     "Report key to indicate if Single Pass Dys is turned on."),
     MOS_DECLARE_UF_KEY(__MEDIA_USER_FEATURE_VALUE_MEMNINJA_COUNTER_ID,
      __MEDIA_USER_FEATURE_VALUE_MEMNINJA_COUNTER,
      __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
@@ -742,15 +1054,15 @@ static MOS_USER_FEATURE_VALUE MOSUserFeatureDescFields[__MOS_USER_FEATURE_KEY_MA
      MOS_USER_FEATURE_VALUE_TYPE_INT32,
      "1",
      "Enables/Disables HEVC Encode."),
-	MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_HEVC_ENCODE_SECURE_INPUT_ID,
-		"Secure HEVC Encode",
-		__MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
-		__MEDIA_USER_FEATURE_SUBKEY_REPORT,
-		"Secure HEVC Encode",
-		MOS_USER_FEATURE_TYPE_USER,
-		MOS_USER_FEATURE_VALUE_TYPE_INT32,
-		"0",
-		"Secure HEVC Encode."),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_HEVC_ENCODE_SECURE_INPUT_ID,
+        "Secure HEVC Encode",
+        __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+        __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+        "Secure HEVC Encode",
+        MOS_USER_FEATURE_TYPE_USER,
+        MOS_USER_FEATURE_VALUE_TYPE_INT32,
+        "0",
+        "Secure HEVC Encode."),
     MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_HEVC_ENCODE_ENABLE_MEDIARESET_TEST_ID,
      "Enable MediaReset Test",
      __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
@@ -759,7 +1071,7 @@ static MOS_USER_FEATURE_VALUE MOSUserFeatureDescFields[__MOS_USER_FEATURE_KEY_MA
      MOS_USER_FEATURE_TYPE_USER,
      MOS_USER_FEATURE_VALUE_TYPE_INT32,
      "0",
-     "Enable HEVC Encode Media Reset Test, by default:0(disabled)."),   
+     "Enable HEVC Encode Media Reset Test, by default:0(disabled)."),
     MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_HEVC_ENCODE_ENABLE_WP_SUPPORT_ID,
      "Enable WP Support",
      __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
@@ -768,7 +1080,7 @@ static MOS_USER_FEATURE_VALUE MOSUserFeatureDescFields[__MOS_USER_FEATURE_KEY_MA
      MOS_USER_FEATURE_TYPE_USER,
      MOS_USER_FEATURE_VALUE_TYPE_INT32,
      "1",
-     "Enable Weighted Prediction support in HEVC Encoder."),     
+     "Enable Weighted Prediction support in HEVC Encoder."),
     MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_HEVC_ENCODE_MODE_ID,
      "HEVC Encode Mode",
      __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
@@ -805,6 +1117,24 @@ static MOS_USER_FEATURE_VALUE MOSUserFeatureDescFields[__MOS_USER_FEATURE_KEY_MA
      MOS_USER_FEATURE_VALUE_TYPE_INT32,
      "0",
      "Enables/Disables UHME for HEVC."),
+    MOS_DECLARE_UF_KEY(__MEDIA_USER_FEATURE_VALUE_HEVC_VDENC_16xME_ENABLE_ID,
+     "Enable HEVC VDEnc SuperHME",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Encode",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_INT32,
+     "1",
+     "Enable/Disable SuperHme for HEVC VDEnc."),
+    MOS_DECLARE_UF_KEY(__MEDIA_USER_FEATURE_VALUE_HEVC_VDENC_32xME_ENABLE_ID,
+     "Enable HEVC VDEnc UltraHME",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Encode",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_INT32,
+     "1",
+     "Enables/Disables UHME for HEVC VDEnc."),
      MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_HEVC_ENCODE_26Z_ENABLE_ID,
      "HEVC Encode 26Z Enable",
      __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
@@ -911,7 +1241,7 @@ MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENCODE_BRC_SOFTWARE_ID,
      "Encode",
      MOS_USER_FEATURE_TYPE_USER,
      MOS_USER_FEATURE_VALUE_TYPE_INT32,
-     "0",
+     "1",
      "Enable ACQP for HEVC VDEnc"),
     MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_FORCE_PAK_PASS_NUM_ID,
      "Force PAK Pass Num",
@@ -940,15 +1270,6 @@ MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENCODE_BRC_SOFTWARE_ID,
      MOS_USER_FEATURE_VALUE_TYPE_INT32,
      "0",
      "Enable PakObjCmd StreamOut for HEVC VDEnc"),
-     MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_HEVC_VDENC_TILEREPLAY_ENABLE_ID,
-     "HEVC VDEnc TileReplay Enable",
-     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
-     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
-     "Encode",
-     MOS_USER_FEATURE_TYPE_USER,
-     MOS_USER_FEATURE_VALUE_TYPE_INT32,
-     "0",
-     "Enable TileReplay for HEVC VDEnc"),
      MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_HEVC_VDENC_LBCONLY_ENABLE_ID,
      "HEVC VDEnc LBC Only Enable",
      __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
@@ -985,7 +1306,7 @@ MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENCODE_BRC_SOFTWARE_ID,
     MOS_USER_FEATURE_VALUE_TYPE_INT32,
     "0",
     "Enables/Disables MDF for HEVC Encoder."),
-    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_CODEC_MMC_ENABLE_ID,
+    MOS_DECLARE_UF_KEY(__MEDIA_USER_FEATURE_VALUE_CODEC_MMC_ENABLE_ID,
      "Enable Codec MMC",
      __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
      __MEDIA_USER_FEATURE_SUBKEY_REPORT,
@@ -1030,6 +1351,15 @@ MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENCODE_BRC_SOFTWARE_ID,
      MOS_USER_FEATURE_VALUE_TYPE_INT32,
      "0",
      "Report key to indicate if decode MMC is turned on "),
+    MOS_DECLARE_UF_KEY(__MEDIA_USER_FEATURE_VALUE_DECODE_HISTOGRAM_FROM_VEBOX_ID,
+     "Decode Histogram from VEBox",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Report",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_INT32,
+     "0",
+     "Report key to indicate if decode histogram is from VEBox "),
     MOS_DECLARE_UF_KEY(__MEDIA_USER_FEATURE_VALUE_DECODE_EXTENDED_MMC_IN_USE_ID,
      "Decode Extended MMC In Use",
      __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
@@ -1065,7 +1395,7 @@ MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENCODE_BRC_SOFTWARE_ID,
      MOS_USER_FEATURE_TYPE_USER,
      MOS_USER_FEATURE_VALUE_TYPE_INT32,
      "1",
-     "Media Encode Used VDBOX Number."),     
+     "Media Encode Used VDBOX Number."),
     MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENCODE_ENABLE_COMPUTE_CONTEXT_ID,
      "Enable Compute Context",
      __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
@@ -1075,6 +1405,15 @@ MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENCODE_BRC_SOFTWARE_ID,
      MOS_USER_FEATURE_VALUE_TYPE_UINT32,
      "0",
      "Enable Compute Context. default:0 disabled."),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_DECODE_ENABLE_COMPUTE_CONTEXT_ID,
+        "Enable Compute Context",
+        __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+        __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+        "Encode",
+        MOS_USER_FEATURE_TYPE_USER,
+        MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+        "0",
+        "Enable Compute Context. default:0 disabled."),
     MOS_DECLARE_UF_KEY(__MEDIA_USER_FEATURE_VALUE_MMC_DEC_RT_COMPRESSIBLE_ID,
      "Decode RT Compressible",
      __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
@@ -1156,6 +1495,15 @@ MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENCODE_BRC_SOFTWARE_ID,
      MOS_USER_FEATURE_VALUE_TYPE_INT32,
      "0",
      "Slice Shutdown Target Usage Threshold "),
+    MOS_DECLARE_UF_KEY(__MEDIA_USER_FEATURE_VALUE_SLICE_COUNT_SET_SUPPORT_ID,
+     "Slice Count Set Support",
+     __MEDIA_USER_FEATURE_SUBKEY_PERFORMANCE,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "General",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_BOOL,
+     "0",
+     "Support Slice Count Set "),
     MOS_DECLARE_UF_KEY(__MEDIA_USER_FEATURE_VALUE_DYNAMIC_SLICE_SHUTDOWN_ID,
      "Dynamic Slice Shutdown",
      __MEDIA_USER_FEATURE_SUBKEY_PERFORMANCE,
@@ -1183,6 +1531,15 @@ MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENCODE_BRC_SOFTWARE_ID,
      MOS_USER_FEATURE_VALUE_TYPE_INT32,
      "0",
      "Enables/Disables BRC distorion buffer dump for MPEG2 Encoder"),
+    MOS_DECLARE_UF_KEY(__MEDIA_USER_FEATURE_VALUE_ENABLE_VDBOX_BALANCING_ID,
+     "Enable VDBox load balancing",
+     __MEDIA_USER_FEATURE_SUBKEY_PERFORMANCE,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Codec",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_BOOL,
+     "0",
+     "Enable balancing of VDBox load by KMD hint. (Default FALSE: disabled"),
     MOS_DECLARE_UF_KEY(__MEDIA_USER_FEATURE_VALUE_NUMBER_OF_CODEC_DEVICES_ON_VDBOX1_ID,
      "Num of Codec Devices on VDBOX1",
      __MEDIA_USER_FEATURE_SUBKEY_REPORT,//read path and write path are the same
@@ -1236,7 +1593,7 @@ MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENCODE_BRC_SOFTWARE_ID,
         MOS_USER_FEATURE_TYPE_USER,
         MOS_USER_FEATURE_VALUE_TYPE_INT32,
         "1",
-        "Enables VP8 Encode HW Scoreboard Feature."),     
+        "Enables VP8 Encode HW Scoreboard Feature."),
     MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_VP8_ENCODE_ME_ENABLE_ID,
         "VP8 Encode HME",
         __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
@@ -1245,7 +1602,7 @@ MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENCODE_BRC_SOFTWARE_ID,
         MOS_USER_FEATURE_TYPE_USER,
         MOS_USER_FEATURE_VALUE_TYPE_INT32,
         "1",
-        "Enables VP8 Encode HME Feature."),     
+        "Enables VP8 Encode HME Feature."),
     MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_VP8_ENCODE_16xME_ENABLE_ID,
         "VP8 Encode SuperHME",
         __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
@@ -1272,7 +1629,7 @@ MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENCODE_BRC_SOFTWARE_ID,
         MOS_USER_FEATURE_TYPE_USER,
         MOS_USER_FEATURE_VALUE_TYPE_INT32,
         "1",
-        "Enables VP8 Encode Multipass BRC."),     
+        "Enables VP8 Encode Multipass BRC."),
     MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_VP8_ENCODE_ADAPTIVE_REPAK_ENABLE_ID,
         "VP8 Encode Adpative Repak Enable",
         __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
@@ -1281,7 +1638,7 @@ MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENCODE_BRC_SOFTWARE_ID,
         MOS_USER_FEATURE_TYPE_USER,
         MOS_USER_FEATURE_VALUE_TYPE_INT32,
         "1",
-        "Enables VP8 Encode Adaptive Repak Feature."),        
+        "Enables VP8 Encode Adaptive Repak Feature."),
 #if MOS_COMMAND_BUFFER_DUMP_SUPPORTED
      MOS_DECLARE_UF_KEY(__MEDIA_USER_FEATURE_VALUE_DUMP_COMMAND_BUFFER_ENABLE_ID,
      "Dump Command Buffer Enable",
@@ -1293,6 +1650,26 @@ MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENCODE_BRC_SOFTWARE_ID,
      "0",
      "If enabled, all of the command buffers submitted through MOS will be dumped (0: disabled, 1: to a file, 2: as a normal message)."),
 #endif // MOS_COMMAND_BUFFER_DUMP_SUPPORTED
+#if MOS_COMMAND_RESINFO_DUMP_SUPPORTED
+    MOS_DECLARE_UF_KEY(__MEDIA_USER_FEATURE_VALUE_DUMP_COMMAND_INFO_ENABLE_ID,
+        "Dump Command Info Enable",
+        __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+        __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+        "MOS",
+        MOS_USER_FEATURE_TYPE_USER,
+        MOS_USER_FEATURE_VALUE_TYPE_INT32,
+        "0",
+        "If enabled, gpu command info will be dumped (0: disabled, 1: to a file)."),
+     MOS_DECLARE_UF_KEY(__MEDIA_USER_FEATURE_VALUE_DUMP_COMMAND_INFO_PATH_ID,
+         "Dump Command Info Path",
+         __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+         __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+         "MOS",
+         MOS_USER_FEATURE_TYPE_USER,
+         MOS_USER_FEATURE_VALUE_TYPE_STRING,
+         "",
+         "Path where command info will be dumped, for example: ./"),
+#endif // MOS_COMMAND_RESINFO_DUMP_SUPPORTED
 #if (_DEBUG || _RELEASE_INTERNAL)
      MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_MEDIA_PREEMPTION_ENABLE_ID,
      "Media Preemption Enable",
@@ -1311,7 +1688,7 @@ MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENCODE_BRC_SOFTWARE_ID,
      MOS_USER_FEATURE_TYPE_USER,
      MOS_USER_FEATURE_VALUE_TYPE_INT32,
      "0",
-     "Sets the value of Group ID"),    
+     "Sets the value of Group ID"),
     MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENCODE_VFE_MAX_THREADS_ID,
      "Encode VFE Max Threads",
      __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
@@ -1591,6 +1968,15 @@ MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENCODE_BRC_SOFTWARE_ID,
      MOS_USER_FEATURE_VALUE_TYPE_STRING,
      "",
      "Directory where all CodecHal debug interface can locate cfg file and dump."),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_CODECHAL_DUMP_OUTPUT_DIRECTORY_ID,
+        "CodecHal Dump Output Directory",
+        __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+        __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+        "Codec",
+        MOS_USER_FEATURE_TYPE_USER,
+        MOS_USER_FEATURE_VALUE_TYPE_STRING,
+        "",
+        "CodecHal Dump Output Directory."),
     MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_CODECHAL_DEBUG_CFG_GENERATION_ID,
      "CodecHal Debug Cfg Generation",
      __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
@@ -1600,7 +1986,70 @@ MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENCODE_BRC_SOFTWARE_ID,
      MOS_USER_FEATURE_VALUE_TYPE_INT32,
      "0",
      "Enable the Generation of CodecHal Debug Cfg file."),
-     MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_HUC_DEMO_KERNEL_ID, // Used to indicate which huc kernel to load for the Huc Demo feature
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_CODECHAL_RDOQ_INTRA_TU_OVERRIDE_ID,
+     "RDOQ Intra TU Override",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Codec",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "0",
+     "Override Intra RDOQ TU setting."),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_CODECHAL_RDOQ_INTRA_TU_DISABLE_ID,
+     "RDOQ Intra TU Disable",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Codec",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "0",
+     "Disable RDOQ for Intra TU."),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_CODECHAL_RDOQ_INTRA_TU_THRESHOLD_ID,
+     "RDOQ Intra TU Threshold",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Codec",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "0",
+     "RDOQ Intra TU Threshold"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_CODECHAL_ENABLE_FAKE_HEADER_SIZE_ID,
+     "Fake Header Size Enable",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Codec",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "0",
+     "Enable Fake Header Size"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_CODECHAL_FAKE_IFRAME_HEADER_SIZE_ID,
+     "Fake IFrame Header Size",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Codec",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "128",
+     "Fake I Frame Header Size"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_CODECHAL_FAKE_PBFRAME_HEADER_SIZE_ID,
+     "Fake PBFrame Header Size",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Codec",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "16",
+     "Fake P/B Frame Header Size"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_COMMAND_OVERRIDE_INPUT_FILE_PATH_ID,
+     "Command Override Input File Path",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Media",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_STRING,
+     "",
+     "Path of command override input file"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_HUC_DEMO_KERNEL_ID, // Used to indicate which huc kernel to load for the Huc Demo feature
      "Media Huc Demo kernel Id",
      __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
      __MEDIA_USER_FEATURE_SUBKEY_REPORT,
@@ -1854,6 +2303,61 @@ MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENCODE_BRC_SOFTWARE_ID,
      MOS_USER_FEATURE_VALUE_TYPE_UINT64,
      "0",
      "Allows different CM subcomponents to have different debug levels. "),
+    MOS_DECLARE_UF_KEY(__MOS_USER_FEATURE_KEY_MESSAGE_SCALABILITY_TAG_ID,
+     __MOS_USER_FEATURE_KEY_MESSAGE_SCALABILITY_TAG,
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     "MOS",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     __MOS_USER_FEATURE_KEY_MESSAGE_DEFAULT_VALUE_STR,
+     "Enables messages and/or asserts for all of SCALABILITY "),
+    MOS_DECLARE_UF_KEY(__MOS_USER_FEATURE_KEY_BY_SUB_COMPONENT_SCALABILITY_ID,
+     __MOS_USER_FEATURE_KEY_BY_SUB_COMPONENT_SCALABILITY,
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     "MOS",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "0",
+     "If enabled, will allow the subcomponent tags to take effect."),
+    MOS_DECLARE_UF_KEY(__MOS_USER_FEATURE_KEY_SUB_COMPONENT_SCALABILITY_TAG_ID,
+     __MOS_USER_FEATURE_KEY_SUB_COMPONENT_SCALABILITY_TAG,
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     "MOS",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT64,
+     "0",
+     "Allows different SCALABILITY subcomponents to have different debug levels. "),
+    MOS_DECLARE_UF_KEY(__MOS_USER_FEATURE_KEY_MESSAGE_MMC_TAG_ID,
+     __MOS_USER_FEATURE_KEY_MESSAGE_MMC_TAG,
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     "MOS",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     __MOS_USER_FEATURE_KEY_MESSAGE_DEFAULT_VALUE_STR,
+     "Enables messages and/or asserts for all of MMC "),
+    MOS_DECLARE_UF_KEY(__MOS_USER_FEATURE_KEY_BY_SUB_COMPONENT_MMC_ID,
+     __MOS_USER_FEATURE_KEY_BY_SUB_COMPONENT_MMC,
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     "MOS",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "0",
+     "If enabled, will allow the subcomponent tags to take effect."),
+    MOS_DECLARE_UF_KEY(__MOS_USER_FEATURE_KEY_SUB_COMPONENT_MMC_TAG_ID,
+     __MOS_USER_FEATURE_KEY_SUB_COMPONENT_MMC_TAG,
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     "MOS",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT64,
+     "0",
+     "Allows different MMC subcomponents to have different debug levels. "),
+
 #endif // MOS_MESSAGES_ENABLED
     MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_HEVC_SF_2_DMA_SUBMITS_ENABLE_ID,
      "Enable HEVC SF 2 DMA Submits",
@@ -1981,6 +2485,78 @@ MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENCODE_BRC_SOFTWARE_ID,
      MOS_USER_FEATURE_VALUE_TYPE_UINT32,
      "0",
      "Enable MDF Surface Dump"),
+     MOS_DECLARE_UF_KEY(__MEDIA_USER_FEATURE_VALUE_MDF_SURFACE_STATE_DUMP_ENABLE_ID,
+     __MEDIA_USER_FEATURE_VALUE_MDF_SURFACE_STATE_DUMP_ENABLE,
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "MDF",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "0",
+     "Enable MDF Surface State Dump"),
+     MOS_DECLARE_UF_KEY(__MEDIA_USER_FEATURE_VALUE_MDF_CMD_DUMP_COUNTER_ID,
+     __MEDIA_USER_FEATURE_VALUE_MDF_CMD_DUMP_COUNTER,
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     "MDF",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "0",
+     "Record MDF Command Buffer Dump counter for multiple device create/destroy"),
+     MOS_DECLARE_UF_KEY(__MEDIA_USER_FEATURE_VALUE_MDF_SURFACE_STATE_DUMP_COUNTER_ID,
+     __MEDIA_USER_FEATURE_VALUE_MDF_SURFACE_STATE_DUMP_COUNTER,
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     "MDF",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "0",
+     "Record MDF Surface state Dump counter for multiple device create/destroy"),
+     MOS_DECLARE_UF_KEY(__MEDIA_USER_FEATURE_VALUE_MDF_INTERFACE_DESCRIPTOR_DATA_DUMP_ID,
+     __MEDIA_USER_FEATURE_VALUE_MDF_INTERFACE_DESCRIPTOR_DATA_DUMP,
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "MDF",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "0",
+     "Enable MDF interface descriptor data dump"),
+     MOS_DECLARE_UF_KEY(__MEDIA_USER_FEATURE_VALUE_MDF_INTERFACE_DESCRIPTOR_DATA_COUNTER_ID,
+     __MEDIA_USER_FEATURE_VALUE_MDF_INTERFACE_DESCRIPTOR_DATA_COUNTER,
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     "MDF",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "0",
+     "Record MDF Interface descriptor data Dump counter for multiple device create/destroy"),
+     MOS_DECLARE_UF_KEY(__MEDIA_USER_FEATURE_VALUE_MDF_EMU_MODE_ENABLE_ID,
+     __MEDIA_USER_FEATURE_VALUE_MDF_EMU_MODE_ENABLE,
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "MDF",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "0",
+     "MDF EMU Enable"),
+     MOS_DECLARE_UF_KEY(__VPHAL_VEBOX_OUTPUTPIPE_MODE_ID,
+     "VPOutputPipe Mode",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     "Report",
+     "VP",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_INT32,
+     "0",
+     "For Notify which datapath Vebox used"),
+     MOS_DECLARE_UF_KEY(__VPHAL_VEBOX_FEATURE_INUSE_ID,
+     "VeBox Feature In use",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     "Report",
+     "VP",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_INT32,
+     "0",
+     "For Notify which feature Vebox used"),
      MOS_DECLARE_UF_KEY_DBGONLY(__VPHAL_RNDR_SSD_CONTROL_ID,
      "SSD Control",
      __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
@@ -2106,7 +2682,7 @@ MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENCODE_BRC_SOFTWARE_ID,
      "VP",
      MOS_USER_FEATURE_TYPE_USER,
      MOS_USER_FEATURE_VALUE_TYPE_UINT32,
-     "0",
+     "1",
      "VP Parameters Dump Start Frame"),
      MOS_DECLARE_UF_KEY(__VPHAL_DBG_PARAM_DUMP_END_FRAME_KEY_NAME_ID,
      "endxmlFrame",
@@ -2115,8 +2691,17 @@ MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENCODE_BRC_SOFTWARE_ID,
      "VP",
      MOS_USER_FEATURE_TYPE_USER,
      MOS_USER_FEATURE_VALUE_TYPE_UINT32,
-     MOS_USER_FEATURE_MAX_UINT32_STR_VALUE,
+     "0",
      "VP Parameters Dump End Frame"),
+    MOS_DECLARE_UF_KEY(__VPHAL_DBG_DUMP_OUTPUT_DIRECTORY_ID,
+    "Vphal Debug Dump Output Directory",
+    __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+    __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+    "VP",
+    MOS_USER_FEATURE_TYPE_USER,
+    MOS_USER_FEATURE_VALUE_TYPE_STRING,
+    "",
+    "Vphal Debug Dump Output Directory"),
 #endif
     MOS_DECLARE_UF_KEY_DBGONLY(__VPHAL_SET_SINGLE_SLICE_VEBOX_ID,
      "SetSingleSliceVeboxEnable",
@@ -2152,9 +2737,9 @@ MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENCODE_BRC_SOFTWARE_ID,
      "VP",
      MOS_USER_FEATURE_TYPE_USER,
      MOS_USER_FEATURE_VALUE_TYPE_BOOL,
-     "0",                                               
+     "0",
      "For debugging purpose. Enable Vebox In-Place decompression"),
-    MOS_DECLARE_UF_KEY_DBGONLY(__VPHAL_ENABLE_MMC_ID,
+    MOS_DECLARE_UF_KEY(__VPHAL_ENABLE_MMC_ID,
      "Enable VP MMC",
      __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
      __MEDIA_USER_FEATURE_SUBKEY_REPORT,
@@ -2163,6 +2748,24 @@ MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENCODE_BRC_SOFTWARE_ID,
      MOS_USER_FEATURE_VALUE_TYPE_BOOL,
      "0",
      "Enable memory compression"),
+    MOS_DECLARE_UF_KEY(__VPHAL_ENABLE_MMC_IN_USE_ID,
+     "VP MMC In Use",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "VP",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_BOOL,
+     "0",
+     "VP use memory compression"),
+     MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_ENABLE_RENDER_ENGINE_MMC_ID,
+     "Enable Media RenderEngine MMC",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "VP",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_BOOL,
+     "0",
+     "Enable media render engine memory compression in media workload"),
     MOS_DECLARE_UF_KEY_DBGONLY(__VPHAL_VEBOX_DISABLE_TEMPORAL_DENOISE_FILTER_ID,
      "Disable Temporal Denoise Filter",
      __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
@@ -2268,6 +2871,304 @@ MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENCODE_BRC_SOFTWARE_ID,
      MOS_USER_FEATURE_VALUE_TYPE_STRING,
      "MOS",
      "Enable"),
+    MOS_DECLARE_UF_KEY(__MEDIA_USER_FEATURE_VALUE_FORCE_VEBOX_ID,
+     "Force VEBOX",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "VP",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "0",
+     "Force the VEBox to be used. (Default 0: FORCE_VEBOX_NONE "),
+    MOS_DECLARE_UF_KEY(__MEDIA_USER_FEATURE_VALUE_ENABLE_VEBOX_SCALABILITY_MODE_ID,
+     "Enable Vebox Scalability",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "VP",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_BOOL,
+     "0",
+     "TRUE for Enabling Vebox Scalability. (Default FALSE: disabled"),
+     MOS_DECLARE_UF_KEY(__MEDIA_USER_FEATURE_VALUE_VEBOX_SPLIT_RATIO_ID,
+     "Vebox Split Ratio",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "VP",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "50",
+     "Vebox Scalability Split Ratio. (Default 50: 50 percent"),
+    /* codec gen11 based */
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_HCP_DECODE_MODE_SWITCH_THRESHOLD1_ID,
+     "HCP Decode Mode Switch TH1",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Decode",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "0",
+     "Hcp Decode mode switch single pipe <-> 2 pipe"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_HCP_DECODE_MODE_SWITCH_THRESHOLD2_ID,
+     "HCP Decode Mode Switch TH2",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Decode",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "0",
+     "Hcp Decode mode switch single pipe <-> 2/3 pipe"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_HEVC_ENCODE_ENABLE_VE_DEBUG_OVERRIDE,
+     "Enable VE Debug Override",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Encode",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_INT64,
+     "0",
+     "Enable VE Debug Override."),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_HEVC_ENCODE_ENABLE_HW_SEMAPHORE,
+     "Enable HW Semaphore",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Encode",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_INT32,
+     "1",
+     "Enable HW Semaphore."),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_HEVC_ENCODE_ENABLE_VDBOX_HW_SEMAPHORE,
+     "Enable HEVC Per VDBOX HW Semaphore in GEN11",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Encode",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_INT32,
+     "1",
+     "Enable HEVC Per VDBOX HW Semaphore in GEN11."),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_HEVC_ENCODE_ENABLE_HW_STITCH,
+     "HEVC Encode Enable HW Stitch",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Encode",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_INT32,
+     "1",
+     "HEVC Encode Enable HW Stitch."),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_HEVC_ENCODE_SUBTHREAD_NUM_ID,
+     "HEVC Encode SubThread Number",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Encode",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_INT32,
+     "2",
+     "Used to enable HEVC ENCODE SubThread Number in the ENC kernel."),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_HEVC_ENCODE_PAK_ONLY_ID,
+     "HEVC PAK Only Mode",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Encode",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_STRING,
+     "",
+     "Set the PAK command/CU record folder name for HEVC encoder"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_HEVC_VME_ENCODE_SSE_ENABLE_ID,
+     "HEVC Encode SSE Enable",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Encode",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_INT32,
+     "0",
+     "Used to enable HEVC VME ENCODE SSE.(default 0:disabled)"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENCODE_DISABLE_SCALABILITY,
+     "Disable Media Encode Scalability",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Encode",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_INT32,
+     "0",
+     "Disable Media Encode Scalability."),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_HEVC_ENCODE_RDOQ_PERF_DISABLE_ID,
+     "Disable HEVC RDOQ Perf",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Encode",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_INT32,
+     "1",
+     "HEVC"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_WATCHDOG_TIMER_THRESHOLD,
+     "Watchdog Timer Threshold",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Decode",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "120",
+     "Used to override default watchdog timer threshold"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENABLE_DECODE_VIRTUAL_ENGINE_ID,
+     "Enable Decode VE",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Codec",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_BOOL,
+     "1",
+     "TRUE for Enabling Decode Virtual Engine. (Default TRUE: enabled"), 
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENABLE_DECODE_VE_CTXSCHEDULING_ID,
+     "Enable Decode VE CtxBasedScheduling",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Codec",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_BOOL,
+     "0",
+     "TRUE for Enabling Decode Virtual Engine context based scheduling. (Default false: disabled"), 
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENABLE_ENCODE_VIRTUAL_ENGINE_ID,
+     "Enable Encode VE",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Codec",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_BOOL,
+     "1",
+     "TRUE for Enabling Encode Virtual Engine. (Default TRUE: enabled"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENABLE_ENCODE_VE_CTXSCHEDULING_ID,
+     "Enable Encode VE CtxBasedScheduling",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Codec",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_BOOL,
+     "0",
+     "TRUE for Enabling Encode Virtual Engine context based scheduling. (Default false: disabled"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENABLE_VE_DEBUG_OVERRIDE_ID,
+     "Enable VE Debug Override",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Codec",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_BOOL,
+     "0",
+     "TRUE for Enabling KMD Virtual Engine Debug Override. (Default FALSE: not override"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_ENABLE_HCP_SCALABILITY_DECODE_ID,
+     "Enable HCP Scalability Decode",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Codec",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_BOOL,
+     "1",
+     "Enable HCP Scalability decode mode. (Default 1: Scalable Decode Mode "),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_HCP_DECODE_ALWAYS_FRAME_SPLIT_ID,
+     "HCP Decode Always Frame Split",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Codec",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_BOOL,
+     "0",
+     "HCP Decode always does frame split instead of make decision based on LZ table. (Default 0: using LZ table "),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_SCALABILITY_OVERRIDE_SPLIT_WIDTH_IN_MINCB,
+     "Scalability Split Width In MinCb",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Codec",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "0",
+     "Override virtual tile scalability width. (Default 0: not overroded "),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_SCALABILITY_FE_SEPARATE_SUBMISSION_ENABLED_ID,
+     "FE Separate Submission Enabled",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Codec",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_BOOL,
+     "0", //Disable FE separate submission by default. Will change it to "Enable" after proving it has performance enhancement.
+     "Enable FE separate submission in Scalability decode. (Default 0: Disable FE separate submission "),
+    MOS_DECLARE_UF_KEY(__MEDIA_USER_FEATURE_VALUE_SCALABILITY_FE_SEPARATE_SUBMISSION_IN_USE_ID,
+     "FE Separate Submission In Use",
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Report",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "0",
+     "Report FE separate submission is in use in Scalability decode. (Default 0: Disable FE separate submission "),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_HEVC_VME_BRC_LTR_DISABLE_ID,
+     "HEVC VME BRC LTR Disable",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Codec",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_BOOL,
+     "0", 
+     "Disable long term reference in hevc vme brc. (Default 0: LTR Enable"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_HEVC_VME_BRC_LTR_INTERVAL_ID,
+     "HEVC VME BRC LTR Interval",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Codec",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_BOOL,
+     "0", 
+     "HEVC Vme encode BRC Long term reference interval. (Default 0: interval=0"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_HEVC_VME_FORCE_SCALABILITY_ID,
+     "HEVC VME Force Scalability For Low Size",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Codec",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_BOOL,
+     "0", 
+     "HEVC Vme encode force scalability for low (< 4K) resolution. (Default 0"),    
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_HCP_DECODE_BE_SEMA_RESET_DELAY_ID,
+     "BE Semaphore Reset Delay",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Codec",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "15", 
+     "Control the num of placeholder cmds which are used for the delay of reset BE sync semaphore"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_HEVC_VDENC_SEMA_RESET_DELAY_ID,
+     "HEVC VDEnc Semaphore Reset Delay",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Codec",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_UINT32,
+     "15",
+     "Control the num of placeholder cmds which are used for the delay of VDEnc sync semaphore"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_SET_CMD_DEFAULT_PARS_FROM_FILES_ID,
+     "Set CMD Default Parameters From File",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Codec",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_BOOL,
+     "0", 
+     "Enable to set cmd default parameters from file (Default 0)"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_CMD_PARS_FILES_DIRECORY_ID,
+     "CMD Parameters Input File Directory",
+     __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+     __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+     "Codec",
+     MOS_USER_FEATURE_TYPE_USER,
+     MOS_USER_FEATURE_VALUE_TYPE_STRING,
+     "", 
+     "Set CMD Parameters Input File Directory"),
+    MOS_DECLARE_UF_KEY_DBGONLY(__MEDIA_USER_FEATURE_VALUE_APOGEIOS_ENABLE_ID,
+      "ApogeiosEnable",
+      __MEDIA_USER_FEATURE_SUBKEY_INTERNAL,
+      __MEDIA_USER_FEATURE_SUBKEY_REPORT,
+      "VP",
+      MOS_USER_FEATURE_TYPE_USER,
+      MOS_USER_FEATURE_VALUE_TYPE_INT32,
+      "0",
+      "Eanble Apogeios path. 1: enable, 0: disable."),
 };
 
 #define MOS_NUM_USER_FEATURE_VALUES     (sizeof(MOSUserFeatureDescFields) / sizeof(MOSUserFeatureDescFields[0]))
@@ -2307,7 +3208,7 @@ MOS_STATUS MOS_utilities_close()
     // MOS_OS_Utilitlies_Close must be called right before end of function
     // Because Memninja will calc mem leak here.
     // Any memory allocation release after MOS_OS_Utilities_Close() will be treated as mem leak.
-    eStatus = MOS_OS_Utilities_Close(); 
+    eStatus = MOS_OS_Utilities_Close();
 
     return eStatus;
 }
@@ -2364,8 +3265,8 @@ void  *MOS_AlignedAllocMemory(
 
     if(ptr != nullptr)
     {
-       MOS_MEMNINJA_ALLOC_MESSAGE(ptr, size, functionName, filename, line);
-       MosMemAllocCounter++;
+        MOS_AtomicIncrement(&MosMemAllocCounter);
+        MOS_MEMNINJA_ALLOC_MESSAGE(ptr, size, functionName, filename, line);
     }
 
     return ptr;
@@ -2395,8 +3296,7 @@ void MOS_AlignedFreeMemory(void  *ptr)
 
     if(ptr != nullptr)
     {
-        MosMemAllocCounter--;
-
+        MOS_AtomicDecrement(&MosMemAllocCounter);
         MOS_MEMNINJA_FREE_MESSAGE(ptr, functionName, filename, line);
 
         _aligned_free(ptr);
@@ -2431,8 +3331,8 @@ void  *MOS_AllocMemory(size_t size)
 
     if(ptr != nullptr)
     {
+        MOS_AtomicIncrement(&MosMemAllocCounter);
         MOS_MEMNINJA_ALLOC_MESSAGE(ptr, size, functionName, filename, line);
-        MosMemAllocCounter++;
     }
 
     return ptr;
@@ -2469,12 +3369,59 @@ void  *MOS_AllocAndZeroMemory(size_t size)
     {
         MOS_ZeroMemory(ptr, size);
 
+        MOS_AtomicIncrement(&MosMemAllocCounter);
         MOS_MEMNINJA_ALLOC_MESSAGE(ptr, size, functionName, filename, line);
-
-        MosMemAllocCounter++;
     }
 
     return ptr;
+}
+
+//!
+//! \brief    Reallocate memory
+//! \details  Wrapper for realloc(). Performs error checking.
+//!           It modifies memory allocation counter variable
+//!           MosMemAllocCounter for checking memory leaks.
+//! \param    [in] ptr
+//!           Pointer to be reallocated
+//! \param    [in] new_size
+//!           Size of memory to be allocated
+//! \return   void *
+//!           Pointer to allocated memory
+//!
+#if MOS_MESSAGES_ENABLED
+void *MOS_ReallocMemoryUtils(
+    void       *ptr,
+    size_t     newSize,
+    const char *functionName,
+    const char *filename,
+    int32_t    line)
+#else
+void *MOS_ReallocMemory(
+    void       *ptr,
+    size_t     newSize)
+#endif // MOS_MESSAGES_ENABLED
+{
+    void *oldPtr = ptr;
+    void *newPtr = realloc(ptr, newSize);
+
+    MOS_OS_ASSERT(newPtr != nullptr);
+
+    if (newPtr != oldPtr)
+    {
+        if (oldPtr != nullptr)
+        {
+            MOS_AtomicDecrement(&MosMemAllocCounter);
+            MOS_MEMNINJA_FREE_MESSAGE(oldPtr, functionName, filename, line);
+        }
+
+        if (newPtr != nullptr)
+        {
+            MOS_AtomicIncrement(&MosMemAllocCounter);
+            MOS_MEMNINJA_ALLOC_MESSAGE(newPtr, newSize, functionName, filename, line);
+        }
+    }
+
+    return newPtr;
 }
 
 //!
@@ -2498,8 +3445,7 @@ void MOS_FreeMemory(void  *ptr)
 {
     if(ptr != nullptr)
     {
-        MosMemAllocCounter--;
-
+        MOS_AtomicDecrement(&MosMemAllocCounter);
         MOS_MEMNINJA_FREE_MESSAGE(ptr, functionName, filename, line);
 
         free(ptr);
@@ -2750,12 +3696,12 @@ MOS_STATUS MOS_AppendFileFromPtr(
 //!
 MOS_FUNC_EXPORT MOS_STATUS MOS_EXPORT_DECL DumpUserFeatureKeyDefinitionsMedia()
 {
-    MOS_STATUS							eStatus = MOS_STATUS_SUCCESS;
+    MOS_STATUS                            eStatus = MOS_STATUS_SUCCESS;
     // Init MOS User Feature Key from mos desc table
     MOS_OS_CHK_STATUS( MOS_DeclareUserFeatureKeysForAllDescFields() );
     MOS_OS_CHK_STATUS( MOS_GenerateUserFeatureKeyXML() );
 finish:
-    return	eStatus;
+    return    eStatus;
 }
 
 #endif
@@ -2994,7 +3940,7 @@ MOS_STATUS MOS_GenerateUserFeatureKeyXML()
         UserFeatureData.StringData.pStringData,
         sOutBuf,
         (uint32_t)strlen(sOutBuf));
-    return	eStatus;
+    return    eStatus;
 }
 
 //!
@@ -3802,7 +4748,7 @@ MOS_STATUS MOS_DestroyUserFeatureKeysForAllDescFields()
 static MOS_STATUS MOS_UserFeature_ReadValueInit(
     PMOS_USER_FEATURE_INTERFACE   pOsUserFeatureInterface,
     uint32_t                      uiNumValues,
-    MOS_USER_FEATURE_VALUE_DATA	  Value,
+    MOS_USER_FEATURE_VALUE_DATA   Value,
     const char                    *pValueName,
     MOS_USER_FEATURE_VALUE_TYPE   ValueType)
 {
@@ -4044,6 +4990,7 @@ static MOS_STATUS MOS_UserFeature_ReadValueString(
     {
         MOS_SafeFreeMemory(pFeatureValue->Value.StringData.pStringData);
         pFeatureValue->Value.StringData.pStringData = (char *)MOS_AllocAndZeroMemory(strlen(pcTmpStr) + 1);
+        MosMemAllocFakeCounter++;
         MOS_SecureMemcpy(pFeatureValue->Value.StringData.pStringData, strlen(pcTmpStr), pcTmpStr, strlen(pcTmpStr));
         pFeatureValue->Value.StringData.uSize = dwUFSize;
     }
@@ -4115,6 +5062,7 @@ static MOS_STATUS MOS_UserFeature_ReadValueMultiString(
     {
         MOS_SafeFreeMemory(pFeatureValue->Value.MultiStringData.pMultStringData);
         pFeatureValue->Value.MultiStringData.pMultStringData = (char *)MOS_AllocAndZeroMemory(strlen(pcTmpStr) + 1);
+        MosMemAllocFakeCounter++;
         if (pFeatureValue->Value.MultiStringData.pMultStringData == nullptr)
         {
             MOS_OS_ASSERTMESSAGE("Failed to allocate memory.");
@@ -4499,7 +5447,7 @@ MOS_STATUS MOS_UserFeature_ReadValue (
     uint32_t                                ui;
     void                                    *UFKey = nullptr;
     PMOS_USER_FEATURE_VALUE                 pSettingsValue = nullptr;
-    MOS_USER_FEATURE_VALUE_DATA	            UserFeatureData;
+    MOS_USER_FEATURE_VALUE_DATA             UserFeatureData;
     MOS_USER_FEATURE_VALUE_ID               ValueID = __MOS_USER_FEATURE_KEY_INVALID_ID;
     PMOS_USER_FEATURE_VALUE                 pUserFeatureValue=NULL;
     PMOS_USER_FEATURE_VALUE_STRING          pSrcString = nullptr;
@@ -4516,7 +5464,7 @@ MOS_STATUS MOS_UserFeature_ReadValue (
     MOS_OS_ASSERT(ValueType != MOS_USER_FEATURE_VALUE_TYPE_INVALID);
     //--------------------------------------------------
 
-    //--------------------------------------------------    
+    //--------------------------------------------------
     MOS_ZeroMemory(&UserFeatureData, sizeof(UserFeatureData));
 
     for (ui = (__MOS_USER_FEATURE_KEY_INVALID_ID+1); ui < __MOS_USER_FEATURE_KEY_MAX_ID; ui++)
@@ -4649,7 +5597,7 @@ MOS_STATUS MOS_UserFeature_ReadValue (
 //!                 MOS_STATUS_USER_FEATURE_KEY_READ_FAILED: pValueData is from default value
 //!                 MOS_STATUS_NULL_POINTER: NO USER FEATURE KEY DEFINITION in corresponding user feature key Desc Field table, 
 //!                                          No default value or User Feature Key value return
-//!                 
+//! 
 //!
 MOS_STATUS MOS_UserFeature_ReadValue_FromMap_ID(
     MOS_USER_FEATURE_VALUE_MAP      *keyValueMap,
@@ -4675,7 +5623,7 @@ MOS_STATUS MOS_UserFeature_ReadValue_FromMap_ID(
         pUserFeature = keyValueMap[ValueID].pUserFeatureValue;
     }
     else
-    {   
+    {
         MOS_ASSERTMESSAGE("Not supported null key value map in C code");
     }
 #endif
@@ -4815,7 +5763,7 @@ finish:
 //!                 MOS_STATUS_USER_FEATURE_KEY_READ_FAILED: pValueData is from default value
 //!                 MOS_STATUS_NULL_POINTER: NO USER FEATURE KEY DEFINITION in corresponding user feature key Desc Field table, 
 //!                                          No default value or User Feature Key value return
-//!                 
+//! 
 //!
 #ifdef  __MOS_USER_FEATURE_WA_
 MOS_STATUS MOS_UserFeature_ReadValue_ID(
@@ -5076,7 +6024,7 @@ MOS_STATUS MOS_UserFeature_EnableNotification(
     int32_t                                 bResult;
     MOS_STATUS                              eStatus;
     MOS_UNUSED(pOsUserFeatureInterface);
-    
+
     //---------------------------------------
     MOS_OS_ASSERT(pNotification);
     MOS_OS_ASSERT(pNotification->NotifyType != MOS_USER_FEATURE_NOTIFY_TYPE_INVALID);
@@ -5321,68 +6269,51 @@ uint32_t MOS_GCD(uint32_t a, uint32_t b)
     }
 }
 
-
-//!
-//! \brief    Swizzles the given linear offset via the specified tiling params.
-//! \details  Swizzles the given linear offset via the specified tiling parameters. 
-//!           Used to provide linear access to raw, tiled data.
-//! \param    [in] OffsetX
-//!           Horizontal byte offset from left edge of tiled surface.
-//! \param    [in] OffsetY
-//!           Vertical offset from top of tiled surface.
-//! \param    [in] Pitch
-//!           Row-to-row byte stride.
-//! \param    [in] TileFormat
-//!           Either 'x' or 'y'--for X-Major or Y-Major tiling, respectively.
-//! \param    [in] CsxSwizzle
-//!           (Boolean) Additionally perform Channel Select XOR swizzling.
-//! \return   int32_t
-//!           Return SwizzleOffset
-//!
-static __inline int32_t Mos_SwizzleOffset(
+__inline int32_t __Mos_SwizzleOffset(
     int32_t         OffsetX,
     int32_t         OffsetY,
     int32_t         Pitch,
     MOS_TILE_TYPE   TileFormat,
-    int32_t         CsxSwizzle)
+    int32_t         CsxSwizzle,
+    int32_t         ExtFlags)
 {
-    // When dealing with a tiled surface, logical linear accesses to the 
+    // When dealing with a tiled surface, logical linear accesses to the
     // surface (y * pitch + x) must be translated into appropriate tile-
-    // formated accesses--This is done by swizzling (rearranging/translating) 
-    // the given access address--though it is important to note that the 
-    // swizzling is actually done on the accessing OFFSET into a TILED 
+    // formated accesses--This is done by swizzling (rearranging/translating)
+    // the given access address--though it is important to note that the
+    // swizzling is actually done on the accessing OFFSET into a TILED
     // REGION--not on the absolute address itself.
 
-    // (!) Y-MAJOR TILING, REINTERPRETATION: For our purposes here, Y-Major 
+    // (!) Y-MAJOR TILING, REINTERPRETATION: For our purposes here, Y-Major
     // tiling will be thought of in a different way, we will deal with
     // the 16-byte-wide columns individually--i.e., we will treat a single
     // Y-Major tile as 8 separate, thinner tiles--Doing so allows us to
     // deal with both X- and Y-Major tile formats in the same "X-Major"
-    // way--just with different dimensions: either 512B x 8 rows, or 
+    // way--just with different dimensions: either 512B x 8 rows, or
     // 16B x 32 rows, respectively.
 
-    // A linear offset into a surface is of the form 
+    // A linear offset into a surface is of the form
     //     y * pitch + x   =   y:x (Shorthand, meaning: y * (x's per y) + x)
-    // 
-    // To treat a surface as being composed of tiles (though still being 
-    // linear), just as a linear offset has a y:x composition--its y and x 
-    // components can be thought of as having Row:Line and Column:X 
-    // compositions, respectively, where Row specifies a row of tiles, Line 
-    // specifies a row of pixels within a tile, Column specifies a column 
-    // of tiles, and X in this context refers to a byte within a Line--i.e., 
+    //
+    // To treat a surface as being composed of tiles (though still being
+    // linear), just as a linear offset has a y:x composition--its y and x
+    // components can be thought of as having Row:Line and Column:X
+    // compositions, respectively, where Row specifies a row of tiles, Line
+    // specifies a row of pixels within a tile, Column specifies a column
+    // of tiles, and X in this context refers to a byte within a Line--i.e.,
     //     offset = y:x
     //     y = Row:Line
     //     x = Col:X
     //     offset = y:x = Row:Line:Col:X
 
-    // Given the Row:Line:Col:X composition of a linear offset, all that 
-    // tile swizzling does is swap the Line and Col components--i.e., 
+    // Given the Row:Line:Col:X composition of a linear offset, all that
+    // tile swizzling does is swap the Line and Col components--i.e.,
     //     Linear Offset:   Row:Line:Col:X
     //     Swizzled Offset: Row:Col:Line:X
-    // And with our reinterpretation of the Y-Major tiling format, we can now 
-    // describe both the X- and Y-Major tiling formats in two simple terms: 
-    // (1) The bit-depth of their Lines component--LBits, and (2) the 
-    // swizzled bit-position of the Lines component (after it swaps with the 
+    // And with our reinterpretation of the Y-Major tiling format, we can now
+    // describe both the X- and Y-Major tiling formats in two simple terms:
+    // (1) The bit-depth of their Lines component--LBits, and (2) the
+    // swizzled bit-position of the Lines component (after it swaps with the
     // Col component)--LPos.
 
     int32_t Row, Line, Col, x; // Linear Offset Components
@@ -5398,7 +6329,7 @@ static __inline int32_t Mos_SwizzleOffset(
         LBits = 5; // Log2(TileY.Height = 32)
         LPos = 4;  // Log2(TileY.PseudoWidth = 16)
     }
-    else //if (TileFormat == MOS_TILE_X) 
+    else //if (TileFormat == MOS_TILE_X)
     {
         LBits = 3; // Log2(TileX.Height = 8)
         LPos = 9;  // Log2(TileX.Width = 512)
@@ -5453,7 +6384,8 @@ void Mos_SwizzleData(
     MOS_TILE_TYPE   SrcTiling,
     MOS_TILE_TYPE   DstTiling,
     int32_t         iHeight,
-    int32_t         iPitch)
+    int32_t         iPitch,
+    int32_t         extFlags)
 {
 
 #define IS_TILED(_a)                ((_a) != MOS_TILE_LINEAR)
@@ -5478,7 +6410,8 @@ void Mos_SwizzleData(
                     y,
                     iPitch,
                     SrcTiling,
-                    false);
+                    false,
+                    extFlags);
 
                 *(pDst + LinearOffset) = *(pSrc + TileOffset);
             }
@@ -5490,7 +6423,8 @@ void Mos_SwizzleData(
                     y,
                     iPitch,
                     DstTiling,
-                    false);
+                    false,
+                    extFlags);
 
                 *(pDst + TileOffset) = *(pSrc + LinearOffset);
             }

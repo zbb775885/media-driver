@@ -28,6 +28,12 @@
 #include "media_libva_common.h"
 #include "media_ddi_encode_base.h"
 
+DdiEncodeBase::DdiEncodeBase()
+    :DdiMediaBase()
+{
+    m_codechalSettings = CodechalSetting::CreateCodechalSetting();
+}
+
 VAStatus DdiEncodeBase::BeginPicture(
     VADriverContextP    ctx,
     VAContextID         context,
@@ -175,10 +181,13 @@ VAStatus DdiEncodeBase::StatusReport(
             m_encodeCtx->BufMgr.pCodedBufferSegment->buf    = DdiMediaUtil_LockBuffer(mediaBuf, MOS_LOCKFLAG_READONLY);
             m_encodeCtx->BufMgr.pCodedBufferSegment->size   = size;
             m_encodeCtx->BufMgr.pCodedBufferSegment->status = status;
-
-            // fill hdcp related buffer
-            DDI_CHK_RET(m_encodeCtx->pCpDdiInterface->StatusReportForHdcp2Buffer(&m_encodeCtx->BufMgr, &m_encodeCtx->statusReportBuf.infos[index]), "fail to get hdcp2 status report!");
-
+            break;
+        }
+        else if ((index >= 0) && (size == 0) && (status & VA_CODED_BUF_STATUS_BAD_BITSTREAM))
+        {
+            m_encodeCtx->BufMgr.pCodedBufferSegment->buf    = DdiMediaUtil_LockBuffer(mediaBuf, MOS_LOCKFLAG_READONLY);
+            m_encodeCtx->BufMgr.pCodedBufferSegment->size   = size;
+            m_encodeCtx->BufMgr.pCodedBufferSegment->status = status;
             break;
         }
 
@@ -188,13 +197,23 @@ VAStatus DdiEncodeBase::StatusReport(
         encodeStatusReport->bSequential = true;  //Query the encoded frame status in sequential.
 
         uint16_t numStatus = 1;
-        m_encodeCtx->pCodecHal->GetStatusReport(encodeStatusReport, numStatus);
+        MOS_STATUS mosStatus = MOS_STATUS_SUCCESS;
+        mosStatus = m_encodeCtx->pCodecHal->GetStatusReport(encodeStatusReport, numStatus);
+        if (MOS_STATUS_NOT_ENOUGH_BUFFER == mosStatus)
+        {
+            return VA_STATUS_ERROR_NOT_ENOUGH_BUFFER;
+        } else if (MOS_STATUS_SUCCESS != mosStatus)
+        {
+            return VA_STATUS_ERROR_ENCODING_ERROR;
+        }
 
         if (CODECHAL_STATUS_SUCCESSFUL == encodeStatusReport[0].CodecStatus)
         {
             // Only AverageQP is reported at this time. Populate other bits with relevant informaiton later;
             status = (encodeStatusReport[0].AverageQp & VA_CODED_BUF_STATUS_PICTURE_AVE_QP_MASK);
             status = status | ((encodeStatusReport[0].NumberPasses) & 0xf)<<24;
+            // fill hdcp related buffer
+            DDI_CHK_RET(m_encodeCtx->pCpDdiInterface->StatusReportForHdcp2Buffer(&m_encodeCtx->BufMgr, encodeStatusReport), "fail to get hdcp2 status report!");
             if (UpdateStatusReportBuffer(encodeStatusReport[0].bitstreamSize, status) != VA_STATUS_SUCCESS)
             {
                 m_encodeCtx->BufMgr.pCodedBufferSegment->buf  = DdiMediaUtil_LockBuffer(mediaBuf, MOS_LOCKFLAG_READONLY);
@@ -203,6 +222,14 @@ VAStatus DdiEncodeBase::StatusReport(
                 m_encodeCtx->statusReportBuf.ulUpdatePosition = (m_encodeCtx->statusReportBuf.ulUpdatePosition + 1) % DDI_ENCODE_MAX_STATUS_REPORT_BUFFER;
                 break;
             }
+
+            // Report extra status for completed coded buffer
+            eStatus = ReportExtraStatus(encodeStatusReport, m_encodeCtx->BufMgr.pCodedBufferSegment);
+            if (VA_STATUS_SUCCESS != eStatus)
+            {
+                break;
+            }
+
             //Add encoded frame information into status buffer queue.
             continue;
         }
@@ -218,7 +245,7 @@ VAStatus DdiEncodeBase::StatusReport(
                 m_encodeCtx->BufMgr.pCodedBufferSegment->buf  = DdiMediaUtil_LockBuffer(mediaBuf, MOS_LOCKFLAG_READONLY);
                 m_encodeCtx->BufMgr.pCodedBufferSegment->size = 0;
                 m_encodeCtx->BufMgr.pCodedBufferSegment->status |= VA_CODED_BUF_STATUS_BAD_BITSTREAM;
-                m_encodeCtx->statusReportBuf.ulUpdatePosition = (m_encodeCtx->statusReportBuf.ulUpdatePosition + 1) % DDI_ENCODE_MAX_STATUS_REPORT_BUFFER;
+                UpdateStatusReportBuffer(encodeStatusReport[0].bitstreamSize, m_encodeCtx->BufMgr.pCodedBufferSegment->status);
                 DDI_ASSERTMESSAGE("Something unexpected happened in HW, return error to application");
                 break;
             }
@@ -238,7 +265,7 @@ VAStatus DdiEncodeBase::StatusReport(
                 m_encodeCtx->BufMgr.pCodedBufferSegment->buf  = DdiMediaUtil_LockBuffer(mediaBuf, MOS_LOCKFLAG_READONLY);
                 m_encodeCtx->BufMgr.pCodedBufferSegment->size = 0;
                 m_encodeCtx->BufMgr.pCodedBufferSegment->status |= VA_CODED_BUF_STATUS_BAD_BITSTREAM;
-                m_encodeCtx->statusReportBuf.ulUpdatePosition = (m_encodeCtx->statusReportBuf.ulUpdatePosition + 1) % DDI_ENCODE_MAX_STATUS_REPORT_BUFFER;
+                UpdateStatusReportBuffer(encodeStatusReport[0].bitstreamSize, m_encodeCtx->BufMgr.pCodedBufferSegment->status);
                 DDI_ASSERTMESSAGE("Something unexpected happened in HW, return error to application");
                 break;
             }
@@ -249,7 +276,7 @@ VAStatus DdiEncodeBase::StatusReport(
             m_encodeCtx->BufMgr.pCodedBufferSegment->buf  = DdiMediaUtil_LockBuffer(mediaBuf, MOS_LOCKFLAG_READONLY);
             m_encodeCtx->BufMgr.pCodedBufferSegment->size = 0;
             m_encodeCtx->BufMgr.pCodedBufferSegment->status |= VA_CODED_BUF_STATUS_BAD_BITSTREAM;
-            m_encodeCtx->statusReportBuf.ulUpdatePosition = (m_encodeCtx->statusReportBuf.ulUpdatePosition + 1) % DDI_ENCODE_MAX_STATUS_REPORT_BUFFER;
+            UpdateStatusReportBuffer(encodeStatusReport[0].bitstreamSize, m_encodeCtx->BufMgr.pCodedBufferSegment->status);
             break;
         }
         else
@@ -258,7 +285,7 @@ VAStatus DdiEncodeBase::StatusReport(
         }
     }
 
-    if (eStatus != MOS_STATUS_SUCCESS)
+    if (eStatus != VA_STATUS_SUCCESS)
     {
         return VA_STATUS_ERROR_OPERATION_FAILED;
     }
@@ -468,9 +495,18 @@ VAStatus DdiEncodeBase::RemoveFromPreEncStatusReportQueue(
         return eStatus;
     }
 
-    if (index >= 0)
+    bool bufferIsUpdated = m_encodeCtx->statusReportBuf.ulUpdatePosition < m_encodeCtx->statusReportBuf.ulHeadPosition ?
+                            (index < m_encodeCtx->statusReportBuf.ulUpdatePosition)
+                            : (m_encodeCtx->statusReportBuf.ulUpdatePosition == m_encodeCtx->statusReportBuf.ulHeadPosition ?
+                                true
+                                : ((index < m_encodeCtx->statusReportBuf.ulUpdatePosition)
+                                  &&(index > m_encodeCtx->statusReportBuf.ulHeadPosition)));
+
+    // Remove updated status report buffer
+    if (index >= 0 && bufferIsUpdated)
     {
         m_encodeCtx->statusReportBuf.preencInfos[index].pPreEncBuf[typeIdx] = nullptr;
+        m_encodeCtx->statusReportBuf.preencInfos[index].uiBuffers = 0;
     }
 
     return eStatus;
@@ -686,6 +722,14 @@ uint8_t DdiEncodeBase::VARC2HalRC(uint32_t vaRC)
     {
         return (uint8_t)RATECONTROL_VCM;
     }
+    else if (VA_RC_QVBR == vaRC)
+    {
+        return (uint8_t)RATECONTROL_QVBR;
+    }
+    else if (VA_RC_AVBR == vaRC)
+    {
+        return (uint8_t)RATECONTROL_AVBR;
+    }
     else  // VA_RC_CBR or VA_RC_CBR|VA_RC_MB
     {
         return (uint8_t)RATECONTROL_CBR;
@@ -812,8 +856,12 @@ VAStatus DdiEncodeBase::CreateBuffer(
 
     DDI_CHK_NULL(m_encodeCtx, "Null m_encodeCtx", VA_STATUS_ERROR_INVALID_CONTEXT);
 
-    // only for VAEncSliceParameterBufferType of buffer, the number of elements can be greater than 1
-    if ((type != VAEncSliceParameterBufferType) && (type != VAEncQPBufferType) && (elementsNum > 1))
+    // for VAEncSliceParameterBufferType buffer, VAEncQPBufferType buffer and 
+    // VAEncMacroblockMapBufferType buffer, the number of elements can be greater than 1
+    if ((type != VAEncSliceParameterBufferType) &&
+        (type != VAEncQPBufferType) &&
+        (type != VAEncMacroblockMapBufferType) &&
+        (elementsNum > 1))
     {
         return VA_STATUS_ERROR_INVALID_PARAMETER;
     }
@@ -853,10 +901,10 @@ VAStatus DdiEncodeBase::CreateBuffer(
 
     PDDI_MEDIA_CONTEXT mediaCtx = DdiMedia_GetMediaContext(ctx);
 
-    buf->pMediaCtx    = mediaCtx;
-    buf->iNumElements = elementsNum;
-    buf->uiType       = type;
-    buf->uiOffset     = 0;
+    buf->pMediaCtx     = mediaCtx;
+    buf->uiNumElements = elementsNum;
+    buf->uiType        = type;
+    buf->uiOffset      = 0;
 
     uint32_t bufSize = 0;
     uint32_t expectedSize = 0xffffffff;
@@ -877,12 +925,35 @@ VAStatus DdiEncodeBase::CreateBuffer(
         break;
     }
     case VAEncMacroblockMapBufferType:
+    {
+        buf->uiWidth = MOS_ALIGN_CEIL(size, 64);
+        if (size != buf->uiWidth)
+        {
+            va = VA_STATUS_ERROR_INVALID_PARAMETER;
+            CleanUpBufferandReturn(buf);
+            return va;
+        }
+        bufSize            = size * elementsNum;
+        buf->uiHeight      = elementsNum;
+        buf->uiPitch       = buf->uiWidth;
+        buf->iSize         = bufSize;
+        buf->format        = Media_Format_2DBuffer;
+        buf->uiNumElements = 1;
+
+        va = DdiMediaUtil_CreateBuffer(buf, mediaCtx->pDrmBufMgr);
+        if (va != VA_STATUS_SUCCESS)
+        {
+            MOS_FreeMemory(buf);
+            return VA_STATUS_ERROR_ALLOCATION_FAILED;
+        }
+        break;
+    }
     case VAEncMacroblockDisableSkipMapBufferType:
     {
-        buf->iHeight = m_encodeCtx->wPicHeightInMB;
-        buf->iWidth  = m_encodeCtx->wPicWidthInMB;
-        buf->iSize   = m_encodeCtx->wPicHeightInMB * m_encodeCtx->wPicWidthInMB;
-        buf->format  = Media_Format_2DBuffer;
+        buf->uiHeight = m_encodeCtx->wPicHeightInMB;
+        buf->uiWidth  = m_encodeCtx->wPicWidthInMB;
+        buf->iSize    = m_encodeCtx->wPicHeightInMB * m_encodeCtx->wPicWidthInMB;
+        buf->format   = Media_Format_2DBuffer;
 
         va = DdiMediaUtil_CreateBuffer(buf, mediaCtx->pDrmBufMgr);
         if (va != VA_STATUS_SUCCESS)
@@ -1033,22 +1104,22 @@ VAStatus DdiEncodeBase::CreateBuffer(
         //which havent been exposed. the permb QP buffer of FEI is 1D buffer.
         if (CODECHAL_FUNCTION_ENC_PAK == m_encodeCtx->codecFunction ||
             CODECHAL_FUNCTION_ENC_VDENC_PAK == m_encodeCtx->codecFunction ||
-            (((CODECHAL_FUNCTION_FEI_ENC_PAK == m_encodeCtx->codecFunction) || (CODECHAL_FUNCTION_FEI_ENC == m_encodeCtx->codecFunction)) && 
+            (((CODECHAL_FUNCTION_FEI_ENC_PAK == m_encodeCtx->codecFunction) || (CODECHAL_FUNCTION_FEI_ENC == m_encodeCtx->codecFunction)) &&
               (m_encodeCtx->wModeType == CODECHAL_ENCODE_MODE_HEVC)))
         {
-            buf->iWidth = MOS_ALIGN_CEIL(size, 64);
-            if (size != buf->iWidth)
+            buf->uiWidth = MOS_ALIGN_CEIL(size, 64);
+            if (size != buf->uiWidth)
             {
                 va = VA_STATUS_ERROR_INVALID_PARAMETER;
                 CleanUpBufferandReturn(buf);
                 return va;
             }
-            bufSize             = size * elementsNum;
-            buf->iHeight      = elementsNum;
-            buf->iPitch       = buf->iWidth;
-            buf->iSize        = bufSize;
-            buf->format       = Media_Format_2DBuffer;
-            buf->iNumElements = 1;
+            bufSize            = size * elementsNum;
+            buf->uiHeight      = elementsNum;
+            buf->uiPitch       = buf->uiWidth;
+            buf->iSize         = bufSize;
+            buf->format        = Media_Format_2DBuffer;
+            buf->uiNumElements = 1;
         }
         else
         {

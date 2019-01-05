@@ -30,6 +30,7 @@
 #include <va/va.h>
 #include "media_ddi_base.h"
 #include "media_libva_encoder.h"
+#include "codechal_setting.h"
 
 //!
 //! \class  DdiEncodeBase
@@ -38,23 +39,41 @@
 class DdiEncodeBase : public DdiMediaBase
 {
 public:
+    //! \brief chroma format
+    enum ChromaFormat
+    {
+        monochrome  = 0,
+        yuv420      = 1,
+        yuv422      = 2,
+        yuv444      = 3
+    };
+
+    //!
+    //! \brief Constructor
+    //!
+    DdiEncodeBase();
+
     //!
     //! \brief    Initialize the encode context and do codechal setting
     //! \details  Allocate memory for pointer members of encode context, set codechal
     //!           which used by Codechal::Allocate
     //!
     //! \param    [out] codecHalSettings
-    //!           PCODECHAL_SETTINGS
+    //!           CodechalSetting *
     //!
     //! \return   VAStatus
     //!           VA_STATUS_SUCCESS if success, else fail reason
     //!
-    virtual VAStatus ContextInitialize(PCODECHAL_SETTINGS codecHalSettings) = 0;
+    virtual VAStatus ContextInitialize(CodechalSetting * codecHalSettings) = 0;
 
     //!
     //! \brief Destructor
     //!
-    virtual ~DdiEncodeBase(){};
+    virtual ~DdiEncodeBase()
+    {
+        MOS_Delete(m_codechalSettings);
+        m_codechalSettings = nullptr;
+    };
 
     virtual VAStatus BeginPicture(
         VADriverContextP ctx,
@@ -245,7 +264,8 @@ public:
 
     DDI_ENCODE_CONTEXT *m_encodeCtx = nullptr; //!< The referred DDI_ENCODE_CONTEXT object.
     bool m_is10Bit                  = false;   //!< 10 bit flag.
-
+    ChromaFormat m_chromaFormat     = yuv420;  //!< HCP chroma format.
+    CodechalSetting    *m_codechalSettings = nullptr;    //!< Codechal Settings
 protected:
     //!
     //! \brief    Do Encode in codechal
@@ -454,6 +474,24 @@ protected:
         DDI_ENCODE_PRE_ENC_BUFFER_TYPE typeIdx,
         uint32_t                       *status,
         int32_t                        *index);
+
+    //!
+    //! \brief    Report extra encode status for completed coded buffer.
+    //!
+    //! \param    [in] encodeStatusReport
+    //!           Pointer to encode status reported by Codechal
+    //! \param    [out] codedBufferSegment
+    //!           Pointer to coded buffer segment
+    //!
+    //! \return   VAStatus
+    //!           VA_STATUS_SUCCESS if success, else fail reason
+    //!
+    virtual VAStatus ReportExtraStatus(
+        EncodeStatusReport   *encodeStatusReport,
+        VACodedBufferSegment *codedBufferSegment)
+    {
+        return VA_STATUS_SUCCESS;
+    }
 
     //!
     //! \brief    Clean Up Buffer and Return

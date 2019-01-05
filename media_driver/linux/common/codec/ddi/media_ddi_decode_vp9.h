@@ -61,6 +61,8 @@ public:
         VADriverContextP ctx,
         VAContextID      context) override;
 
+    virtual VAStatus SetDecodeParams() override;
+    
     virtual MOS_FORMAT GetFormat() override;
 
     /*virtual VAStatus EndPicture(
@@ -78,7 +80,7 @@ public:
     virtual VAStatus AllocSliceControlBuffer(
         DDI_MEDIA_BUFFER       *buf) override;
 
-    virtual uint8_t* GetPicParamBuf( 
+    virtual uint8_t* GetPicParamBuf(
         DDI_CODEC_COM_BUFFER_MGR     *bufMgr) override;
 
 private:

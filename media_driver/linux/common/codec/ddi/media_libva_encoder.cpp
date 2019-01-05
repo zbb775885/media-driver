@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2009-2017, Intel Corporation
+* Copyright (c) 2009-2018, Intel Corporation
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -26,7 +26,6 @@
 #include <unistd.h>
 #include "media_libva_encoder.h"
 #include "media_ddi_encode_base.h"
-#include "media_libva_cp.h"
 #include "media_libva_util.h"
 #include "media_libva_caps.h"
 #include "media_ddi_factory.h"
@@ -182,7 +181,7 @@ void DdiEncodeCleanUp(PDDI_ENCODE_CONTEXT encCtx)
 
     if (encCtx->pCpDdiInterface)
     {
-        MOS_Delete(encCtx->pCpDdiInterface);
+        Delete_DdiCpInterface(encCtx->pCpDdiInterface);
         encCtx->pCpDdiInterface = nullptr;
     }
 
@@ -256,8 +255,8 @@ VAStatus DdiEncode_CreateContext(
     encCtx->m_encode           = ddiEncode;
 
     //initialize DDI level cp interface
-    MOS_CONTEXT mosCtx;
-    encCtx->pCpDdiInterface = MOS_New(DdiCpInterface, mosCtx);
+    MOS_CONTEXT mosCtx = { };
+    encCtx->pCpDdiInterface = Create_DdiCpInterface(mosCtx);
     if (nullptr == encCtx->pCpDdiInterface)
     {
         vaStatus = VA_STATUS_ERROR_ALLOCATION_FAILED;
@@ -266,18 +265,21 @@ VAStatus DdiEncode_CreateContext(
     }
 
     // Get the buf manager for codechal create
-    mosCtx.bufmgr       = mediaDrvCtx->pDrmBufMgr;
-    mosCtx.fd           = mediaDrvCtx->fd;
-    mosCtx.iDeviceId    = mediaDrvCtx->iDeviceId;
-    mosCtx.SkuTable     = mediaDrvCtx->SkuTable;
-    mosCtx.WaTable      = mediaDrvCtx->WaTable;
-    mosCtx.gtSystemInfo = *mediaDrvCtx->pGtSystemInfo;
-    mosCtx.platform     = mediaDrvCtx->platform;
+    mosCtx.bufmgr          = mediaDrvCtx->pDrmBufMgr;
+    mosCtx.m_gpuContextMgr = mediaDrvCtx->m_gpuContextMgr;
+    mosCtx.m_cmdBufMgr     = mediaDrvCtx->m_cmdBufMgr;
+    mosCtx.fd              = mediaDrvCtx->fd;
+    mosCtx.iDeviceId       = mediaDrvCtx->iDeviceId;
+    mosCtx.SkuTable        = mediaDrvCtx->SkuTable;
+    mosCtx.WaTable         = mediaDrvCtx->WaTable;
+    mosCtx.gtSystemInfo    = *mediaDrvCtx->pGtSystemInfo;
+    mosCtx.platform        = mediaDrvCtx->platform;
 
     mosCtx.ppMediaMemDecompState = &mediaDrvCtx->pMediaMemDecompState;
     mosCtx.pfnMemoryDecompress   = mediaDrvCtx->pfnMemoryDecompress;
     mosCtx.pPerfData             = (PERF_DATA *)MOS_AllocAndZeroMemory(sizeof(PERF_DATA));
     mosCtx.gtSystemInfo          = *mediaDrvCtx->pGtSystemInfo;
+    mosCtx.m_auxTableMgr         = mediaDrvCtx->m_auxTableMgr;
 
     if (nullptr == mosCtx.pPerfData)
     {
@@ -286,9 +288,10 @@ VAStatus DdiEncode_CreateContext(
         return vaStatus;
     }
 
-    encCtx->vaProfile  = profile;
-    encCtx->uiRCMethod = rcMode;
-    encCtx->wModeType = mediaDrvCtx->m_caps->GetEncodeCodecMode(profile, entrypoint);
+    encCtx->vaEntrypoint  = entrypoint;
+    encCtx->vaProfile     = profile;
+    encCtx->uiRCMethod    = rcMode;
+    encCtx->wModeType     = mediaDrvCtx->m_caps->GetEncodeCodecMode(profile, entrypoint);
     encCtx->codecFunction = mediaDrvCtx->m_caps->GetEncodeCodecFunction(profile, entrypoint);
 
     if (entrypoint == VAEntrypointEncSliceLP)
@@ -296,10 +299,20 @@ VAStatus DdiEncode_CreateContext(
         encCtx->bVdencActive  = true;
     }
 
-    //Both dual pipe and LP pipe should support 10bit for HEVCMain10 profile
-    if (profile == VAProfileHEVCMain10)
+    //Both dual pipe and LP pipe should support 10bit for below profiles
+    // - HEVCMain10 profile
+    // - VAProfileVP9Profile2
+    // - VAProfileVP9Profile3
+    if (profile == VAProfileVP9Profile2 ||
+        profile == VAProfileVP9Profile3)
     {
         encCtx->m_encode->m_is10Bit = true;
+    }
+
+    if (profile == VAProfileVP9Profile1 ||
+        profile == VAProfileVP9Profile3)
+    {
+        encCtx->m_encode->m_chromaFormat = DdiEncodeBase::yuv444;
     }
 
     CODECHAL_STANDARD_INFO standardInfo;
@@ -322,24 +335,25 @@ VAStatus DdiEncode_CreateContext(
     encCtx->pCodecHal = pCodecHal;
 
     // Setup some initial data
-    encCtx->dwFrameWidth      = picture_width;
-    encCtx->dwFrameHeight     = picture_height;
+    encCtx->dworiFrameWidth   = picture_width;
+    encCtx->dworiFrameHeight  = picture_height;
     encCtx->wPicWidthInMB     = (uint16_t)(DDI_CODEC_NUM_MACROBLOCKS_WIDTH(picture_width));
     encCtx->wPicHeightInMB    = (uint16_t)(DDI_CODEC_NUM_MACROBLOCKS_HEIGHT(picture_height));
+    encCtx->dwFrameWidth      = encCtx->wPicWidthInMB * CODECHAL_MACROBLOCK_WIDTH;
+    encCtx->dwFrameHeight     = encCtx->wPicHeightInMB * CODECHAL_MACROBLOCK_HEIGHT;
     //recoder old resolution for dynamic resolution  change
     encCtx->wContextPicWidthInMB  = encCtx->wPicWidthInMB;
     encCtx->wContextPicHeightInMB = encCtx->wPicHeightInMB;
     encCtx->wOriPicWidthInMB      = encCtx->wPicWidthInMB;
     encCtx->wOriPicHeightInMB     = encCtx->wPicHeightInMB;
+    encCtx->targetUsage           = TARGETUSAGE_RT_SPEED;
     // Attach PMEDIDA_DRIVER_CONTEXT
     encCtx->pMediaCtx = mediaDrvCtx;
 
     encCtx->pCpDdiInterface->SetHdcp2Enabled(flag);
+    encCtx->pCpDdiInterface->SetCpParams(CP_TYPE_NONE, encCtx->m_encode->m_codechalSettings);
 
-    CODECHAL_SETTINGS codecHalSettings;
-    MOS_ZeroMemory(&codecHalSettings, sizeof(codecHalSettings));
-
-    vaStatus = encCtx->m_encode->ContextInitialize(&codecHalSettings);
+    vaStatus = encCtx->m_encode->ContextInitialize(encCtx->m_encode->m_codechalSettings);
 
     if (vaStatus != VA_STATUS_SUCCESS)
     {
@@ -347,7 +361,7 @@ VAStatus DdiEncode_CreateContext(
         return vaStatus;
     }
 
-    MOS_STATUS eStatus = pCodecHal->Allocate(&codecHalSettings);
+    MOS_STATUS eStatus = pCodecHal->Allocate(encCtx->m_encode->m_codechalSettings);
 
 #ifdef _MMC_SUPPORTED
     PMOS_INTERFACE osInterface = pCodecHal->GetOsInterface();
@@ -435,6 +449,11 @@ VAStatus DdiEncode_DestroyContext(VADriverContextP ctx, VAContextID context)
     if (nullptr != encCtx->m_encode)
     {
         encCtx->m_encode->FreeCompBuffer();
+        if(nullptr != encCtx->m_encode->m_codechalSettings)
+        {
+            MOS_Delete(encCtx->m_encode->m_codechalSettings);
+            encCtx->m_encode->m_codechalSettings = nullptr;
+        }
     }
 
     MOS_FreeMemory(codecHal->GetOsInterface()->pOsContext->pPerfData);
@@ -446,7 +465,7 @@ VAStatus DdiEncode_DestroyContext(VADriverContextP ctx, VAContextID context)
 
     if (encCtx->pCpDdiInterface)
     {
-        MOS_Delete(encCtx->pCpDdiInterface);
+        Delete_DdiCpInterface(encCtx->pCpDdiInterface);
         encCtx->pCpDdiInterface = nullptr;
     }
 
@@ -567,7 +586,6 @@ VAStatus DdiEncode_EndPicture(VADriverContextP ctx, VAContextID context)
     return vaStatus;
 }
 
-
 VAStatus DdiEncode_MfeSubmit(
     VADriverContextP    ctx,
     VAMFContextID      mfe_context,
@@ -593,21 +611,60 @@ VAStatus DdiEncode_MfeSubmit(
         CodechalEncoderState *encoder = dynamic_cast<CodechalEncoderState *>(encodeContext->pCodecHal);
         DDI_CHK_NULL(encoder, "nullptr codechal encoder", VA_STATUS_ERROR_INVALID_CONTEXT);
 
+        if (!encoder->m_mfeEnabled ||
+            encoder->m_mfeEncodeSharedState != encodeMfeContext->mfeEncodeSharedState)
+        {
+            return VA_STATUS_ERROR_INVALID_CONTEXT;
+        }
+
+        // make sure the context has called BeginPicture&RenderPicture&EndPicture
+        if (encodeContext->RTtbl.pRT[0] == nullptr
+            || encodeContext->dwNumSlices <= 0
+            || encodeContext->EncodeParams.pBSBuffer != encodeContext->pbsBuffer)
+        {
+            return VA_STATUS_ERROR_INVALID_PARAMETER;
+        }
+
         encoder->m_mfeEncodeParams.submitIndex  = i;
         encoder->m_mfeEncodeParams.submitNumber = num_contexts;
         encodeContexts.push_back(encodeContext);
         validContextNumber++;
     }
 
+    CmDevice *device = encodeMfeContext->mfeEncodeSharedState->pCmDev;
+    CmTask   *task   = encodeMfeContext->mfeEncodeSharedState->pCmTask;
+    CmQueue  *queue  = encodeMfeContext->mfeEncodeSharedState->pCmQueue;
+    CodechalEncodeMdfKernelResource *resMbencKernel = encodeMfeContext->mfeEncodeSharedState->resMbencKernel;
+    SurfaceIndex *vmeSurface    = encodeMfeContext->mfeEncodeSharedState->vmeSurface;
+    SurfaceIndex *commonSurface = encodeMfeContext->mfeEncodeSharedState->commonSurface;
+
+
     MOS_ZeroMemory(encodeMfeContext->mfeEncodeSharedState, sizeof(MfeSharedState));
+
+    encodeMfeContext->mfeEncodeSharedState->pCmDev   = device;
+    encodeMfeContext->mfeEncodeSharedState->pCmTask  = task;
+    encodeMfeContext->mfeEncodeSharedState->pCmQueue = queue;
+    encodeMfeContext->mfeEncodeSharedState->resMbencKernel = resMbencKernel;
+    encodeMfeContext->mfeEncodeSharedState->vmeSurface     = vmeSurface;
+    encodeMfeContext->mfeEncodeSharedState->commonSurface  = commonSurface;
 
     // Call Enc functions for all the sub contexts
     MOS_STATUS status = MOS_STATUS_SUCCESS;
     for (int32_t i = 0; i < validContextNumber; i++)
     {
         encodeContext  = encodeContexts[i];
-        encodeContext->EncodeParams.ExecCodecFunction = CODECHAL_FUNCTION_ENC;
-        status = encodeContext->pCodecHal->Execute(&encodeContext->EncodeParams);
+        if (encodeContext->vaEntrypoint != VAEntrypointFEI )
+        {
+            encodeContext->EncodeParams.ExecCodecFunction = CODECHAL_FUNCTION_ENC;
+        }
+        else
+        {
+            encodeContext->EncodeParams.ExecCodecFunction = CODECHAL_FUNCTION_FEI_ENC;
+        }
+
+        CodechalEncoderState *encoder = dynamic_cast<CodechalEncoderState *>(encodeContext->pCodecHal);
+
+        status = encoder->Execute(&encodeContext->EncodeParams);
         if (MOS_STATUS_SUCCESS != status)
         {
             DDI_ASSERTMESSAGE("DDI:Failed in Execute Enc!");
@@ -619,8 +676,17 @@ VAStatus DdiEncode_MfeSubmit(
     for (int32_t i = 0; i < validContextNumber; i++)
     {
         encodeContext  = encodeContexts[i];
-        encodeContext->EncodeParams.ExecCodecFunction = CODECHAL_FUNCTION_PAK;
-        status = encodeContext->pCodecHal->Execute(&encodeContext->EncodeParams);
+        if (encodeContext->vaEntrypoint != VAEntrypointFEI )
+        {
+            encodeContext->EncodeParams.ExecCodecFunction = CODECHAL_FUNCTION_PAK;
+        }
+        else
+        {
+            encodeContext->EncodeParams.ExecCodecFunction = CODECHAL_FUNCTION_FEI_PAK;
+        }
+
+        CodechalEncoderState *encoder = dynamic_cast<CodechalEncoderState *>(encodeContext->pCodecHal);
+        status = encoder->Execute(&encodeContext->EncodeParams);
         if (MOS_STATUS_SUCCESS != status)
         {
             DDI_ASSERTMESSAGE("DDI:Failed in Execute Pak!");
